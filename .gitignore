@@ -1,0 +1,23 @@
+# Secrets / entorno
+.env
+*.local
+
+# Dependencias
+node_modules/
+
+# Builds
+dist/
+build/
+
+# Bases de datos SQLite
+*.db
+*.db-journal
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editores
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paleta corporativa TIVIT: rojo y blanco.
+     El rojo está tomado directamente del logo oficial (frontend/public/media/logos/logo-tivit.png). */
+  --color-tivit-red: #f20026;
+  --color-tivit-red-dark: #b3001c;
+  --color-tivit-red-light: #ffecef;
+  --color-tivit-ink: #1f2328;
+
+  /* Color de alerta, distinto del rojo de marca para no confundirse con él */
+  --color-alert: #b3261e;
+}
+
+body {
+  @apply bg-white text-tivit-ink antialiased;
+}
+
+/* Revelado suave al entrar en viewport (activado por IntersectionObserver). */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  will-change: opacity, transform;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Entrada escalonada del Hero al cargar. */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-anim {
+  opacity: 0;
+  animation: fade-in-up 0.6s ease forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .hero-anim {
+    opacity: 1;
+    transform: none;
+    animation: none;
+    transition: none;
+  }
+}
