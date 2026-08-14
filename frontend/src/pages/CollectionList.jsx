@@ -133,6 +133,7 @@ function Grupo({ titulo, items, coleccion, etiqueta, horizontal, cta }) {
             etiqueta={etiqueta}
             horizontal={horizontal}
             cta={cta}
+            almaviva={coleccion.ruta === "almaviva"}
           />
         ))}
       </div>

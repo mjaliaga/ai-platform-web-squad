@@ -1,4 +1,5 @@
 import items from "./items.json";
+import { productosAlmaviva } from "./almaviva";
 
 export const team = [
   { name: "Marjorie Guerra", role: "Gerente Digital", initials: "MG" },
@@ -266,6 +267,57 @@ export const colecciones = {
     cta: "Ver todas las PoC",
     agruparPor: null,
     items: pocs,
+  },
+
+  almaviva: {
+    ruta: "almaviva",
+    nombre: "Almaviva",
+    titulo: "Soluciones de IA de Almaviva Group",
+    intro:
+      "Portafolio de soluciones de inteligencia artificial de Almaviva Group, clasificadas por capacidad de IA. Explora cada una para conocer su alcance, clientes de referencia, arquitectura y condiciones de implementación.",
+    resumenPortada: "Soluciones y productos de IA del grupo",
+    cta: "Ver todas las soluciones",
+    sinClasificaciones: true,
+    tipoDestacado: null,
+    agruparPor: [
+      {
+        valor: "Documental y Conocimiento",
+        titulo: "IA Documental y del Conocimiento",
+        campo: "categoria",
+        etiqueta: "DOCUMENTAL",
+      },
+      {
+        valor: "Salud y Clínica",
+        titulo: "Salud y Clínica",
+        campo: "categoria",
+        etiqueta: "SALUD",
+      },
+      {
+        valor: "Conversacional y Atención al Cliente",
+        titulo: "Conversacional y Atención al Cliente",
+        campo: "categoria",
+        etiqueta: "CONVERSACIONAL",
+      },
+      {
+        valor: "Voz y Multimodal",
+        titulo: "Voz y Multimodal",
+        campo: "categoria",
+        etiqueta: "VOZ",
+      },
+      {
+        valor: "Analítica, Predicción y Riesgo",
+        titulo: "Analítica, Predicción y Riesgo",
+        campo: "categoria",
+        etiqueta: "ANALÍTICA",
+      },
+      {
+        valor: "Asistencia en Campo y Mantenimiento",
+        titulo: "Asistencia en Campo y Mantenimiento",
+        campo: "categoria",
+        etiqueta: "CAMPO",
+      },
+    ],
+    items: productosAlmaviva,
   },
 };
 

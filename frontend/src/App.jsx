@@ -3,11 +3,11 @@ import { listaColecciones } from "./data/contenido";
 import { PublicSite } from "./pages/PublicSite";
 import { CollectionList } from "./pages/CollectionList";
 import { CollectionDetail } from "./pages/CollectionDetail";
-import { AlmavivaPage } from "./pages/AlmavivaPage";
 import { Login } from "./pages/Login";
 import { Panel } from "./pages/Panel";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ScrollManager } from "./components/ScrollManager";
+
 
 function App() {
   return (
@@ -15,9 +15,8 @@ function App() {
       <ScrollManager />
       <Routes>
         <Route path="/" element={<PublicSite />} />
-        <Route path="/almaviva" element={<AlmavivaPage />} />
 
-        {/* Cada colección (proyectos, casos de uso, laboratorio, PoC) genera su
+        {/* Cada colección (proyectos, casos de éxito, laboratorio, PoC, almaviva) genera su
             página de listado y su ficha de detalle a partir de la misma vista. */}
         {listaColecciones.flatMap((coleccion) => [
           <Route

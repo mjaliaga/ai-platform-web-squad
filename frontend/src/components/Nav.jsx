@@ -40,16 +40,6 @@ export function Nav() {
               {coleccion.nombre}
             </NavLink>
           ))}
-          <NavLink
-            to="/almaviva"
-            className={({ isActive }) =>
-              `underline-offset-8 transition hover:text-tivit-red hover:underline ${
-                isActive ? "text-tivit-red" : ""
-              }`
-            }
-          >
-            Almaviva
-          </NavLink>
         </nav>
       </div>
     </header>

@@ -54,14 +54,6 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
-              <li>
-                <Link
-                  to="/almaviva"
-                  className="text-white/80 underline-offset-4 transition hover:text-white hover:underline"
-                >
-                  Almaviva
-                </Link>
-              </li>
             </ul>
           </nav>
 

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CirclePlay } from "lucide-react";
-import { EtiquetasItem } from "./Etiquetas";
+import { EtiquetasItem, EtiquetaCodigo, EtiquetaEstado } from "./Etiquetas";
 import { ClienteLinea } from "./ClienteLinea";
 import { ChipsStack } from "./ChipsStack";
 
@@ -15,6 +15,7 @@ export function ItemCard({
   etiqueta,
   horizontal = false,
   cta,
+  almaviva = false,
 }) {
   const nombre = item.nombreComercial || item.name;
   const descripcion = item.descripcion || item.description;
@@ -22,6 +23,8 @@ export function ItemCard({
   const tieneDemo = Boolean(video && !esVideoPlaceholder(video));
   const tieneEtiquetas = !sinEtiquetas && Boolean(item.codigo || item.tipo || item.estado);
   const textoCta = cta || (tieneDemo ? "Ver detalle y demo" : "Ver detalle");
+  const industrias = item.industrias || [];
+  const tituloAire = etiqueta || tieneEtiquetas || almaviva;
 
   return (
     <Link
@@ -37,6 +40,18 @@ export function ItemCard({
           </span>
         )}
 
+        {almaviva && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <EtiquetaCodigo codigo={item.codigo} />
+            <EtiquetaEstado estado={item.estado} />
+            {industrias.length > 0 && (
+              <span className="rounded-full bg-tivit-red-light px-2.5 py-0.5 text-xs font-semibold text-tivit-red-dark">
+                {industrias.length} {industrias.length === 1 ? "industria" : "industrias"}
+              </span>
+            )}
+          </div>
+        )}
+
         {tieneEtiquetas && (
           <EtiquetasItem
             item={item}
@@ -48,7 +63,7 @@ export function ItemCard({
 
         <h3
           className={`font-semibold text-tivit-red-dark group-hover:text-tivit-red ${
-            etiqueta || tieneEtiquetas ? "mt-3" : ""
+            tituloAire ? "mt-3" : ""
           }`}
         >
           {nombre}
