@@ -1,5 +1,6 @@
 import { Nav } from "./Nav";
 import { Footer } from "./Footer";
+import { BackToTop } from "./BackToTop";
 
 export function SiteLayout({ children }) {
   return (
@@ -7,6 +8,7 @@ export function SiteLayout({ children }) {
       <Nav />
       <main className="min-h-[calc(100vh-4rem)] flex-1">{children}</main>
       <Footer />
+      <BackToTop />
     </div>
   );
 }

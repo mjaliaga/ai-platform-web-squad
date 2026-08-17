@@ -1,4 +1,3 @@
-import { TechIcon } from "./TechIcon";
 import { useState } from "react";
 
 /**
@@ -6,7 +5,7 @@ import { useState } from "react";
  * Muestra hasta `limite` y agrupa el resto en "+N más", que se despliega al
  * pasar el mouse o al enfocarlo con el teclado.
  */
-export function ChipsStack({ tecnologias, limite = 4, iconos = false }) {
+export function ChipsStack({ tecnologias, limite = 4 }) {
   if (!tecnologias || tecnologias.length === 0) return null;
 
   const tecnologiasLimpias = normalizarTecnologias(tecnologias);
@@ -16,18 +15,14 @@ export function ChipsStack({ tecnologias, limite = 4, iconos = false }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {visibles.map((tecnologia) => (
-        <Chip key={tecnologia} iconos={iconos}>
-          {tecnologia}
-        </Chip>
+        <Chip key={tecnologia}>{tecnologia}</Chip>
       ))}
-      {ocultas.length > 0 && (
-        <MasTecnologias tecnologias={ocultas} iconos={iconos} />
-      )}
+      {ocultas.length > 0 && <MasTecnologias tecnologias={ocultas} />}
     </div>
   );
 }
 
-function MasTecnologias({ tecnologias, iconos }) {
+function MasTecnologias({ tecnologias }) {
   const [abierto, setAbierto] = useState(false);
 
   return (
@@ -43,9 +38,7 @@ function MasTecnologias({ tecnologias, iconos }) {
       </button>
       <span className={`absolute left-0 top-full z-20 mt-1 w-max max-w-64 flex-wrap gap-1.5 rounded-xl border border-gray-200 bg-white p-2 shadow-lg group-hover:flex group-focus-within:flex ${abierto ? "flex" : "hidden"}`}>
         {tecnologias.map((tecnologia) => (
-          <Chip key={tecnologia} iconos={iconos}>
-            {tecnologia}
-          </Chip>
+          <Chip key={tecnologia}>{tecnologia}</Chip>
         ))}
       </span>
     </span>
@@ -71,10 +64,9 @@ function normalizarTecnologias(tecnologias) {
   return [...new Set(tecnologias.flatMap((tecnologia) => ALIAS_TECNOLOGIAS[tecnologia] ?? [tecnologia]))];
 }
 
-function Chip({ children, iconos }) {
+function Chip({ children }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-      {iconos && <TechIcon nombre={children} />}
       {children}
     </span>
   );

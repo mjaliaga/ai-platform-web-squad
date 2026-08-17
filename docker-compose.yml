@@ -1,31 +1,57 @@
 services:
   backend:
-    build: ./backend
+    build: ./backend-rust
     restart: unless-stopped
     environment:
-      DATABASE_URL: file:/data/dev.db
-      JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: sqlite:///app/data/portal.db
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
-      SEED_USERS: ${SEED_USERS:-true}
       PORT: 3000
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-manuel.aliaga@tivit.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-tivit2026}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Manuel Aliaga}
     volumes:
-      - tivit-db:/data
+      - tivit-db:/app/data
     networks:
       - tivit
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frontend:
     build:
       context: ./frontend
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_SHOW_DEMO_CREDENTIALS: ${VITE_SHOW_DEMO_CREDENTIALS:-false}
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "${PORT:-8080}:8080"
     networks:
       - tivit
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   tivit-db:

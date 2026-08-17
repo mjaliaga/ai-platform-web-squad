@@ -1,0 +1,5 @@
+ALTER TABLE sprints ADD COLUMN risks TEXT NOT NULL DEFAULT '';
+ALTER TABLE sprints ADD COLUMN team_dependencies TEXT NOT NULL DEFAULT '';
+ALTER TABLE sprints ADD COLUMN third_party_dependencies TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE tasks ADD COLUMN deliverable TEXT NOT NULL DEFAULT '';

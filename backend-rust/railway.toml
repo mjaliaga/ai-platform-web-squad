@@ -1,0 +1,8 @@
+[build]
+cmd = "cargo build --release"
+
+[deploy]
+startCommand = "tivit-portal-backend"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"

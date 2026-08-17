@@ -1,32 +1,94 @@
-import { useState } from "react";
-import { getColeccion, itemsPublicados, VACIO_DEFAULT } from "../data/contenido";
+import { useEffect, useMemo, useState } from "react";
+import { getColeccion, cargarItems, itemsPublicados, VACIO_DEFAULT } from "../data/contenido";
 import { SiteLayout } from "../components/SiteLayout";
 import { Eyebrow } from "../components/SectionHeading";
 import { ItemCard } from "../components/ItemCard";
 import { FilterBar } from "../components/FilterBar";
+import { SkeletonCard } from "../components/Skeleton";
 
 /** Página de listado de una colección: /proyectos, /casos-de-exito, /laboratorio, /poc */
 export function CollectionList({ ruta }) {
   const coleccion = getColeccion(ruta);
-  const publicados = itemsPublicados(coleccion);
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let activo = true;
+    setError(false);
+    setItems(null);
+    cargarItems(coleccion)
+      .then((data) => activo && setItems(data))
+      .catch(() => activo && setError(true));
+    return () => {
+      activo = false;
+    };
+  }, [coleccion]);
 
   const [filtroTipo, setFiltroTipo] = useState("Todos");
   const [filtroEstado, setFiltroEstado] = useState("Todos");
 
+  const publicados = useMemo(() => (items ? itemsPublicados(items) : []), [items]);
+
   const soloArea = Boolean(coleccion.soloArea);
   const sinClasificaciones = Boolean(coleccion.sinClasificaciones);
-  const tipos = sinClasificaciones
-    ? []
-    : [...new Set(publicados.map((item) => item.tipo).filter(Boolean))];
-  const estados = soloArea || sinClasificaciones
-    ? []
-    : [...new Set(publicados.map((item) => item.estado).filter(Boolean))];
 
-  const filtrados = publicados.filter(
-    (item) =>
-      (filtroTipo === "Todos" || item.tipo === filtroTipo) &&
-      (filtroEstado === "Todos" || item.estado === filtroEstado)
+  const tipos = useMemo(() => {
+    if (sinClasificaciones) return [];
+    return [...new Set(publicados.map((item) => item.tipo).filter(Boolean))];
+  }, [publicados, sinClasificaciones]);
+
+  const estados = useMemo(() => {
+    if (soloArea || sinClasificaciones) return [];
+    return [...new Set(publicados.map((item) => item.estado).filter(Boolean))];
+  }, [publicados, soloArea, sinClasificaciones]);
+
+  const filtrados = useMemo(
+    () =>
+      publicados.filter(
+        (item) =>
+          (filtroTipo === "Todos" || item.tipo === filtroTipo) &&
+          (filtroEstado === "Todos" || item.estado === filtroEstado)
+      ),
+    [publicados, filtroTipo, filtroEstado]
   );
+
+  const grupos = useMemo(() => {
+    if (!coleccion.agruparPor) return null;
+    return coleccion.agruparPor.map((grupo) => {
+      const itemsGrupo = filtrados.filter((item) => item[grupo.campo ?? "tipo"] === grupo.valor);
+      return { ...grupo, items: itemsGrupo, horizontal: grupo.horizontal && itemsGrupo.length === 1 };
+    });
+  }, [coleccion, filtrados]);
+
+  if (!items) {
+    if (error) {
+      return (
+        <SiteLayout>
+          <div className="mx-auto max-w-6xl px-6 py-32 text-center text-tivit-ink/60">
+            No se pudieron cargar los contenidos.
+          </div>
+        </SiteLayout>
+      );
+    }
+    return (
+      <SiteLayout>
+        <div className="bg-gradient-to-b from-tivit-red-light to-white">
+          <div className="mx-auto max-w-6xl px-6 py-16">
+            <div className="skeleton h-4 w-28 rounded-full" />
+            <div className="skeleton mt-3 h-9 w-2/3 rounded-full" />
+            <div className="skeleton mt-3 h-4 w-1/2 rounded-full" />
+          </div>
+        </div>
+        <div className="mx-auto max-w-6xl px-6 pb-24 pt-10">
+          <div className="grid gap-6 md:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <SkeletonCard key={index} />
+            ))}
+          </div>
+        </div>
+      </SiteLayout>
+    );
+  }
 
   return (
     <SiteLayout>
@@ -72,20 +134,18 @@ export function CollectionList({ ruta }) {
               onTipo={setFiltroTipo}
               onEstado={setFiltroEstado}
               tipoEtiqueta={coleccion.filtroTipoEtiqueta}
+              items={publicados}
             />
 
-            {coleccion.agruparPor ? (
-              coleccion.agruparPor.map((grupo) => (
+            {grupos ? (
+              grupos.map((grupo) => (
                 <Grupo
                   key={grupo.valor}
                   titulo={grupo.titulo}
-                  items={filtrados.filter((item) => item[grupo.campo ?? "tipo"] === grupo.valor)}
+                  items={grupo.items}
                   coleccion={coleccion}
                   etiqueta={grupo.etiqueta}
-                  horizontal={
-                    grupo.horizontal &&
-                    filtrados.filter((item) => item[grupo.campo ?? "tipo"] === grupo.valor).length === 1
-                  }
+                  horizontal={grupo.horizontal}
                   cta={grupo.cta}
                 />
               ))
@@ -134,6 +194,8 @@ function Grupo({ titulo, items, coleccion, etiqueta, horizontal, cta }) {
             horizontal={horizontal}
             cta={cta}
             almaviva={coleccion.ruta === "almaviva"}
+            xms={coleccion.ruta === "xms"}
+            casosExito={coleccion.ruta === "casos-de-exito"}
           />
         ))}
       </div>

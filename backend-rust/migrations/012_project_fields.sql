@@ -1,0 +1,3 @@
+ALTER TABLE projects ADD COLUMN sector TEXT NOT NULL DEFAULT 'Proyecto';
+ALTER TABLE projects ADD COLUMN code TEXT NOT NULL DEFAULT '';
+ALTER TABLE projects ADD COLUMN po_user_id TEXT;

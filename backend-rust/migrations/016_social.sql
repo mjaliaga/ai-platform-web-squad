@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN linkedin TEXT;
+ALTER TABLE users ADD COLUMN github TEXT;

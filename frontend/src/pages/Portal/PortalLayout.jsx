@@ -1,0 +1,165 @@
+import { useEffect, useState } from "react";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { NotificationBell } from "./components/NotificationBell";
+
+const links = [
+  { to: "/portal", label: "Inicio", icon: Home, end: true },
+  { to: "/portal/projects", label: "Proyectos", icon: FolderKanban },
+  { to: "/portal/members", label: "Miembros", icon: Users },
+];
+
+export function PortalLayout() {
+  const { user, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setProfileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    function onScroll() {
+      setScrolled(window.scrollY > 8);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const navLinkClass = ({ isActive }) =>
+    `flex items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+      isActive
+        ? "bg-tivit-red text-white shadow-sm"
+        : "text-tivit-ink/70 hover:bg-tivit-red-light/70 hover:text-tivit-ink"
+    }`;
+
+  return (
+    <div className="min-h-screen bg-tivit-red-light/40">
+      <header
+        className={`sticky top-0 z-40 border-b border-black/5 bg-white/90 backdrop-blur-md transition-shadow ${
+          scrolled ? "shadow-sm" : ""
+        }`}
+      >
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="TIVIT">
+              <img src="/media/logos/logo-tivit-tile.png" alt="TIVIT" className="h-8 w-auto" />
+              <div className="hidden flex-col leading-tight sm:flex">
+                <span className="text-sm font-semibold tracking-tight text-tivit-ink">
+                  Portal del equipo
+                </span>
+                <span className="text-[11px] font-medium text-tivit-ink/45">
+                  Colaboración y seguimiento
+                </span>
+              </div>
+            </Link>
+            <nav className="ml-2 hidden items-center gap-1 lg:flex" aria-label="Principal">
+              {links.map((l) => (
+                <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
+                  <l.icon className="h-4 w-4" aria-hidden="true" />
+                  {l.label}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <NotificationBell />
+            <div className="relative">
+              <button
+                onClick={() => setProfileOpen((o) => !o)}
+                className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-tivit-red-light/70"
+                aria-haspopup="menu"
+                aria-expanded={profileOpen}
+              >
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-white shadow-sm"
+                  style={{ background: user?.avatar_color || "#dc2626" }}
+                >
+                  {user?.name?.[0]?.toUpperCase()}
+                </div>
+                <div className="hidden text-left md:block">
+                  <div className="max-w-[10rem] truncate text-sm font-semibold leading-tight text-tivit-ink">
+                    {user?.name}
+                  </div>
+                  <div className="max-w-[10rem] truncate text-xs leading-tight text-tivit-ink/50">
+                    {user?.email}
+                  </div>
+                </div>
+                <ChevronDown
+                  className={`hidden h-4 w-4 text-tivit-ink/40 transition-transform md:block ${
+                    profileOpen ? "rotate-180" : ""
+                  }`}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {profileOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-black/5 bg-white p-1.5 shadow-xl"
+                >
+                  <Link
+                    to="/portal/profile"
+                    role="menuitem"
+                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-tivit-ink transition hover:bg-tivit-red-light/70"
+                  >
+                    <div
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
+                      style={{ background: user?.avatar_color || "#dc2626" }}
+                    >
+                      {user?.name?.[0]?.toUpperCase()}
+                    </div>
+                    <span className="truncate">{user?.name}</span>
+                  </Link>
+                  <div className="my-1 border-t border-black/5" />
+                  <button
+                    onClick={logout}
+                    role="menuitem"
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-alert transition hover:bg-alert/10"
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden="true" /> Salir
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setMobileOpen((o) => !o)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/5 text-tivit-ink/70 transition hover:bg-tivit-red-light/70 lg:hidden"
+              aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={mobileOpen}
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
+
+        {mobileOpen && (
+          <nav
+            className="border-t border-black/5 bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden"
+            aria-label="Principal"
+          >
+            <div className="flex flex-col gap-1">
+              {links.map((l) => (
+                <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
+                  <l.icon className="h-4 w-4" aria-hidden="true" />
+                  {l.label}
+                </NavLink>
+              ))}
+            </div>
+          </nav>
+        )}
+      </header>
+
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <Outlet />
+      </main>
+    </div>
+  );
+}

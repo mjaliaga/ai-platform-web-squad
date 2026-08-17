@@ -10,10 +10,53 @@
 
   /* Color de alerta, distinto del rojo de marca para no confundirse con él */
   --color-alert: #b3261e;
+
+  /* Tipografía: Inter para texto, Sora para titulares. Empaquetadas con
+     @fontsource (sin dependencia de CDN). */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 body {
   @apply bg-white text-tivit-ink antialiased;
+}
+
+/* Titulares con la fuente display del sitio. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: var(--color-tivit-red);
+  color: #fff;
+}
+
+/* Barra de desplazamiento sutil, coherente con la marca. */
+@media (min-width: 1024px) {
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #e4e7eb;
+    border-radius: 9999px;
+    border: 2px solid #fff;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-tivit-red-light);
+  }
 }
 
 /* Revelado suave al entrar en viewport (activado por IntersectionObserver). */
@@ -46,6 +89,53 @@ body {
   animation: fade-in-up 0.6s ease forwards;
 }
 
+/* Fondo decorativo del Hero: gradiente mesh rojo + retícula de puntos. */
+@keyframes hero-mesh-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-3%, 2%, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.hero-mesh {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hero-mesh::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(38rem 30rem at 12% 8%, rgb(242 0 38 / 0.12), transparent 60%),
+    radial-gradient(30rem 26rem at 88% 16%, rgb(242 0 38 / 0.1), transparent 60%),
+    radial-gradient(26rem 30rem at 70% 90%, rgb(242 0 38 / 0.08), transparent 60%);
+  animation: hero-mesh-drift 14s ease-in-out infinite;
+  will-change: transform;
+}
+
+.hero-mesh::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(31 35 40 / 0.09) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(60% 60% at 30% 30%, #000 30%, transparent 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-mesh::before {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal,
   .hero-anim {
@@ -53,5 +143,57 @@ body {
     transform: none;
     animation: none;
     transition: none;
+  }
+}
+
+/* Esqueleto de carga: destello sutil sobre gris. */
+@keyframes skeleton-pulse {
+  0% {
+    background-color: #f0f2f5;
+  }
+  50% {
+    background-color: #e4e8ed;
+  }
+  100% {
+    background-color: #f0f2f5;
+  }
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* ---- Portal del equipo: refinamientos visuales ---- */
+
+/* Fondo suave de las tarjetas del portal. */
+.portal-card {
+  @apply rounded-2xl border border-black/5 bg-white shadow-sm;
+}
+
+/* Entrada sutil al montar tarjetas del portal. */
+@keyframes portal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.portal-rise {
+  animation: portal-rise 0.35s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-rise {
+    animation: none;
   }
 }

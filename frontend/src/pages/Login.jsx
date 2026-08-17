@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -17,7 +18,7 @@ export function Login() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate("/panel");
+      navigate(location.state?.from || "/portal", { replace: true });
     } catch (err) {
       setError(err.message || "No se pudo iniciar sesión");
     } finally {
@@ -26,9 +27,10 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-tivit-red-light px-6">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
-        <Link to="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-tivit-red hover:underline">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-tivit-red-light px-6">
+      <div className="hero-mesh" aria-hidden="true" />
+      <div className="relative w-full max-w-sm rounded-3xl border border-tivit-red-light bg-white p-8 shadow-xl shadow-tivit-red/10">
+        <Link to="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-tivit-red hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Volver al sitio
         </Link>
@@ -48,7 +50,7 @@ export function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-lg border border-tivit-red-light px-3 py-2 outline-none focus:border-tivit-red"
+              className="rounded-xl border border-tivit-red-light bg-white px-3.5 py-2.5 outline-none transition focus:border-tivit-red focus:ring-2 focus:ring-tivit-red/20"
               placeholder="tu.email@tivit.com"
             />
           </label>
@@ -59,13 +61,13 @@ export function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-lg border border-tivit-red-light px-3 py-2 outline-none focus:border-tivit-red"
+              className="rounded-xl border border-tivit-red-light bg-white px-3.5 py-2.5 outline-none transition focus:border-tivit-red focus:ring-2 focus:ring-tivit-red/20"
               placeholder="••••••••"
             />
           </label>
 
           {error && (
-            <p className="rounded-lg bg-alert/10 px-3 py-2 text-sm font-medium text-alert">
+            <p className="rounded-xl bg-alert/10 px-3.5 py-2.5 text-sm font-medium text-alert">
               {error}
             </p>
           )}
@@ -73,15 +75,11 @@ export function Login() {
           <button
             type="submit"
             disabled={submitting}
-            className="mt-2 rounded-full bg-tivit-red px-4 py-2 font-semibold text-white transition hover:bg-tivit-red-dark disabled:opacity-60"
+            className="mt-2 rounded-full bg-tivit-red px-4 py-2.5 font-semibold text-white shadow-sm shadow-tivit-red/25 transition hover:bg-tivit-red-dark hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Ingresando…" : "Ingresar"}
           </button>
         </form>
-
-        <p className="mt-6 text-xs text-tivit-ink/50">
-          Demo: demo@tivit.com / tivit2026
-        </p>
       </div>
     </div>
   );

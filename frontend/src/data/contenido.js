@@ -1,6 +1,3 @@
-import items from "./items.json";
-import { productosAlmaviva } from "./almaviva";
-
 export const team = [
   { name: "Marjorie Guerra", role: "Gerente Digital", initials: "MG" },
   { name: "Sergio Aguas", role: "Arquitecto IA", initials: "SA" },
@@ -17,9 +14,11 @@ export const team = [
  * comparten la misma forma, y por eso comparten también las mismas páginas de
  * listado y detalle.
  *
- * Los items de "proyectos", "casos-de-exito" y "laboratorio" se cargan de forma
- * incremental desde CSVs (data/*.csv) con el script scripts/cargar_proyectos.py,
- * que genera src/data/items.json. Cada item admite estos campos:
+ * Los items de "proyectos" y "laboratorio" se cargan de forma incremental desde
+ * CSVs (data/*.csv) con el script scripts/cargar_proyectos.py, que genera
+ * src/data/items.json. "almaviva", "xms" y "casos-de-exito" se cargan desde
+ * módulos de datos propios (almaviva.js, xms.js, casosExito.js). Cada item
+ * admite estos campos:
  *
  *   slug             (obligatorio) identificador para la URL: /coleccion/slug
  *   coleccion        colección a la que pertenece (proyectos, casos-de-exito, …)
@@ -161,11 +160,15 @@ const detallesProyectos = {
   },
 };
 
-const proyectos = items
-  .filter((item) => item.coleccion === "proyectos" && item.slug !== "prj-001-plataforma-gestion-comercial")
-  .map((item) => ({ ...item, ...(detallesProyectos[item.slug] ?? {}) }));
-const casosDeExito = items.filter((item) => item.coleccion === "casos-de-exito");
-const laboratorio = items.filter((item) => item.coleccion === "laboratorio");
+// Los items se cargan de forma diferida según la colección (ver cargarItems).
+const FUENTES = {
+  proyectos: "items",
+  "casos-de-exito": "casosExito",
+  laboratorio: "items",
+  poc: "poc",
+  almaviva: "almaviva",
+  xms: "xms",
+};
 
 // TODO: contenido de ejemplo pendiente de reemplazar por las PoC reales.
 const pocs = [
@@ -207,20 +210,57 @@ export const colecciones = {
     agruparPor: null,
     filtroTipoEtiqueta: "Cliente",
     tipoDestacado: null,
-    items: proyectos,
+    fuente: "items",
   },
 
   "casos-de-exito": {
     ruta: "casos-de-exito",
     nombre: "Casos de éxito",
-    titulo: "Problemas reales que hemos resuelto",
+    titulo: "Casos de éxito en Inteligencia Artificial y Datos",
     intro:
-      "Situaciones concretas en las que nuestro trabajo cambió la forma de operar de un equipo o un cliente.",
-    resumenPortada: "Problemas reales que hemos resuelto",
+      "Casos de éxito implementados en clientes corporativos y sector público. Cada caso describe el perfil del cliente, el alcance de la solución, la arquitectura técnica y el stack tecnológico.",
+    resumenPortada: "IA y datos en clientes reales",
     cta: "Ver todos los casos de éxito",
-    agruparPor: null,
-    soloArea: true,
-    items: casosDeExito,
+    sinClasificaciones: true,
+    agruparPor: [
+      {
+        valor: "Minería",
+        titulo: "Minería",
+        campo: "industria",
+        etiqueta: "MINERÍA",
+      },
+      {
+        valor: "Salud y Seguros",
+        titulo: "Salud y Seguros",
+        campo: "industria",
+        etiqueta: "SALUD",
+      },
+      {
+        valor: "Transporte e Infraestructura Aeroportuaria",
+        titulo: "Transporte e Infraestructura Aeroportuaria",
+        campo: "industria",
+        etiqueta: "AEROPUERTO",
+      },
+      {
+        valor: "Deporte y Tecnología (SportsTech)",
+        titulo: "Deporte y Tecnología (SportsTech)",
+        campo: "industria",
+        etiqueta: "SPORTSTECH",
+      },
+      {
+        valor: "Tecnología y Construcción (ConTech)",
+        titulo: "Tecnología y Construcción (ConTech)",
+        campo: "industria",
+        etiqueta: "CONTECH",
+      },
+      {
+        valor: "Sector Público y Transporte",
+        titulo: "Sector Público y Transporte",
+        campo: "industria",
+        etiqueta: "SECTOR PÚBLICO",
+      },
+    ],
+    fuente: "casosExito",
   },
 
   laboratorio: {
@@ -254,7 +294,7 @@ export const colecciones = {
       mensaje:
         "Aquí se irán publicando las investigaciones y los productos elaborados por el equipo.",
     },
-    items: laboratorio,
+    fuente: "items",
   },
 
   poc: {
@@ -266,7 +306,7 @@ export const colecciones = {
     resumenPortada: "Explorando nuevas ideas",
     cta: "Ver todas las PoC",
     agruparPor: null,
-    items: pocs,
+    fuente: "poc",
   },
 
   almaviva: {
@@ -317,7 +357,34 @@ export const colecciones = {
         etiqueta: "CAMPO",
       },
     ],
-    items: productosAlmaviva,
+    fuente: "almaviva",
+  },
+
+  xms: {
+    ruta: "xms",
+    nombre: "XMS",
+    titulo: "Portafolio de Agentes de Inteligencia Artificial",
+    intro:
+      "Agentes de IA para automatizar la atención, las operaciones y el cumplimiento. Conoce cada agente, su alcance, cliente de referencia, inversión y tecnologías.",
+    resumenPortada: "Agentes de IA",
+    cta: "Ver todos los agentes",
+    sinClasificaciones: true,
+    tipoDestacado: null,
+    agruparPor: [
+      {
+        valor: "especifico",
+        titulo: "Agentes específicos",
+        campo: "tipoAgente",
+        etiqueta: "ESPECÍFICO",
+      },
+      {
+        valor: "general",
+        titulo: "Agentes Generales",
+        campo: "tipoAgente",
+        etiqueta: "GENERAL",
+      },
+    ],
+    fuente: "xms",
   },
 };
 
@@ -333,15 +400,61 @@ export function getColeccion(ruta) {
   return colecciones[ruta];
 }
 
-/** Elementos con ficha propia (excluye los espacios reservados). */
-export function itemsPublicados(coleccion) {
-  return coleccion.items.filter((item) => !item.reservado);
+/**
+ * Carga diferida de los items de una colección. Los datos pesados
+ * (items.json, almaviva.js) se traen solo cuando la página los necesita,
+ * generando chunks separados en el bundle. El resultado se cachea por ruta
+ * para evitar re-importar y re-filtrar en cada llamada.
+ */
+const cacheItems = new Map();
+
+export async function cargarItems(coleccion) {
+  const fuente = FUENTES[coleccion?.ruta];
+  if (!fuente) return [];
+
+  if (cacheItems.has(coleccion.ruta)) {
+    return cacheItems.get(coleccion.ruta);
+  }
+
+  let resultado;
+  if (fuente === "poc") {
+    resultado = pocs;
+  } else if (fuente === "almaviva") {
+    const modulo = await import("./almaviva.js");
+    resultado = modulo.productosAlmaviva;
+  } else if (fuente === "xms") {
+    const modulo = await import("./xms.js");
+    resultado = modulo.agentesXms;
+  } else if (fuente === "casosExito") {
+    const modulo = await import("./casosExito.js");
+    resultado = modulo.casosExito;
+  } else if (fuente === "items") {
+    const { default: items } = await import("./items.json");
+    if (coleccion.ruta === "proyectos") {
+      resultado = items
+        .filter((item) => item.coleccion === "proyectos" && item.slug !== "prj-001-plataforma-gestion-comercial")
+        .map((item) => ({ ...item, ...(detallesProyectos[item.slug] ?? {}) }));
+    } else {
+      resultado = items.filter((item) => item.coleccion === coleccion.ruta);
+    }
+  } else {
+    resultado = [];
+  }
+
+  cacheItems.set(coleccion.ruta, resultado);
+  return resultado;
 }
 
-export function getItem(ruta, slug) {
+/** Elementos con ficha propia (excluye los espacios reservados). */
+export function itemsPublicados(items) {
+  return items.filter((item) => !item.reservado);
+}
+
+export async function getItem(ruta, slug) {
   const coleccion = getColeccion(ruta);
   if (!coleccion) return undefined;
-  return itemsPublicados(coleccion).find((item) => item.slug === slug);
+  const items = await cargarItems(coleccion);
+  return itemsPublicados(items).find((item) => item.slug === slug);
 }
 
 /** Indica si la ficha todavía no tiene contenido descriptivo. */

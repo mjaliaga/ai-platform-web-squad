@@ -8,10 +8,16 @@ node_modules/
 # Builds
 dist/
 build/
+target/
+
+# Rust
+**/*.rs.bk
 
 # Bases de datos SQLite
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 
 # Logs
 *.log
