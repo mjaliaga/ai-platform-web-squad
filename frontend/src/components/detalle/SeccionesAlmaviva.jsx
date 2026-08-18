@@ -17,7 +17,6 @@ import {
   Workflow,
   Wrench,
 } from "lucide-react";
-import { Eyebrow } from "../SectionHeading";
 import { Reveal } from "../Reveal";
 
 /** Secciones propias del portafolio de Almaviva: ficha de producto en tarjetas
@@ -40,7 +39,7 @@ export function SeccionesAlmaviva({ item }) {
       titulo: "Resultados esperados",
       icono: TrendingUp,
       visible: resultados.length > 0,
-      cuerpo: <ListaIcono icono={CircleCheck} tono="text-emerald-600" items={resultados} />,
+      cuerpo: <ListaIcono icono={CircleCheck} tono="text-almaviva-blue" items={resultados} />,
     },
     {
       titulo: "Prerrequisitos",
@@ -95,10 +94,12 @@ export function SeccionesAlmaviva({ item }) {
       {grupos.map((grupo) => (
         <Reveal key={grupo.titulo}>
           <section className="mb-14">
-            <Eyebrow>{grupo.titulo}</Eyebrow>
+            <span className="text-sm font-semibold uppercase tracking-wide text-almaviva-blue">
+              {grupo.titulo}
+            </span>
             <div className="mt-4 grid items-start gap-5 md:grid-cols-2">
               {grupo.secciones.map((seccion) => (
-                <TarjetaSeccion key={seccion.titulo} icono={seccion.icono} titulo={seccion.titulo}>
+                <TarjetaSeccion key={seccion.titulo} tema="almaviva" icono={seccion.icono} titulo={seccion.titulo}>
                   {seccion.cuerpo}
                 </TarjetaSeccion>
               ))}
@@ -110,9 +111,11 @@ export function SeccionesAlmaviva({ item }) {
       {item.contenidoExtra && (
         <Reveal>
           <section className="mb-14">
-            <Eyebrow>Información adicional</Eyebrow>
+            <span className="text-sm font-semibold uppercase tracking-wide text-almaviva-blue">
+              Información adicional
+            </span>
             <div className="mt-4">
-              <TarjetaSeccion icono={BookOpen} titulo="Contenido adicional">
+              <TarjetaSeccion tema="almaviva" icono={BookOpen} titulo="Contenido adicional">
                 <Parrafo texto={item.contenidoExtra} />
               </TarjetaSeccion>
             </div>
@@ -123,13 +126,55 @@ export function SeccionesAlmaviva({ item }) {
   );
 }
 
-/** Tarjeta de sección con icono y título, base de la ficha de producto Almaviva. */
-export function TarjetaSeccion({ icono: Icono, titulo, children }) {
+/** Temas de color de las tarjetas de sección según la colección de marca. */
+const TEMAS_TARJETA = {
+  tivit: {
+    borde: "border-tivit-red-light",
+    titulo: "text-tivit-red-dark",
+    iconoCaja: "bg-tivit-red-light text-tivit-red",
+  },
+  xms: {
+    borde: "border-xms-blue-light",
+    titulo: "text-xms-blue-dark",
+    iconoCaja: "bg-xms-blue-light text-xms-blue",
+  },
+  almaviva: {
+    borde: "border-almaviva-blue-light",
+    titulo: "text-almaviva-blue-dark",
+    iconoCaja: "bg-almaviva-blue-light text-almaviva-blue",
+  },
+  exito: {
+    borde: "border-exito-green-light",
+    titulo: "text-exito-green-dark",
+    iconoCaja: "bg-exito-green-light text-exito-green",
+  },
+  labs: {
+    borde: "border-labs-celeste-light",
+    titulo: "text-labs-celeste-dark",
+    iconoCaja: "bg-labs-celeste-light text-labs-celeste",
+  },
+  proyectos: {
+    borde: "border-proyectos-orange-light",
+    titulo: "text-proyectos-orange-dark",
+    iconoCaja: "bg-proyectos-orange-light text-proyectos-orange",
+  },
+  poc: {
+    borde: "border-poc-blue-light",
+    titulo: "text-poc-blue-dark",
+    iconoCaja: "bg-poc-blue-light text-poc-blue",
+  },
+};
+
+/** Tarjeta de sección con icono y título, base de la ficha de producto Almaviva.
+ *  `tema` elige la paleta (tivit por defecto, xms o almaviva). */
+export function TarjetaSeccion({ icono: Icono, titulo, children, tema = "tivit" }) {
+  const t = TEMAS_TARJETA[tema];
+
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-tivit-red-light bg-white p-6 shadow-sm">
-      <h3 className="flex items-center gap-3 text-base font-bold text-tivit-red-dark">
+    <article className={`flex h-full flex-col rounded-2xl border ${t.borde} bg-white p-6 shadow-sm`}>
+      <h3 className={`flex items-center gap-3 text-base font-bold ${t.titulo}`}>
         <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tivit-red-light text-tivit-red"
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.iconoCaja}`}
           aria-hidden="true"
         >
           <Icono className="h-5 w-5" />

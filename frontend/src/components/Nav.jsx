@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
-import { listaColecciones } from "../data/contenido";
+import { Menu, X, ExternalLink } from "lucide-react";
+import { listaColecciones, enlacesExternos } from "../data/contenido";
 
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
@@ -56,6 +56,18 @@ export function Nav() {
               {coleccion.nombre}
             </NavLink>
           ))}
+          {enlacesExternos.map((enlace) => (
+            <a
+              key={enlace.nombre}
+              href={enlace.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2 text-tivit-ink/75 hover:bg-tivit-red-light/60 hover:text-tivit-red"
+            >
+              {enlace.nombre}
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            </a>
+          ))}
           <NavLink
               to="/portal"
               className={({ isActive }) =>
@@ -102,6 +114,18 @@ export function Nav() {
               >
                 {coleccion.nombre}
               </NavLink>
+            ))}
+            {enlacesExternos.map((enlace) => (
+              <a
+                key={enlace.nombre}
+                href={enlace.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl px-4 py-3 text-sm font-semibold transition text-tivit-ink/75 hover:bg-tivit-red-light/60 hover:text-tivit-red"
+              >
+                {enlace.nombre}
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
             ))}
             <NavLink
               to="/portal"

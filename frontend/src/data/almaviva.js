@@ -33,7 +33,7 @@ Identificación de cambios a lo largo del tiempo, así como de similitudes y var
 Identificación de posibles impactos sobre casos específicos.
 Consultas conversacionales en lenguaje natural, facilitando el acceso y análisis de la información.
 Generación automática de resúmenes y explicaciones de documentos y actos complejos, como resoluciones, reglamentos y normativas.`,
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1E86Ungvkxlc7BmUDy-3hfpQGtgik_Q3N/preview" },
     clientesReferencia: `Parte de un concepto diseñado para una entidad del Gobierno Central (AGEA – Agencia Nacional Italiana para la Agricultura) y sus áreas de Legal y Compliance.
 Parte de una solución diseñada para Administraciones Regionales, orientada a la búsqueda y consulta de procedimientos y normativa aplicable.`,
     gtm: `Solución dirigida a entidades gubernamentales y empresas medianas y grandes que cuenten con áreas legales y/o de cumplimiento (Compliance) estructuradas.
@@ -69,7 +69,7 @@ Primera arquitectura en evaluación: modelo híbrido, con front-end y middleware
     cronogramaRiesgos: `El plazo depende en gran medida de la complejidad del cliente. Para una entidad gubernamental de alta complejidad, la implementación suele tomar entre 6 y 8 meses, debido a la necesidad de alinear las distintas áreas internas, incluyendo los equipos de TI y técnicos.
 Para una empresa privada pequeña o mediana, el plazo puede reducirse a aproximadamente 2 a 3 meses.`,
     servicios: `Altamente dependiente de la tecnología objetivo y de la arquitectura asociada.
-Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva + TIVIT), considerando los clientes en pipeline, su tamaño y la tecnología que mejor se adapte a sus necesidades.`,
+Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva Group + TIVIT), considerando los clientes en pipeline, su tamaño y la tecnología que mejor se adapte a sus necesidades.`,
     licenciamiento: `Implementación: costo por única vez, asociado al esfuerzo del equipo + infraestructura de desarrollo.
 Mantenimiento: costo recurrente, con diferentes niveles de servicio:
 Soporte y corrección de errores (bug fixing).
@@ -117,7 +117,7 @@ La solución incorpora funcionalidades de Retrieval-Augmented Generation (RAG) a
 La IA Generativa se aplica sobre plantillas y procesos controlables y validables, permitiendo automatizar múltiples controles de consistencia y coherencia, mejorar el cumplimiento normativo (compliance) y reducir el esfuerzo requerido para la preparación de las licitaciones.
 
 Como resultado, se logra una simplificación y aceleración de los procesos, manteniendo además referencias verificables y trazables a las fuentes de origen.`,
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1Pjopy021-Xw6049zt6S4GWi2GR43Ze1m/preview" },
     clientesReferencia: `Desarrollada para la entidad de compras de la Región de Emilia-Romaña (IntercentER).
 Los principales desafíos están relacionados con la gestión de la Base de Conocimiento (Knowledge Base – KB), compuesta por licitaciones anteriores similares, así como con la identificación y aplicación de la normativa correspondiente para garantizar una correcta elaboración de los procesos de licitación.
 Otro factor relevante de complejidad es la cantidad de códigos CPV (Common Procurement Vocabulary) que deben ser mapeados y gestionados por la solución.`,
@@ -151,7 +151,7 @@ Los criterios de éxito deberán ser definidos y acordados con el cliente.`,
     cronogramaRiesgos: `El plazo depende en gran medida de la complejidad del cliente. Para una entidad gubernamental de alta complejidad, la implementación suele tomar entre 6 y 8 meses, debido a la necesidad de alinear las distintas áreas internas, incluyendo los equipos de TI y técnicos.
 Para una empresa privada pequeña o mediana, el plazo puede reducirse a aproximadamente 2 a 3 meses.`,
     servicios: `Altamente dependiente de la tecnología objetivo y de la arquitectura asociada.
-Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
+Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva Group + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
     licenciamiento: `Implementación: costo por única vez, asociado al esfuerzo del equipo + infraestructura de desarrollo.
 Mantenimiento: costo recurrente, con distintos niveles de servicio:
 Soporte y corrección de errores (bug fixing).
@@ -172,7 +172,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
     descripcion: "Plataforma con paneles laterales de apoyo para reformular documentos.",
     descripcionLarga:
       "Soporte para cumplimiento normativo, reformulación o parafraseo de lenguaje y navegación asistida en portales.",
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/16jtFYckxF_X2fy3sOVC75H9eOrgVvM9p/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -212,7 +212,7 @@ Posibilidad de combinar la reutilización de datos —incluyendo su uso con IA�
 Identificación de entidades nominales considerando también el contexto, por ejemplo, las partes involucradas en un determinado caso o expediente.
 Posibilidad de realizar despliegues on-premise, reforzando la seguridad y protección de la información.
 Capacidad para procesar grandes volúmenes de datos de manera eficiente y confiable, reduciendo los tiempos de revisión y facilitando una gestión estructurada del cumplimiento normativo.`,
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1Mmodu6go3wTIXPGD2_R3coij2dKTae2p/preview" },
     clientesReferencia: `Desarrollada para el Ministerio de Justicia de Italia (DG SIA).
 Desarrollada para la Corte Suprema de Justicia de Italia (Corte di Cassazione).
 Ofrecida al INPS (Instituto Nacional de Seguridad Social de Italia), para la publicación de sentencias de interés.
@@ -253,7 +253,7 @@ Para una entidad gubernamental de alta complejidad, la implementación suele tom
 Para una empresa privada pequeña o mediana, el plazo puede reducirse a aproximadamente 2 a 3 meses.
 Un piloto sobre un conjunto de datos previamente definido puede implementarse en aproximadamente 4 a 6 semanas.`,
     servicios: `Altamente dependiente de la tecnología objetivo y de la arquitectura asociada.
-Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
+Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva Group + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
     licenciamiento: `Implementación: costo por única vez, asociado al esfuerzo del equipo + infraestructura de desarrollo.
 Mantenimiento: costo recurrente, con diferentes niveles de servicio:
 Soporte y corrección de errores (bug fixing).
@@ -275,7 +275,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
       'Interfaz en pantalla con un avatar virtual femenino y paneles de texto, diseñada para el soporte sin reemplazo del personal médico (Human in the Loop).',
     descripcionLarga:
       'Transcripción estructurada en vivo ("speech-to-text") con identificación de hablante, recuperación de datos del paciente mediante comandos de voz y redacción automática de informes quirúrgicos sujetos a validación humana.',
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1knuOxdWPMhpU3PyKYPf-AqITl2FC57l8/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -312,7 +312,7 @@ Extracción de datos a partir de informes clínicos, notas y registros.
 Capacidad para reconocer acrónimos, terminología especializada y unidades de medida.
 Posibilidad de realizar consultas avanzadas sobre los datos y la información recopilada.
 Transformación de datos no estructurados en conocimiento estructurado y utilizable.`,
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1OYh85AFaHvzf8_nMh8q5WLUpAIuk5TKO/preview" },
     clientesReferencia: `Desarrollada para un hospital italiano (S. Giuseppe Moscati, Avellino, Campania).
 El principal desafío está relacionado con el cumplimiento de las normativas de privacidad y protección de datos. Por ello, es fundamental diseñar la arquitectura y seleccionar el LLM adecuado, de acuerdo con las políticas y requerimientos específicos del cliente.`,
     gtm: `Solución desarrollada para el sector Salud (Healthcare).
@@ -347,7 +347,7 @@ Para una entidad gubernamental de alta complejidad, la implementación suele tom
 Para una empresa privada pequeña o mediana, el plazo puede reducirse a aproximadamente 2 a 3 meses.
 Un piloto sobre un conjunto de datos previamente definido puede implementarse en aproximadamente 4 a 6 semanas.`,
     servicios: `Altamente dependiente de la tecnología objetivo y de la arquitectura asociada.
-Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
+Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva Group + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
     licenciamiento: `Implementación: costo por única vez, asociado al esfuerzo del equipo + infraestructura de desarrollo.
 Mantenimiento: costo recurrente, con diferentes niveles de servicio:
 Soporte y corrección de errores (bug fixing).
@@ -381,7 +381,7 @@ Reducción del tiempo de elaboración de documentos y de la carga administrativa
 Mayor consistencia en la estructura y completitud de la información.
 Reducción del riesgo de omisiones de información clínicamente relevante.
 Posibilidad de personalización y actualización continua de la solución.`,
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1X0WfpZpMuCO2T0W6HtyEPqiJtfD39uvF/preview" },
     clientesReferencia: `Desarrollada para un hospital italiano (S. Pio, Benevento, Campania).
 El principal desafío está relacionado con el cumplimiento de las normativas de privacidad y protección de datos. Por ello, es fundamental diseñar la arquitectura y seleccionar el LLM adecuado, de acuerdo con las políticas y requerimientos específicos del cliente.`,
     gtm: `Solución desarrollada para el sector Salud (Healthcare).
@@ -417,7 +417,7 @@ Para una entidad gubernamental de alta complejidad, la implementación suele tom
 Para una empresa privada pequeña o mediana, el plazo puede reducirse a aproximadamente 2 a 3 meses.
 Un piloto sobre un conjunto de datos previamente definido puede implementarse en aproximadamente 4 a 6 semanas.`,
     servicios: `Altamente dependiente de la tecnología objetivo y de la arquitectura asociada.
-Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
+Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva Group + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
     licenciamiento: `Implementación: costo por única vez, asociado al esfuerzo del equipo + infraestructura de desarrollo.
 Mantenimiento: costo recurrente, con diferentes niveles de servicio:
 Soporte y corrección de errores (bug fixing).
@@ -439,7 +439,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
       "Un panel de control avanzado (dashboard) que consolida y organiza de manera visual toda la información compleja del paciente, integrando IA generativa para procesar y mostrar literatura médica actualizada pertinente al caso.",
     descripcionLarga:
       "Visualización de historiales médicos mediante gráficos de red interconectados, sugerencias y tips procesados por IA sobre posibles diagnósticos, y herramientas visuales para la planificación de dosis, terapias y rutas de tratamiento.",
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1U8lr002_gKvmjsLl47OghO3kqdHIEOgd/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -470,7 +470,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
       "Modelos analíticos y matemáticos de IA que evalúan el historial y los datos en tiempo real del paciente para anticipar escenarios clínicos adversos antes de que ocurran.",
     descripcionLarga:
       "Generación de indicadores de pronóstico para prever riesgos relacionados con enfermedades (como el riesgo de sepsis o complicaciones postoperatorias) y apoyo algorítmico preventivo para la toma de decisiones del personal de salud.",
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1gXS3zOrDSYRTxIxx71GEfYsnmbCt4sh4/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -501,7 +501,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
       'Representación de un usuario interactuando de forma autónoma con una plataforma asistida por IA (ilustrada con un pulpo robótico llamado "ROCCO AI"). Se menciona su implementación en un instituto financiero brasileño.',
     descripcionLarga:
       "Soporte en derechos de pensión no reclamados, recompras y contribuciones voluntarias, asistencia a empleadores en declaraciones y herramientas de búsqueda avanzada mediante IA Generativa.",
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/17VC2IQmNnEt4PBJyf_S2oubI-PKVrJNU/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -532,7 +532,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
       "Usuarios interactuando con dispositivos móviles para obtener información de tránsito apoyada por IA conversacional.",
     descripcionLarga:
       "Actualizaciones en tiempo real sobre cambios o retrasos, uso de agentes coordinados de IA con razonamiento avanzado y generación de salidas estructuradas para operaciones y reportes.",
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1rf6J4CUhPsU8RQR7ZfHPum3mm-Bd0Gjo/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -573,7 +573,7 @@ Mayor uniformidad y consistencia en las respuestas generadas.
 Reducción de tiempos y costos de capacitación de los equipos.
 Experiencia de usuario fluida e intuitiva, con uso inmediato e interacción mediante lenguaje natural.
 Análisis inmediatos y precisos, accesibles incluso sin necesidad de conocimientos de programación (no-code).`,
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1mUqQ0fwjmEfk6OxdSf9ATJQvrurjaLgM/preview" },
     clientesReferencia: `La solución ha sido desarrollada para Almaviva Experience, operación de BPO en Brasil.
 Los principales desafíos están relacionados con la diversidad de procesos y procedimientos que deben gestionarse según los distintos clientes finales atendidos por el Contact Center.
 La Base de Conocimiento (Knowledge Base) ha sido diseñada con especial rigurosidad, considerando que un mismo operador puede gestionar interacciones de múltiples clientes finales, cada uno con sus propios procedimientos y reglas.
@@ -615,7 +615,7 @@ Para un BPO de gran escala, la implementación suele tomar entre 5 y 6 meses.
 Para un BPO pequeño o mediano, el plazo puede reducirse a aproximadamente 2 a 3 meses.
 Un piloto sobre un conjunto de datos previamente definido puede implementarse en aproximadamente 4 a 6 semanas, siempre que se utilice un idioma ya soportado por la solución, como italiano o portugués.`,
     servicios: `Altamente dependiente de la tecnología objetivo y de la arquitectura asociada.
-Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
+Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva Group + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
     licenciamiento: `Implementación: costo por única vez, asociado al esfuerzo del equipo + infraestructura de desarrollo.
 Mantenimiento: costo recurrente, con diferentes niveles de servicio:
 Soporte y corrección de errores (bug fixing).
@@ -650,7 +650,7 @@ Consultas en lenguaje natural sobre datos estructurados.
 Generación de fichas técnicas estructuradas, incluso a partir de notas de voz poco estructuradas.
 Actualización directa de sistemas back-end y plataformas de Workforce Management.
 Herramientas de IA Generativa para la creación automática de resúmenes y reportes.`,
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/175HNShjkjiIz3BQPvSbEB2fsmlhEaYie/preview" },
     clientesReferencia: `La solución ha sido desarrollada para la empresa italiana de infraestructura ferroviaria (RFI), con el objetivo de facilitar el reporte de actividades de mantenimiento en modalidad manos libres (hands-free).
 Los principales desafíos están relacionados con la integración con los sistemas de Workforce Management (WFM), basados en SAP.`,
     gtm: `Solución dirigida a grandes clientes de los sectores Transporte, Energía & Utilities y Manufactura.
@@ -686,7 +686,7 @@ Para una entidad gubernamental de alta complejidad, la implementación suele tom
 Para una empresa privada pequeña o mediana, el plazo puede reducirse a aproximadamente 2 a 3 meses.
 Un primer piloto utilizando infraestructura externa puede implementarse en aproximadamente 4 a 6 semanas.`,
     servicios: `Altamente dependiente de la tecnología objetivo y de la arquitectura asociada.
-Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
+Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva Group + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
     licenciamiento: `Implementación: costo por única vez, asociado al esfuerzo del equipo + infraestructura de desarrollo.
 Mantenimiento: costo recurrente, con diferentes niveles de servicio:
 Soporte y corrección de errores (bug fixing).
@@ -715,8 +715,8 @@ Consulta inmediata de KPIs operativos, capas GIS, alarmas, eventos, incidentes h
 Mayor precisión y relevancia de la información obtenida automáticamente.
 Actualización rápida de la Base de Conocimiento (Knowledge Base), sin necesidad de reentrenar los modelos.
 Posibilidad de integración con servicios de voz para procesos de autenticación y búsqueda de información.`,
-    videoPromocional: null,
-    clientesReferencia: `La solución ha sido desarrollada como un servicio de valor agregado para la plataforma de monitoreo MoovA de Almaviva.
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1dWL-sVv5ydum_RpgfT5Wp7S7XND3AgNQ/preview" },
+    clientesReferencia: `La solución ha sido desarrollada como un servicio de valor agregado para la plataforma de monitoreo MoovA de Almaviva Group.
 Su principal valor diferencial es la capacidad de gestionar y consultar capas GIS, así como interpretar y explicar los KPIs de MoovA mediante lenguaje natural.
 El principal desafío está relacionado con la integración con los sistemas GIS y la capa de gestión de datos (Data Management Layer).`,
     gtm: `Capacidades de IA de valor agregado para soluciones verticales de Centros de Control (Control Rooms).
@@ -750,7 +750,7 @@ Para una entidad gubernamental de alta complejidad, la implementación suele tom
 Para una empresa privada pequeña o mediana, el plazo puede reducirse a aproximadamente 2 a 3 meses.
 Un primer piloto utilizando infraestructura externa puede implementarse en aproximadamente 4 a 6 semanas.`,
     servicios: `Altamente dependiente de la tecnología objetivo y de la arquitectura asociada.
-Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
+Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva Group + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
     licenciamiento: `Implementación: costo por única vez, asociado al esfuerzo del equipo + infraestructura de desarrollo.
 Mantenimiento: costo recurrente, con diferentes niveles de servicio:
 Soporte y corrección de errores (bug fixing).
@@ -782,7 +782,7 @@ Ejecución paso a paso de procedimientos de mantenimiento asistida por IA.
 Mayor productividad y efectividad de las intervenciones.
 Transferencia de conocimiento (Knowledge Transfer – KT) y capacitación en el puesto de trabajo (Training-on-the-Job) más rápidas.
 Mayor estandarización y consistencia en la ejecución de las actividades de mantenimiento entre los diferentes técnicos.`,
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1Um3OxC3gYTcB9jVR79nnWrb7xmgIv0TV/preview" },
     clientesReferencia: `La solución ha sido desarrollada para la empresa italiana de infraestructura ferroviaria (RFI).
 Uno de los principales desafíos está relacionado con la integración con el sistema de gestión documental IMAN.
 Adicionalmente, debido al gran volumen y complejidad de la base documental, la arquitectura RAG requiere un LLM multimodal, capaz de interpretar y procesar planos, tablas y esquemas técnicos, además de contenido textual.
@@ -820,7 +820,7 @@ Para una entidad gubernamental de alta complejidad, la implementación suele tom
 Para una empresa privada pequeña o mediana, el plazo puede reducirse a aproximadamente 2 a 3 meses.
 Un primer piloto utilizando infraestructura externa puede implementarse en aproximadamente 4 a 6 semanas.`,
     servicios: `Altamente dependiente de la tecnología objetivo y de la arquitectura asociada.
-Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
+Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva Group + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
     licenciamiento: `Implementación: costo por única vez, asociado al esfuerzo del equipo + infraestructura de desarrollo.
 Mantenimiento: costo recurrente, con diferentes niveles de servicio:
 Soporte y corrección de errores (bug fixing).
@@ -842,7 +842,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
       "Paneles de control (dashboards) mostrando mapas interactivos, gráficos circulares y métricas de rendimiento de la ciudad.",
     descripcionLarga:
       'Plataforma Big Data integrada que combina múltiples fuentes para generar KPIs urbanos, gemelos digitales ("Digital Twin") para simulaciones y apoyo a políticas, y aplicaciones para seguridad y gestión de áreas verdes urbanas.',
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1SfRwCeQZ894czIo-EWaAt994OqTK7d7z/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -873,7 +873,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
       "Mapa de calor (heatmap) interactivo de una zona urbana con una barra lateral de conversación por chat.",
     descripcionLarga:
       'Consultas conversacionales para explorar datos de la ciudad (ej. accidentes viales), detección automática de tendencias y anomalías, y generación de mapas de calor a partir de "prompts" simples.',
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/134HqYXYsmPpfaq9BSZ0aIZL38f8Ex1id/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -904,7 +904,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
       "Transmisión de video de una asamblea pública con transcripción de texto automatizada al margen de la pantalla.",
     descripcionLarga:
       "Subtítulos en tiempo real y lenguaje de señas para sesiones en vivo, transcripción y traducción multilingüe (soporte para docenas de idiomas), y transcripciones sincronizadas y buscables (texto-audio-video).",
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1vhWB_XMzXg1byZ1HTIXms4C5ycZjiv90/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -935,7 +935,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
       "Interfaz de chat corporativo integrada en un entorno de datos bancarios para realizar consultas financieras.",
     descripcionLarga:
       "Acceso conversacional a cuentas, transacciones y patrones de gasto; insights automatizados sobre comportamientos financieros y anomalías; y soporte de decisiones para asesores con recomendaciones personalizadas.",
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1T7yf1968eGRKSb8Sm4gH09-DFkdZ5VmY/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -966,7 +966,7 @@ Corrección de errores + monitoreo y optimización + actividades evolutivas, baj
       "Gráfico de dispersión cuadriculado y listas para clasificar grandes volúmenes de reportes.",
     descripcionLarga:
       "Clasificación automatizada de quejas, casos y reportes de alto volumen; detección de precedentes similares y reglas regulatorias; y apoyo a la toma de decisiones con supervisión humana.",
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1Dpqv-E6htUCTCW-Hhus7Z9DE4weLEBSE/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -1011,7 +1011,7 @@ Explicabilidad de las recomendaciones generadas por los modelos de IA.
 Identificación temprana de casos complejos, anómalos o de alto riesgo.
 Visibilidad consolidada del portafolio de siniestros para supervisores y responsables de operaciones.
 Capa de inteligencia escalable, aplicable de manera transversal a múltiples procesos del negocio asegurador.`,
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1P9HdApG7WotgAmszZMe77Bfv_qJCpIdb/preview" },
     clientesReferencia: `Concepto diseñado para ilustrar ejemplos de capacidades aplicables al ámbito de Customer Care / Atención al Cliente.
 Puede integrarse con capacidades de análisis de riesgo basadas en datos alternativos —como sentimiento y popularidad— y con soluciones de Inteligencia de Localización (Location Intelligence).`,
     gtm: `Solución especialmente adecuada para clientes con operaciones de Contact Center.
@@ -1045,7 +1045,7 @@ El esfuerzo, plazo y nivel de riesgo dependerán principalmente de la complejida
 Si el cliente ya cuenta con una plataforma madura de Contact Center Omnicanal —por ejemplo, Genesys, Five9 o Avaya—, el esfuerzo de integración puede reducirse, con una estimación aproximada de 12 a 16 semanas. Sin embargo, en este escenario se deberá considerar la competencia con proveedores especializados de Workforce Optimization (WFO), como Verint.
 Si el cliente no dispone de una plataforma omnicanal madura, el esfuerzo de integración puede ser significativamente mayor y extenderse por varios meses. No obstante, en este escenario podría existir menor competencia directa con plataformas Enterprise especializadas, como Verint o NICE.`,
     servicios: `Altamente dependiente de la tecnología objetivo y de la arquitectura asociada.
-Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
+Se requiere un co-diseño de la estrategia Go-to-Market (Almaviva Group + TIVIT), considerando los clientes en pipeline, su tamaño y el tipo de tecnología que mejor se adapte a sus necesidades.`,
     licenciamiento: `Implementación (Realization): costo por única vez, asociado al esfuerzo del equipo + infraestructura de desarrollo.
 Mantenimiento: costo recurrente, con diferentes niveles de servicio:
 Soporte y corrección de errores (bug fixing).
@@ -1103,7 +1103,7 @@ Desarrollo de negocio: foco en zonas con alta demanda y baja presión competitiv
       "Consiste en la aplicación de modelos de Inteligencia Artificial y analítica avanzada dentro del sistema de gestión (SWMS) para monitorear continuamente el estado de la infraestructura hídrica. Su objetivo es identificar patrones de comportamiento inusuales en tiempo real que puedan indicar fallas, optimizando así la eficiencia operativa y previniendo pérdidas.",
     descripcionLarga:
       "Procesamiento de datos en tiempo real provenientes de más de 100,000 sensores e integraciones IoT y SCADA: Detección automatizada de fugas, caídas de presión o irregularidades en los más de 110,000 km de red gestionada. Generación de alertas tempranas para habilitar labores de mantenimiento predictivo antes de que ocurra una rotura mayor.",
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1Q7HGxdPtk4cohHlRwsgdfnPym3VWI-T1/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -1134,7 +1134,7 @@ Desarrollo de negocio: foco en zonas con alta demanda y baja presión competitiv
       "Una interfaz interactiva que permite a los operadores, ingenieros y planificadores consultar datos espaciales y técnicos complejos de la red utilizando preguntas o comandos conversacionales cotidianos (lenguaje natural), en lugar de requerir conocimientos avanzados en lenguajes de consulta de bases de datos.",
     descripcionLarga:
       'Interacción directa con el módulo de Sistemas de Información Geográfica (GIS) para solicitar, mediante un "prompt" de texto, la visualización de áreas específicas de la red en el mapa interactivo. Consultas conversacionales para integrar y cruzar datos heterogéneos (ej. "muéstrame el estado operativo y las simulaciones de la red en esta zona geográfica"). Creación automatizada y fácil de reportes visuales basados en los datos territoriales y de infraestructura solicitados por el usuario.',
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1_kgMXzcUsZeFx3PBrIm3mkWLH6jG4YiN/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,
@@ -1165,7 +1165,7 @@ Desarrollo de negocio: foco en zonas con alta demanda y baja presión competitiv
       "Múltiples mapas geográficos mundiales con clústeres de puntos de interés, mapas de calor, y paneles de análisis de sentimiento con métricas de cuota de mercado (251M+ puntos de interés, 5000+ destinos monitoreados).",
     descripcionLarga:
       "Herramientas para fortalecer redes de ventas y estudiar nuevos mercados, aumento del atractivo de los territorios a través de KPIs y tableros que combinan datos alternativos, datos de mercado, análisis de sentimientos e IA Generativa.",
-    videoPromocional: null,
+    videoPromocional: { tipo: "drive", url: "https://drive.google.com/file/d/1lPLq1ghxkQT3qgtxc5XQvmXC-b9OpHcR/preview" },
     clientesReferencia: null,
     gtm: null,
     prerrequisitos: null,

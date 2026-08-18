@@ -12,7 +12,7 @@ export const casosExito = [
     pais: "Perú",
     estado: "Implementado en Producción",
     plazo: "2 meses",
-    inversion: "USD 8.000",
+    precio: "USD 8.000",
     cliente: "ADP",
     descripcion:
       "Extracción automática de metadatos de documentos PDF con IA generativa para autocompletar el portal SharePoint de ADP.",
@@ -32,7 +32,7 @@ export const casosExito = [
     pais: "Argentina",
     estado: "Implementado en Pre-Producción",
     plazo: "3 meses",
-    inversion: "USD 5.000",
+    precio: "USD 5.000",
     cliente: "AccessFan",
     descripcion:
       "Plataforma web para la recepción, análisis, moderación y aprobación de videos enviados por hinchas, integrada a AccessFan.",
@@ -59,7 +59,7 @@ export const casosExito = [
     pais: "Perú",
     estado: "Implementado en Producción",
     plazo: "3 meses",
-    inversion: "USD 55.000 (75% Portal + 25% Chatbot AI)",
+    precio: "USD 55.000 (75% Portal + 25% Chatbot AI)",
     cliente: "Minera Antamina",
     descripcion:
       "Portal web de mantenimiento de maquinaria con dashboard centralizado, seguimiento de órdenes de trabajo y módulo GenAI de consultas por lenguaje natural.",
@@ -93,7 +93,7 @@ export const casosExito = [
     pais: "Chile",
     estado: "Implementado en Producción",
     plazo: "3 meses",
-    inversion: null,
+    precio: null,
     cliente: "Subsecretaría de Transporte",
     descripcion:
       "Plataforma PaaS de Big Data sobre AWS para gestionar y analizar grandes volúmenes de datos semiestructurados del sistema de transporte de Chile.",
@@ -126,7 +126,7 @@ export const casosExito = [
     pais: "Perú",
     estado: "Implementado en Producción",
     plazo: "3 meses",
-    inversion: "PEN 125.500",
+    precio: "PEN 125.500",
     cliente: "Makers150",
     descripcion:
       "Azure Data Platform con Microsoft Fabric para integrar, transformar y explotar grandes volúmenes de información mediante Power BI.",
@@ -153,7 +153,7 @@ export const casosExito = [
     pais: "Perú",
     estado: "Implementado en Producción",
     plazo: "4 meses",
-    inversion: "PEN 61.910",
+    precio: "PEN 61.910",
     cliente: "Pacífico Salud",
     descripcion:
       "Cloud Data Lakehouse en Microsoft Azure para centralizar, integrar y procesar información de salud y seguros con gobernanza de datos.",

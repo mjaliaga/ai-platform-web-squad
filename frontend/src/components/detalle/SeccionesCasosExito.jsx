@@ -1,5 +1,4 @@
 import { Cpu, Target, UserRound, Wrench } from "lucide-react";
-import { Eyebrow } from "../SectionHeading";
 import { Reveal } from "../Reveal";
 import { Parrafo, TarjetaSeccion, ListaIcono } from "./SeccionesAlmaviva";
 
@@ -42,10 +41,12 @@ export function SeccionesCasosExito({ item }) {
     <div className="mt-16">
       <Reveal>
         <section className="mb-14">
-          <Eyebrow>Detalle del caso</Eyebrow>
+          <span className="text-sm font-semibold uppercase tracking-wide text-exito-green">
+            Detalle del caso
+          </span>
           <div className="mt-4 grid items-start gap-5 md:grid-cols-2">
             {secciones.map((seccion) => (
-              <TarjetaSeccion key={seccion.titulo} icono={seccion.icono} titulo={seccion.titulo}>
+              <TarjetaSeccion key={seccion.titulo} tema="exito" icono={seccion.icono} titulo={seccion.titulo}>
                 {seccion.cuerpo}
               </TarjetaSeccion>
             ))}

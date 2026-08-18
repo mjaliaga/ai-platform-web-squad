@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { Mail, ExternalLink } from "lucide-react";
-import { listaColecciones } from "../data/contenido";
+import { ExternalLink } from "lucide-react";
+import { listaColecciones, enlacesExternos } from "../data/contenido";
 
 function LinkedInIcon() {
   return (
@@ -54,6 +54,19 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              {enlacesExternos.map((enlace) => (
+                <li key={enlace.nombre}>
+                  <a
+                    href={enlace.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-white/80 underline-offset-4 transition hover:text-white hover:underline"
+                  >
+                    {enlace.nombre}
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                </li>
+              ))}
             </ul>
           </nav>
 
@@ -64,11 +77,13 @@ export function Footer() {
             <ul className="mt-3 flex flex-col gap-3 text-sm text-white/80">
               <li>
                 <a
-                  href="mailto:contacto@tivit.com"
+                  href="https://tivit.com/es/nova-home-espanhol/"
+                  target="_blank"
+                  rel="noreferrer"
                   className="group inline-flex items-center gap-2 underline-offset-4 transition hover:text-white hover:underline"
                 >
-                  <Mail className="h-4 w-4 text-white/60 transition group-hover:text-white" />
-                  contacto@tivit.com
+                  <ExternalLink className="h-4 w-4 text-white/60 transition group-hover:text-white" />
+                  TIVIT — Nova Home
                 </a>
               </li>
               <li>

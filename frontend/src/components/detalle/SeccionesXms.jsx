@@ -6,7 +6,6 @@ import {
   TrendingUp,
   Workflow,
 } from "lucide-react";
-import { Eyebrow } from "../SectionHeading";
 import { Reveal } from "../Reveal";
 import { Parrafo, TarjetaSeccion, ListaIcono } from "./SeccionesAlmaviva";
 
@@ -41,7 +40,7 @@ export function SeccionesXms({ item }) {
       titulo: "Beneficios / Valor Entregado",
       icono: TrendingUp,
       visible: beneficios.length > 0,
-      cuerpo: <ListaIcono icono={CircleCheck} tono="text-emerald-600" items={beneficios} />,
+      cuerpo: <ListaIcono icono={CircleCheck} tono="text-xms-green" items={beneficios} />,
     },
     {
       titulo: "Integraciones",
@@ -57,10 +56,12 @@ export function SeccionesXms({ item }) {
     <div className="mt-16">
       <Reveal>
         <section className="mb-14">
-          <Eyebrow>Detalle del agente</Eyebrow>
+          <span className="text-sm font-semibold uppercase tracking-wide text-xms-blue">
+            Detalle del agente
+          </span>
           <div className="mt-4 grid items-start gap-5 md:grid-cols-2">
             {secciones.map((seccion) => (
-              <TarjetaSeccion key={seccion.titulo} icono={seccion.icono} titulo={seccion.titulo}>
+              <TarjetaSeccion key={seccion.titulo} tema="xms" icono={seccion.icono} titulo={seccion.titulo}>
                 {seccion.cuerpo}
               </TarjetaSeccion>
             ))}

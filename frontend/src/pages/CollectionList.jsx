@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getColeccion, cargarItems, itemsPublicados, VACIO_DEFAULT } from "../data/contenido";
 import { SiteLayout } from "../components/SiteLayout";
 import { Eyebrow } from "../components/SectionHeading";
+import { BrandBanner } from "../components/BrandBanner";
 import { ItemCard } from "../components/ItemCard";
 import { FilterBar } from "../components/FilterBar";
 import { SkeletonCard } from "../components/Skeleton";
@@ -60,6 +61,52 @@ export function CollectionList({ ruta }) {
     });
   }, [coleccion, filtrados]);
 
+  const esXms = coleccion.ruta === "xms";
+  const esAlmaviva = coleccion.ruta === "almaviva";
+  const esExito = coleccion.ruta === "casos-de-exito";
+  const esLabs = coleccion.ruta === "laboratorio";
+  const esProyectos = coleccion.ruta === "proyectos";
+  const esPoc = coleccion.ruta === "poc";
+  const temaBanner = esXms
+    ? "xms"
+    : esAlmaviva
+      ? "almaviva"
+      : esExito
+        ? "exito"
+        : esLabs
+          ? "labs"
+          : esProyectos
+            ? "proyectos"
+            : esPoc
+              ? "poc"
+              : null;
+  const gradienteCarga = esXms
+    ? "bg-xms-blue-light"
+    : esAlmaviva
+      ? "bg-almaviva-blue-light"
+      : esExito
+        ? "bg-exito-green-light"
+        : esLabs
+          ? "bg-labs-celeste-light"
+          : esProyectos
+            ? "bg-proyectos-orange-light"
+            : esPoc
+              ? "bg-poc-blue-light"
+              : "bg-tivit-red-light";
+  const colorTituloGrupo = esXms
+    ? "text-xms-blue-dark"
+    : esAlmaviva
+      ? "text-almaviva-blue-dark"
+      : esExito
+        ? "text-exito-green-dark"
+        : esLabs
+          ? "text-labs-celeste-dark"
+          : esProyectos
+            ? "text-proyectos-orange-dark"
+            : esPoc
+              ? "text-poc-blue-dark"
+              : "text-tivit-red-dark";
+
   if (!items) {
     if (error) {
       return (
@@ -72,7 +119,7 @@ export function CollectionList({ ruta }) {
     }
     return (
       <SiteLayout>
-        <div className="bg-gradient-to-b from-tivit-red-light to-white">
+        <div className={`bg-gradient-to-b ${gradienteCarga} to-white`}>
           <div className="mx-auto max-w-6xl px-6 py-16">
             <div className="skeleton h-4 w-28 rounded-full" />
             <div className="skeleton mt-3 h-9 w-2/3 rounded-full" />
@@ -92,14 +139,14 @@ export function CollectionList({ ruta }) {
 
   return (
     <SiteLayout>
-      <div className="bg-gradient-to-b from-tivit-red-light to-white">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <Eyebrow>{coleccion.nombre}</Eyebrow>
-          <h1 className="mt-1 max-w-3xl text-4xl font-bold text-tivit-red-dark">
-            {coleccion.titulo}
-          </h1>
-          <p className="mt-3 max-w-2xl text-lg text-tivit-ink/70">{coleccion.intro}</p>
-          {coleccion.ruta === "laboratorio" && (
+      {temaBanner ? (
+        <BrandBanner
+          tema={temaBanner}
+          eyebrow={coleccion.nombre}
+          title={coleccion.titulo}
+          intro={coleccion.intro}
+        >
+          {esLabs && (
             <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
               <DatoLaboratorio
                 valor={publicados.length}
@@ -118,8 +165,18 @@ export function CollectionList({ ruta }) {
               />
             </div>
           )}
+        </BrandBanner>
+      ) : (
+        <div className="bg-gradient-to-b from-tivit-red-light to-white">
+          <div className="mx-auto max-w-6xl px-6 py-16">
+            <Eyebrow>{coleccion.nombre}</Eyebrow>
+            <h1 className="mt-1 max-w-3xl text-4xl font-bold text-tivit-red-dark">
+              {coleccion.titulo}
+            </h1>
+            <p className="mt-3 max-w-2xl text-lg text-tivit-ink/70">{coleccion.intro}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mx-auto max-w-6xl px-6 pb-24">
         {publicados.length === 0 ? (
@@ -147,10 +204,11 @@ export function CollectionList({ ruta }) {
                   etiqueta={grupo.etiqueta}
                   horizontal={grupo.horizontal}
                   cta={grupo.cta}
+                  colorTitulo={colorTituloGrupo}
                 />
               ))
             ) : (
-              <Grupo items={filtrados} coleccion={coleccion} />
+              <Grupo items={filtrados} coleccion={coleccion} colorTitulo={colorTituloGrupo} />
             )}
 
             {filtrados.length === 0 && (
@@ -167,20 +225,24 @@ export function CollectionList({ ruta }) {
 
 function DatoLaboratorio({ valor, etiqueta, detalle }) {
   return (
-    <div className="rounded-xl border border-white/80 bg-white/60 px-4 py-3 shadow-sm backdrop-blur-sm">
-      <p className="text-2xl font-bold text-tivit-red-dark">{valor}</p>
-      <p className="text-xs font-semibold uppercase tracking-wide text-tivit-red">{etiqueta}</p>
-      <p className="mt-1 text-xs text-tivit-ink/60">{detalle}</p>
+    <div className="rounded-xl border border-labs-celeste-light bg-white/60 px-4 py-3 shadow-sm backdrop-blur-sm">
+      <p className="text-2xl font-bold text-labs-celeste-dark">{valor}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-labs-pink">{etiqueta}</p>
+      <p className="mt-1 text-xs text-labs-ink/60">{detalle}</p>
     </div>
   );
 }
 
-function Grupo({ titulo, items, coleccion, etiqueta, horizontal, cta }) {
+function Grupo({ titulo, items, coleccion, etiqueta, horizontal, cta, colorTitulo = "text-tivit-red-dark" }) {
   if (items.length === 0) return null;
 
   return (
     <section className="pt-14">
-      {titulo && <h2 className="text-2xl font-bold text-tivit-red-dark">{titulo}</h2>}
+      {titulo && (
+        <h2 className={`text-2xl font-bold ${colorTitulo}`}>
+          {titulo}
+        </h2>
+      )}
       <div className={`grid gap-6 ${horizontal ? "mt-6" : titulo ? "mt-6 md:grid-cols-2" : "mt-2 md:grid-cols-2"}`}>
         {items.map((item) => (
           <ItemCard
@@ -196,6 +258,9 @@ function Grupo({ titulo, items, coleccion, etiqueta, horizontal, cta }) {
             almaviva={coleccion.ruta === "almaviva"}
             xms={coleccion.ruta === "xms"}
             casosExito={coleccion.ruta === "casos-de-exito"}
+            labs={coleccion.ruta === "laboratorio"}
+            proyectos={coleccion.ruta === "proyectos"}
+            poc={coleccion.ruta === "poc"}
           />
         ))}
       </div>

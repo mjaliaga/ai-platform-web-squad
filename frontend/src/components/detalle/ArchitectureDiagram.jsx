@@ -1,58 +1,10 @@
 import { Eyebrow } from "../SectionHeading";
 
+/** Diagrama de arquitectura para AuditIA. Para AssistDev se usa
+ *  `SeccionesLabs` con más detalle, así que aquí solo queda AuditIA. */
 export function ArchitectureDiagram({ tipo }) {
   if (tipo === "auditia") return <SecurityArchitectureDiagram />;
-
-  const agentes = ["orchestrator", "design", "control", "delivery"];
-  const mcps = ["Context7", "Playwright", "Docker", "Postgres", "GitHub"];
-
-  return (
-    <section className="pt-12">
-      <Eyebrow>Arquitectura del framework</Eyebrow>
-      <div className="mt-4 overflow-hidden rounded-2xl border border-tivit-red-light bg-tivit-ink p-6 text-white shadow-sm">
-        <div className="grid gap-6 md:grid-cols-[1fr_auto_1fr] md:items-center">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
-              Entrada
-            </p>
-            <div className="mt-2 rounded-xl border border-white/10 bg-white/10 p-4">
-              <p className="font-semibold">Necesidad de negocio</p>
-              <p className="mt-1 text-sm text-white/60">Contexto, requisitos y criterios de calidad</p>
-            </div>
-          </div>
-          <div className="hidden text-2xl text-tivit-red-light md:block" aria-hidden="true">→</div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
-              Capa agéntica
-            </p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {agentes.map((agente) => (
-                <div key={agente} className="rounded-lg border border-tivit-red bg-[#2D151A] px-3 py-2 text-center text-sm font-bold text-white">
-                  {agente}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
-              Capacidades MCP
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {mcps.map((mcp) => (
-                <span key={mcp} className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-white/75">
-                  {mcp}
-                </span>
-              ))}
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-white/50">+5 más</span>
-            </div>
-          </div>
-        </div>
-        <div className="mt-6 border-t border-white/10 pt-4 text-center text-sm text-white/60">
-          Skills especializadas · Gobernanza · Seguridad · Observabilidad · Código productivo
-        </div>
-      </div>
-    </section>
-  );
+  return null;
 }
 
 function SecurityArchitectureDiagram() {

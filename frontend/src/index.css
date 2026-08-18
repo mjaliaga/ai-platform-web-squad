@@ -11,6 +11,59 @@
   /* Color de alerta, distinto del rojo de marca para no confundirse con él */
   --color-alert: #b3261e;
 
+  /* Paleta de la sección XMS, tomada del logo oficial de XMS (imágenes/logo-xms).
+     Azul primario con acentos verde, amarillo y rojo del mismo logo. */
+  --color-xms-blue: #4060d0;
+  --color-xms-blue-dark: #2640a0;
+  --color-xms-blue-light: #edf1fc;
+  --color-xms-green: #00a040;
+  --color-xms-green-light: #e5f6ec;
+  --color-xms-yellow: #f0b000;
+  --color-xms-yellow-light: #fcf3d8;
+  --color-xms-red: #e05020;
+  --color-xms-red-light: #fcebe4;
+  --color-xms-ink: #17204a;
+
+  /* Paleta de la sección Almaviva, tomada del logo oficial de Almaviva
+     (imágenes/almaviva-logo.png): azul primario con acento azul claro. */
+  --color-almaviva-blue: #044897;
+  --color-almaviva-blue-dark: #02315f;
+  --color-almaviva-blue-light: #eaf1fa;
+  --color-almaviva-sky: #aab1d9;
+  --color-almaviva-ink: #0f2540;
+
+  /* Paleta de la sección Casos de Éxito: verde característico de la sección,
+     sobre el logo de TIVIT (rojo y blanco) que se mantiene como imagen. */
+  --color-exito-green: #059669;
+  --color-exito-green-dark: #047857;
+  --color-exito-green-light: #ecfdf5;
+  --color-exito-ink: #0e2f26;
+
+  /* Paleta de la sección Tivit Labs (antes Laboratorio), tomada del logo
+     oficial (imágenes/images.jpeg): gradiente celeste y rosado con letras
+     blancas. */
+  --color-labs-celeste: #25b7e6;
+  --color-labs-celeste-dark: #0f84b4;
+  --color-labs-celeste-light: #e7f7fd;
+  --color-labs-pink: #d32691;
+  --color-labs-pink-light: #fbe7f5;
+  --color-labs-ink: #0e2b36;
+
+  /* Paleta de la sección Proyectos: naranja característico, sobre el logo de
+     TIVIT (rojo y blanco) que se mantiene como imagen. */
+  --color-proyectos-orange: #f97316;
+  --color-proyectos-orange-dark: #c2410c;
+  --color-proyectos-orange-light: #fff3e8;
+  --color-proyectos-ink: #431407;
+
+  /* Paleta de la sección PoC: azul oscuro (blue-700/900) sobre el logo de
+     TIVIT (rojo y blanco) que se mantiene como imagen. Distinguible de Tivit
+     Labs (celeste) y de Almaviva/XMS (azules más claros). */
+  --color-poc-blue: #1d4ed8;
+  --color-poc-blue-dark: #1e3a8a;
+  --color-poc-blue-light: #dbeafe;
+  --color-poc-ink: #172554;
+
   /* Tipografía: Inter para texto, Sora para titulares. Empaquetadas con
      @fontsource (sin dependencia de CDN). */
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;

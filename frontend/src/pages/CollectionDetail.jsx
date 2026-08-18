@@ -5,11 +5,13 @@ import { getColeccion, getItem, contenidoPendiente } from "../data/contenido";
 import { SiteLayout } from "../components/SiteLayout";
 import { DemoVideo } from "../components/DemoVideo";
 import { Eyebrow } from "../components/SectionHeading";
+import { BrandBanner } from "../components/BrandBanner";
 import { EtiquetasItem, EtiquetaCodigo, EtiquetaTipo, EtiquetaEstado } from "../components/Etiquetas";
 import { ClienteLinea } from "../components/ClienteLinea";
 import { Reveal } from "../components/Reveal";
 import { iniciales, esVideoPlaceholder } from "../lib/utils";
 import { ArchitectureDiagram } from "../components/detalle/ArchitectureDiagram";
+import { SeccionesLabs } from "../components/detalle/SeccionesLabs";
 import { SidebarMeta, EquipoCard, EtiquetaCategoria } from "../components/detalle/SidebarMeta";
 import { Bloque, ListaProblemas, ListaPasos, ListaResultados } from "../components/detalle/Bloques";
 import { SeccionesAlmaviva, Parrafo } from "../components/detalle/SeccionesAlmaviva";
@@ -45,10 +47,57 @@ export function CollectionDetail({ ruta }) {
     };
   }, [ruta, slug]);
 
+  const esXms = ruta === "xms";
+  const esAlmaviva = ruta === "almaviva";
+  const esExito = ruta === "casos-de-exito";
+  const esLabs = ruta === "laboratorio";
+  const esProyectos = ruta === "proyectos";
+  const esPoc = ruta === "poc";
+  const temaBloques = esLabs ? "labs" : esProyectos ? "proyectos" : "tivit";
+  const gradienteCarga = esXms
+    ? "from-xms-blue-light"
+    : esAlmaviva
+      ? "from-almaviva-blue-light"
+      : esExito
+        ? "from-exito-green-light"
+        : esLabs
+          ? "from-labs-celeste-light"
+          : esProyectos
+            ? "from-proyectos-orange-light"
+            : esPoc
+              ? "from-poc-blue-light"
+              : "from-tivit-red-light";
+  const bordeSidebar = esXms
+    ? "border-xms-blue-light"
+    : esAlmaviva
+      ? "border-almaviva-blue-light"
+      : esExito
+        ? "border-exito-green-light"
+        : esLabs
+          ? "border-labs-celeste-light"
+          : esProyectos
+            ? "border-proyectos-orange-light"
+            : esPoc
+              ? "border-poc-blue-light"
+              : "border-tivit-red-light";
+  const acentoSidebar = esXms
+    ? "text-xms-blue"
+    : esAlmaviva
+      ? "text-almaviva-blue"
+      : esExito
+        ? "text-exito-green"
+        : esLabs
+          ? "text-labs-celeste"
+          : esProyectos
+            ? "text-proyectos-orange"
+            : esPoc
+              ? "text-poc-blue"
+              : "text-tivit-red";
+
   if (cargando) {
     return (
       <SiteLayout>
-        <div className="bg-gradient-to-b from-tivit-red-light to-white">
+        <div className={`bg-gradient-to-b ${gradienteCarga} to-white`}>
           <div className="mx-auto max-w-5xl px-6 py-14">
             <div className="skeleton h-4 w-40 rounded-full" />
             <div className="skeleton mt-6 h-9 w-2/3 rounded-full" />
@@ -70,7 +119,21 @@ export function CollectionDetail({ ruta }) {
           </p>
           <Link
             to={`/${coleccion.ruta}`}
-            className="mt-8 inline-block rounded-full bg-tivit-red px-6 py-3 font-semibold text-white transition hover:bg-tivit-red-dark"
+            className={`inline-block rounded-full px-6 py-3 font-semibold text-white transition active:scale-95 focus-visible:ring-2 focus-visible:ring-offset-2 ${
+              esXms
+                ? "bg-xms-blue hover:bg-xms-blue-dark focus-visible:ring-xms-blue"
+                : esAlmaviva
+                  ? "bg-almaviva-blue hover:bg-almaviva-blue-dark focus-visible:ring-almaviva-blue"
+                  : esExito
+                    ? "bg-exito-green hover:bg-exito-green-dark focus-visible:ring-exito-green"
+                    : esLabs
+                      ? "bg-labs-celeste hover:bg-labs-celeste-dark focus-visible:ring-labs-celeste"
+                      : esProyectos
+                        ? "bg-proyectos-orange hover:bg-proyectos-orange-dark focus-visible:ring-proyectos-orange"
+                        : esPoc
+                          ? "bg-poc-blue hover:bg-poc-blue-dark focus-visible:ring-poc-blue"
+                          : "bg-tivit-red hover:bg-tivit-red-dark focus-visible:ring-tivit-red"
+            }`}
           >
             {coleccion.cta}
           </Link>
@@ -104,7 +167,244 @@ export function CollectionDetail({ ruta }) {
   return (
     <SiteLayout>
       <article>
-        <header className="bg-gradient-to-b from-tivit-red-light to-white">
+        <header>
+        {esXms ? (
+          <BrandBanner
+            tema="xms"
+            title={nombre}
+            intro={
+              <>
+                {nombreProyecto && (
+                  <p className="italic text-xms-ink/55">{nombreProyecto}</p>
+                )}
+                {item.cliente && (
+                  <p className="mt-3 text-sm text-xms-ink/60">
+                    <span className="font-medium text-xms-ink/75">Cliente:</span>{" "}
+                    {item.cliente}
+                  </p>
+                )}
+                {descripcion && <p className="mt-1">{descripcion}</p>}
+              </>
+            }
+          >
+            <nav aria-label="Ruta de navegación" className="flex flex-wrap items-center gap-1 text-sm">
+              <Link
+                to={`/${coleccion.ruta}`}
+                className="rounded-md px-2 py-1 font-semibold text-xms-blue transition hover:bg-white/70 hover:underline"
+              >
+                {coleccion.nombre}
+              </Link>
+              <ChevronRight className="h-4 w-4 text-xms-ink/35" aria-hidden="true" />
+              <span className="rounded-md px-2 py-1 font-medium text-xms-ink/60">
+                {item.categoria}
+              </span>
+              <ChevronRight className="h-4 w-4 text-xms-ink/35" aria-hidden="true" />
+              <span className="max-w-full truncate rounded-md px-2 py-1 font-semibold text-xms-ink/75">
+                {nombre}
+              </span>
+            </nav>
+
+            {item.categoria || item.codigo || item.tipoAgente ? (
+              <div className="mt-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <EtiquetaCategoria categoria={item.categoria} xms />
+                  <EtiquetaCodigo codigo={item.codigo} />
+                  <EtiquetaTipo tipo={item.tipoAgente === "general" ? "Agente General" : "Agente específico"} />
+                </div>
+              </div>
+            ) : null}
+          </BrandBanner>
+        ) : esAlmaviva ? (
+          <BrandBanner
+            tema="almaviva"
+            title={nombre}
+            intro={
+              <>
+                {nombreProyecto && (
+                  <p className="italic text-almaviva-ink/55">{nombreProyecto}</p>
+                )}
+                {descripcion && <p className="mt-1">{descripcion}</p>}
+              </>
+            }
+          >
+            <nav aria-label="Ruta de navegación" className="flex flex-wrap items-center gap-1 text-sm">
+              <Link
+                to={`/${coleccion.ruta}`}
+                className="rounded-md px-2 py-1 font-semibold text-almaviva-blue transition hover:bg-white/70 hover:underline"
+              >
+                {coleccion.nombre}
+              </Link>
+              <ChevronRight className="h-4 w-4 text-almaviva-ink/35" aria-hidden="true" />
+              <span className="rounded-md px-2 py-1 font-medium text-almaviva-ink/60">
+                {item.categoria}
+              </span>
+              <ChevronRight className="h-4 w-4 text-almaviva-ink/35" aria-hidden="true" />
+              <span className="max-w-full truncate rounded-md px-2 py-1 font-semibold text-almaviva-ink/75">
+                {nombre}
+              </span>
+            </nav>
+
+            {item.categoria || item.tipo || item.estado ? (
+              <div className="mt-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <EtiquetaCategoria categoria={item.categoria} almaviva />
+                  <EtiquetaCodigo codigo={item.codigo} />
+                  <EtiquetaTipo tipo={item.tipo} />
+                  <EtiquetaEstado estado={item.estado} />
+                </div>
+              </div>
+            ) : null}
+          </BrandBanner>
+        ) : esExito ? (
+          <BrandBanner
+            tema="exito"
+            title={nombre}
+            intro={
+              <>
+                {descripcion && <p className="mt-1">{descripcion}</p>}
+              </>
+            }
+          >
+            <nav aria-label="Ruta de navegación" className="flex flex-wrap items-center gap-1 text-sm">
+              <Link
+                to={`/${coleccion.ruta}`}
+                className="rounded-md px-2 py-1 font-semibold text-exito-green transition hover:bg-white/70 hover:underline"
+              >
+                {coleccion.nombre}
+              </Link>
+              <ChevronRight className="h-4 w-4 text-exito-ink/35" aria-hidden="true" />
+              <span className="rounded-md px-2 py-1 font-medium text-exito-ink/60">
+                {item.industria}
+              </span>
+              <ChevronRight className="h-4 w-4 text-exito-ink/35" aria-hidden="true" />
+              <span className="max-w-full truncate rounded-md px-2 py-1 font-semibold text-exito-ink/75">
+                {nombre}
+              </span>
+            </nav>
+
+            {item.industria || item.codigo || item.estado ? (
+              <div className="mt-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <EtiquetaCategoria categoria={item.industria} exito />
+                  <EtiquetaCodigo codigo={item.codigo} />
+                  <EtiquetaEstado estado={item.estado} />
+                </div>
+              </div>
+            ) : null}
+          </BrandBanner>
+        ) : esLabs ? (
+          <BrandBanner
+            tema="labs"
+            title={nombre}
+            intro={
+              <>
+                {nombreProyecto && (
+                  <p className="italic text-labs-ink/55">{nombreProyecto}</p>
+                )}
+                <ClienteLinea cliente={item.cliente} />
+                {descripcion && <p className="mt-1">{descripcion}</p>}
+              </>
+            }
+          >
+            <nav aria-label="Ruta de navegación" className="flex flex-wrap items-center gap-1 text-sm">
+              <Link
+                to={`/${coleccion.ruta}`}
+                className="rounded-md px-2 py-1 font-semibold text-labs-celeste transition hover:bg-white/70 hover:underline"
+              >
+                {coleccion.nombre}
+              </Link>
+              <ChevronRight className="h-4 w-4 text-labs-ink/35" aria-hidden="true" />
+              <span className="rounded-md px-2 py-1 font-medium text-labs-ink/60">
+                {item.categoria === "Producto"
+                  ? "Productos"
+                  : item.categoria === "Investigación"
+                    ? "Investigación"
+                    : item.categoria}
+              </span>
+              <ChevronRight className="h-4 w-4 text-labs-ink/35" aria-hidden="true" />
+              <span className="max-w-full truncate rounded-md px-2 py-1 font-semibold text-labs-ink/75">
+                {nombre}
+              </span>
+            </nav>
+
+            {item.categoria || item.codigo || item.estado ? (
+              <div className="mt-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <EtiquetaCategoria categoria={item.categoria} labs />
+                  <EtiquetaCodigo codigo={item.codigo} />
+                  <EtiquetaEstado estado={item.estado} />
+                </div>
+              </div>
+            ) : null}
+          </BrandBanner>
+        ) : esProyectos ? (
+          <BrandBanner
+            tema="proyectos"
+            title={nombre}
+            intro={
+              <>
+                {nombreProyecto && (
+                  <p className="italic text-proyectos-ink/55">{nombreProyecto}</p>
+                )}
+                <ClienteLinea cliente={item.cliente} />
+                {descripcion && <p className="mt-1">{descripcion}</p>}
+              </>
+            }
+          >
+            <nav aria-label="Ruta de navegación" className="flex flex-wrap items-center gap-1 text-sm">
+              <Link
+                to={`/${coleccion.ruta}`}
+                className="rounded-md px-2 py-1 font-semibold text-proyectos-orange transition hover:bg-white/70 hover:underline"
+              >
+                {coleccion.nombre}
+              </Link>
+              <ChevronRight className="h-4 w-4 text-proyectos-ink/35" aria-hidden="true" />
+              <span className="max-w-full truncate rounded-md px-2 py-1 font-semibold text-proyectos-ink/75">
+                {nombre}
+              </span>
+            </nav>
+
+            {item.codigo || item.tipo || item.estado ? (
+              <div className="mt-5">
+                <EtiquetasItem item={item} tipoDestacado={coleccion.tipoDestacado} />
+              </div>
+            ) : null}
+          </BrandBanner>
+        ) : esPoc ? (
+          <BrandBanner
+            tema="poc"
+            title={nombre}
+            intro={
+              <>
+                {nombreProyecto && (
+                  <p className="italic text-poc-ink/55">{nombreProyecto}</p>
+                )}
+                <ClienteLinea cliente={item.cliente} />
+                {descripcion && <p className="mt-1">{descripcion}</p>}
+              </>
+            }
+          >
+            <nav aria-label="Ruta de navegación" className="flex flex-wrap items-center gap-1 text-sm">
+              <Link
+                to={`/${coleccion.ruta}`}
+                className="rounded-md px-2 py-1 font-semibold text-poc-blue transition hover:bg-white/70 hover:underline"
+              >
+                {coleccion.nombre}
+              </Link>
+              <ChevronRight className="h-4 w-4 text-poc-ink/35" aria-hidden="true" />
+              <span className="max-w-full truncate rounded-md px-2 py-1 font-semibold text-poc-ink/75">
+                {nombre}
+              </span>
+            </nav>
+
+            {item.codigo || item.tipo || item.estado ? (
+              <div className="mt-5">
+                <EtiquetasItem item={item} tipoDestacado={coleccion.tipoDestacado} />
+              </div>
+            ) : null}
+          </BrandBanner>
+        ) : (
+        <div className="bg-gradient-to-b from-tivit-red-light to-white">
           <div className="mx-auto max-w-5xl px-6 py-14">
             <nav aria-label="Ruta de navegación" className="flex flex-wrap items-center gap-1 text-sm">
               <Link
@@ -115,9 +415,7 @@ export function CollectionDetail({ ruta }) {
               </Link>
               <ChevronRight className="h-4 w-4 text-tivit-ink/35" aria-hidden="true" />
               <span className="rounded-md px-2 py-1 font-medium text-tivit-ink/60">
-                {ruta === "almaviva" || ruta === "xms"
-                  ? item.categoria
-                  : ruta === "casos-de-exito"
+                {ruta === "casos-de-exito"
                     ? item.industria
                     : item.categoria === "Producto"
                       ? "Productos"
@@ -131,15 +429,7 @@ export function CollectionDetail({ ruta }) {
               </span>
             </nav>
 
-            {ruta === "xms" && (item.categoria || item.codigo || item.tipoAgente) ? (
-              <div className="mt-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  <EtiquetaCategoria categoria={item.categoria} />
-                  <EtiquetaCodigo codigo={item.codigo} />
-                  <EtiquetaTipo tipo={item.tipoAgente === "general" ? "Agente General" : "Agente específico"} />
-                </div>
-              </div>
-            ) : ruta === "casos-de-exito" && (item.industria || item.codigo || item.estado) ? (
+            {ruta === "casos-de-exito" && (item.industria || item.codigo || item.estado) ? (
               <div className="mt-6">
                 <div className="flex flex-wrap items-center gap-2">
                   <EtiquetaCategoria categoria={item.industria} />
@@ -174,14 +464,16 @@ export function CollectionDetail({ ruta }) {
               <p className="mt-3 max-w-2xl text-lg text-tivit-ink/70">{descripcion}</p>
             )}
           </div>
+        </div>
+        )}
         </header>
 
         <div className="mx-auto max-w-5xl px-6 pb-24">
           <div className="grid gap-12 md:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="min-w-0">
-              <aside className="mb-10 rounded-2xl border border-tivit-red-light bg-white p-5 shadow-sm md:hidden">
+              <aside className={`mb-10 rounded-2xl border bg-white p-5 shadow-sm md:hidden ${bordeSidebar}`}>
                 <SidebarMeta item={item} stack={stack} ruta={ruta} />
-                {equipo.length > 0 && <EquipoCard equipo={equipo} />}
+                {equipo.length > 0 && <EquipoCard equipo={equipo} acento={acentoSidebar} />}
               </aside>
 
           {item.descripcionLarga && (
@@ -203,7 +495,11 @@ export function CollectionDetail({ ruta }) {
 
           {(item.slug === "lab-002-assistdev" || item.slug === "lab-003-auditia") && (
             <Reveal>
-              <ArchitectureDiagram tipo={item.slug === "lab-003-auditia" ? "auditia" : "assistdev"} />
+              {item.slug === "lab-002-assistdev" ? (
+                <SeccionesLabs item={item} />
+              ) : (
+                <ArchitectureDiagram tipo="auditia" />
+              )}
             </Reveal>
           )}
 
@@ -259,8 +555,30 @@ export function CollectionDetail({ ruta }) {
 
           {pendiente ? (
             <Reveal>
-              <div className="mt-8 rounded-2xl border border-tivit-red-light bg-tivit-red-light/30 p-8">
-                <h2 className="text-xl font-bold text-tivit-red-dark">Ficha en preparación</h2>
+              <div
+                className={`mt-8 rounded-2xl border p-8 ${
+                  esLabs
+                    ? "border-labs-celeste-light bg-labs-celeste-light/30"
+                    : esProyectos
+                      ? "border-proyectos-orange-light bg-proyectos-orange-light/30"
+                      : esPoc
+                        ? "border-poc-blue-light bg-poc-blue-light/30"
+                        : "border-tivit-red-light bg-tivit-red-light/30"
+                }`}
+              >
+                <h2
+                  className={`text-xl font-bold ${
+                    esLabs
+                      ? "text-labs-celeste-dark"
+                      : esProyectos
+                        ? "text-proyectos-orange-dark"
+                        : esPoc
+                          ? "text-poc-blue-dark"
+                          : "text-tivit-red-dark"
+                  }`}
+                >
+                  Ficha en preparación
+                </h2>
                 <p className="mt-2 max-w-2xl text-tivit-ink/70">
                   Falta completar la descripción, los videos, el equipo, las
                   tecnologías, los problemas y los resultados de este proyecto.
@@ -308,6 +626,28 @@ export function CollectionDetail({ ruta }) {
                 </Reveal>
               )}
 
+              {item.highlights?.length > 0 && (
+                <Reveal>
+                  <section className="pt-10">
+                    <Eyebrow>Cifras clave</Eyebrow>
+                    <dl className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {item.highlights.map((h) => (
+                        <div
+                          key={h.etiqueta}
+                          className="rounded-2xl border border-proyectos-orange-light bg-white/80 p-4 shadow-sm backdrop-blur-sm"
+                        >
+                          <dd className="text-3xl font-bold text-proyectos-orange-dark">{h.valor}</dd>
+                          <dt className="mt-1 text-xs font-semibold uppercase tracking-wide text-proyectos-orange">
+                            {h.etiqueta}
+                          </dt>
+                          <p className="mt-1 text-xs text-tivit-ink/60">{h.detalle}</p>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                </Reveal>
+              )}
+
               {ruta !== "almaviva" &&
                 ruta !== "xms" &&
                 ruta !== "casos-de-exito" &&
@@ -319,17 +659,17 @@ export function CollectionDetail({ ruta }) {
                 <div className="mt-14">
                   <Reveal>
                     {problemas.length > 0 && (
-                      <Bloque titulo="Problemas a enfrentar">
-                        <ListaProblemas items={problemas} />
+                      <Bloque titulo="Problemas a enfrentar" tema={temaBloques}>
+                        <ListaProblemas items={problemas} tema={temaBloques} />
                       </Bloque>
                     )}
                     {queHicimos.length > 0 && (
-                      <Bloque titulo="Qué hicimos">
-                        <ListaPasos items={queHicimos} />
+                      <Bloque titulo="Qué hicimos" tema={temaBloques}>
+                        <ListaPasos items={queHicimos} tema={temaBloques} />
                       </Bloque>
                     )}
                     {resultados.length > 0 && (
-                      <Bloque titulo="Resultados">
+                      <Bloque titulo="Resultados" tema={temaBloques}>
                         <ListaResultados items={resultados} />
                       </Bloque>
                     )}
@@ -354,7 +694,21 @@ export function CollectionDetail({ ruta }) {
                       href={urlProyecto}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full bg-tivit-red px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-tivit-red-dark active:scale-95 focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2"
+                      className={`inline-flex items-center gap-2 rounded-full px-6 py-3 font-semibold text-white shadow-sm transition active:scale-95 focus-visible:ring-2 focus-visible:ring-offset-2 ${
+                        esXms
+                          ? "bg-xms-blue hover:bg-xms-blue-dark focus-visible:ring-xms-blue"
+                          : esAlmaviva
+                            ? "bg-almaviva-blue hover:bg-almaviva-blue-dark focus-visible:ring-almaviva-blue"
+                            : esExito
+                              ? "bg-exito-green hover:bg-exito-green-dark focus-visible:ring-exito-green"
+                              : esLabs
+                                ? "bg-labs-celeste hover:bg-labs-celeste-dark focus-visible:ring-labs-celeste"
+                                : esProyectos
+                                  ? "bg-proyectos-orange hover:bg-proyectos-orange-dark focus-visible:ring-proyectos-orange"
+                                  : esPoc
+                                    ? "bg-poc-blue hover:bg-poc-blue-dark focus-visible:ring-poc-blue"
+                                    : "bg-tivit-red hover:bg-tivit-red-dark focus-visible:ring-tivit-red"
+                      }`}
                     >
                       {item.urlProyecto ? "Acceder al proyecto" : "Ver documentación"}
                       <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
@@ -366,9 +720,9 @@ export function CollectionDetail({ ruta }) {
           )}
             </div>
 
-            <aside className="hidden self-start rounded-2xl border border-tivit-red-light bg-white p-5 shadow-sm md:sticky md:top-24 md:block">
+            <aside className={`hidden self-start rounded-2xl border bg-white p-5 shadow-sm md:sticky md:top-24 md:block ${bordeSidebar}`}>
               <SidebarMeta item={item} stack={stack} ruta={ruta} />
-              {equipo.length > 0 && <EquipoCard equipo={equipo} />}
+              {equipo.length > 0 && <EquipoCard equipo={equipo} acento={acentoSidebar} />}
             </aside>
           </div>
 

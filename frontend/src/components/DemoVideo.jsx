@@ -15,6 +15,15 @@ function urlEmbedVimeo(url) {
   return porId ? `https://player.vimeo.com/video/${porId[1]}` : url;
 }
 
+function urlEmbedDrive(url) {
+  // Acepta https://drive.google.com/file/d/ID y /drive/folders/ID
+  const porArchivo = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if (porArchivo) return `https://drive.google.com/file/d/${porArchivo[1]}/preview`;
+  const porCarpeta = url.match(/drive\.google\.com\/drive\/folders\/([\w-]+)/);
+  if (porCarpeta) return `https://drive.google.com/embeddedfolderview?id=${porCarpeta[1]}`;
+  return url;
+}
+
 export function DemoVideo({ demo, titulo }) {
   if (!demo) {
     return (
@@ -50,6 +59,18 @@ export function DemoVideo({ demo, titulo }) {
         <source src={demo.url} type="video/mp4" />
         Tu navegador no puede reproducir este video.
       </video>
+    );
+  }
+
+  if (demo.tipo === "drive") {
+    return (
+      <iframe
+        src={urlEmbedDrive(demo.url)}
+        title={`Video demo de ${titulo}`}
+        allow="autoplay; encrypted-media; picture-in-picture"
+        allowFullScreen
+        className="aspect-video w-full rounded-2xl border-0 bg-black shadow-sm"
+      />
     );
   }
 

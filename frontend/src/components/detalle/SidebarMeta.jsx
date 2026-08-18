@@ -2,6 +2,24 @@ import { ChipsStack } from "../ChipsStack";
 import { iniciales } from "../../lib/utils";
 
 export function SidebarMeta({ item, stack, ruta }) {
+  const xms = ruta === "xms";
+  const almaviva = ruta === "almaviva";
+  const exito = ruta === "casos-de-exito";
+  const labs = ruta === "laboratorio";
+  const proyectos = ruta === "proyectos";
+  const acento = xms
+    ? "text-xms-blue"
+    : almaviva
+      ? "text-almaviva-blue"
+      : exito
+        ? "text-exito-green"
+        : labs
+          ? "text-labs-celeste"
+          : proyectos
+            ? "text-proyectos-orange"
+            : ruta === "poc"
+              ? "text-poc-blue"
+              : "text-tivit-red";
   const tipo =
     ruta === "casos-de-exito"
       ? item.industria
@@ -13,7 +31,7 @@ export function SidebarMeta({ item, stack, ruta }) {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-tivit-red">Ficha técnica</h3>
+      <h3 className={`text-sm font-semibold uppercase tracking-wide ${acento}`}>Ficha técnica</h3>
       <dl className="mt-4 flex flex-col gap-3 text-sm">
         <div>
           <dt className="text-xs text-gray-600">{ruta === "xms" ? "Categoría" : ruta === "casos-de-exito" ? "Industria" : "Tipo de solución"}</dt>
@@ -59,7 +77,7 @@ export function SidebarMeta({ item, stack, ruta }) {
         )}
         {ruta === "xms" && item.precio && (
           <div>
-            <dt className="text-xs text-gray-600">Inversión</dt>
+            <dt className="text-xs text-gray-600">Precio</dt>
             <dd className="mt-0.5 font-semibold text-tivit-ink">{item.precio}</dd>
           </div>
         )}
@@ -81,10 +99,10 @@ export function SidebarMeta({ item, stack, ruta }) {
             <dd className="mt-0.5 font-semibold text-tivit-ink">{item.plazo}</dd>
           </div>
         )}
-        {ruta === "casos-de-exito" && item.inversion && (
+        {ruta === "casos-de-exito" && item.precio && (
           <div>
-            <dt className="text-xs text-gray-600">Inversión</dt>
-            <dd className="mt-0.5 font-semibold text-tivit-ink">{item.inversion}</dd>
+            <dt className="text-xs text-gray-600">Precio</dt>
+            <dd className="mt-0.5 font-semibold text-tivit-ink">{item.precio}</dd>
           </div>
         )}
         {item.version && (
@@ -95,9 +113,9 @@ export function SidebarMeta({ item, stack, ruta }) {
         )}
       </dl>
 
-      {item.industrias?.length > 0 && <IndustriasCard industrias={item.industrias} />}
+      {item.industrias?.length > 0 && <IndustriasCard industrias={item.industrias} acento={acento} />}
 
-      {stack.length > 0 && <TecnologiasCard stack={stack} />}
+      {stack.length > 0 && <TecnologiasCard stack={stack} acento={acento} />}
     </div>
   );
 }
@@ -114,12 +132,22 @@ function StatusBadge({ estado }) {
   );
 }
 
-/** Chip destacado de categoría de producto (portafolio Almaviva). */
-function EtiquetaCategoria({ categoria }) {
+/** Chip destacado de categoría de producto (portafolio Almaviva / XMS / Casos de Éxito). */
+function EtiquetaCategoria({ categoria, xms = false, almaviva = false, exito = false, labs = false }) {
   if (!categoria) return null;
 
+  const clase = xms
+    ? "bg-xms-blue-dark text-white"
+    : almaviva
+      ? "bg-almaviva-blue-dark text-white"
+      : exito
+        ? "bg-exito-green-dark text-white"
+        : labs
+          ? "bg-labs-celeste-dark text-white"
+          : "bg-tivit-ink text-white";
+
   return (
-    <span className="shrink-0 rounded-full bg-tivit-ink px-2.5 py-0.5 text-xs font-semibold text-white">
+    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${clase}`}>
       {categoria}
     </span>
   );
@@ -127,14 +155,24 @@ function EtiquetaCategoria({ categoria }) {
 
 export { EtiquetaCategoria, EquipoCard };
 
-function EquipoCard({ equipo }) {
+function EquipoCard({ equipo, acento = "text-tivit-red" }) {
+  const avatarClase =
+    {
+      "text-proyectos-orange": "bg-proyectos-orange-light text-proyectos-orange-dark",
+      "text-poc-blue": "bg-poc-blue-light text-poc-blue-dark",
+      "text-labs-celeste": "bg-labs-celeste-light text-labs-celeste-dark",
+      "text-exito-green": "bg-exito-green-light text-exito-green-dark",
+      "text-xms-blue": "bg-xms-blue-light text-xms-blue-dark",
+      "text-almaviva-blue": "bg-almaviva-blue-light text-almaviva-blue-dark",
+    }[acento] ?? "bg-tivit-red-light text-tivit-red-dark";
+
   return (
     <div className="mt-5 border-t border-gray-100 pt-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-tivit-red">Equipo desarrollador</h3>
+      <h3 className={`text-sm font-semibold uppercase tracking-wide ${acento}`}>Equipo desarrollador</h3>
       <ul className="mt-4 flex flex-col gap-3">
         {equipo.map((miembro) => (
           <li key={`${miembro.nombre}-${miembro.rol}`} className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tivit-red-light text-sm font-bold text-tivit-red-dark">
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${avatarClase}`}>
               {iniciales(miembro.nombre)}
             </span>
             <div>
@@ -148,10 +186,10 @@ function EquipoCard({ equipo }) {
   );
 }
 
-function TecnologiasCard({ stack }) {
+function TecnologiasCard({ stack, acento = "text-tivit-red" }) {
   return (
     <div className="mt-5 border-t border-gray-100 pt-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-tivit-red">Tecnologías</h3>
+      <h3 className={`text-sm font-semibold uppercase tracking-wide ${acento}`}>Tecnologías</h3>
       <div className="mt-4">
         <ChipsStack tecnologias={stack} limite={stack.length} />
       </div>
@@ -159,11 +197,11 @@ function TecnologiasCard({ stack }) {
   );
 }
 
-function IndustriasCard({ industrias }) {
+function IndustriasCard({ industrias, acento = "text-tivit-red" }) {
   if (!industrias || industrias.length === 0) return null;
   return (
     <div className="mt-5 border-t border-gray-100 pt-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-tivit-red">Industrias aplicables</h3>
+      <h3 className={`text-sm font-semibold uppercase tracking-wide ${acento}`}>Industrias aplicables</h3>
       <ul className="mt-4 flex flex-wrap gap-1.5">
         {industrias.map((industria) => (
           <li
