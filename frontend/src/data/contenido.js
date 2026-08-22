@@ -593,22 +593,36 @@ const cacheItems = new Map();
  * Normaliza un item proveniente de la API del CMS.
  *
  * El CMS almacena los arrays de un solo campo (stack, problemas, queHicimos,
- * resultados) como arreglos de objetos `{ value: "..." }` en lugar de arrays
- * de strings simples. Renderizarlos directamente causa el React error #31
+ * resultados, procesos, industrias, funcionalidades, etc.) como arreglos de
+ * objetos `{ value: "..." }` en lugar de arrays de strings simples.
+ * Renderizarlos directamente causa el React error #31
  * ("Objects are not valid as a React child").
  *
- * Esta función los convierte a strings antes de que lleguen a los componentes.
+ * Esta función detecta genéricamente cualquier array de objetos `{value}`
+ * y los convierte a strings antes de que lleguen a los componentes.
  */
 function normalizarItemApi(item) {
   if (!item || typeof item !== "object") return item;
 
-  const ARRAYS_VALUE = ["stack", "problemas", "queHicimos", "resultados"];
-
   const result = { ...item };
 
-  for (const campo of ARRAYS_VALUE) {
-    if (Array.isArray(result[campo])) {
-      result[campo] = result[campo].map((entry) => {
+  for (const campo of Object.keys(result)) {
+    const val = result[campo];
+    if (!Array.isArray(val) || val.length === 0) continue;
+
+    // ¿Es un array de objetos { value: "..." }?
+    // Lo detectamos comprobando el primer elemento que sea un objeto con solo "value".
+    const esArrayDeValue = val.some(
+      (entry) =>
+        entry !== null &&
+        typeof entry === "object" &&
+        !Array.isArray(entry) &&
+        Object.keys(entry).length === 1 &&
+        "value" in entry
+    );
+
+    if (esArrayDeValue) {
+      result[campo] = val.map((entry) => {
         if (typeof entry === "string") return entry;
         if (entry && typeof entry === "object" && "value" in entry) {
           return String(entry.value ?? "");
