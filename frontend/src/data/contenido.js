@@ -575,12 +575,103 @@ export function getColeccion(ruta) {
 }
 
 /**
- * Carga diferida de los items de una colección. Los datos pesados
- * (items.json, almaviva.js) se traen solo cuando la página los necesita,
- * generando chunks separados en el bundle. El resultado se cachea por ruta
- * para evitar re-importar y re-filtrar en cada llamada.
+ * Carga diferida de los items de una colección.
+ *
+ * Estrategia híbrida:
+ * 1. Primero intenta leer de la API pública (`/api/public/content/:collection`).
+ *    Esta API devuelve los items gestionados por el CMS (solo publicados).
+ * 2. Si la API responde vacío (BD sin items), cae al fallback estático
+ *    (items.json, casosExito.js, almaviva.js, xms.js, pocs).
+ *
+ * El resultado se cachea por ruta para evitar re-importar y re-filtrar en cada
+ * llamada. Esto permite migrar gradualmente los items al CMS sin perder el
+ * contenido preexistente.
  */
 const cacheItems = new Map();
+
+/**
+ * Normaliza un item proveniente de la API del CMS.
+ *
+ * El CMS almacena los arrays de un solo campo (stack, problemas, queHicimos,
+ * resultados) como arreglos de objetos `{ value: "..." }` en lugar de arrays
+ * de strings simples. Renderizarlos directamente causa el React error #31
+ * ("Objects are not valid as a React child").
+ *
+ * Esta función los convierte a strings antes de que lleguen a los componentes.
+ */
+function normalizarItemApi(item) {
+  if (!item || typeof item !== "object") return item;
+
+  const ARRAYS_VALUE = ["stack", "problemas", "queHicimos", "resultados"];
+
+  const result = { ...item };
+
+  for (const campo of ARRAYS_VALUE) {
+    if (Array.isArray(result[campo])) {
+      result[campo] = result[campo].map((entry) => {
+        if (typeof entry === "string") return entry;
+        if (entry && typeof entry === "object" && "value" in entry) {
+          return String(entry.value ?? "");
+        }
+        return String(entry ?? "");
+      });
+    }
+  }
+
+  return result;
+}
+
+async function fetchFromApi(ruta) {
+  const base = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
+  const url = `${base}/public/content/${ruta}?limit=500`;
+  try {
+    const res = await fetch(url, { credentials: "omit" });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.items || json.items.length === 0) return null;
+    return json.items.map((item) => normalizarItemApi(item.data));
+  } catch {
+    return null;
+  }
+}
+
+async function loadStaticFallback(coleccion) {
+  const fuente = FUENTES[coleccion.ruta];
+  if (fuente === "poc") {
+    return pocs;
+  }
+  if (fuente === "almaviva") {
+    const modulo = await import("./almaviva.js");
+    return modulo.productosAlmaviva;
+  }
+  if (fuente === "xms") {
+    const modulo = await import("./xms.js");
+    return modulo.agentesXms;
+  }
+  if (fuente === "casosExito") {
+    const modulo = await import("./casosExito.js");
+    return modulo.casosExito;
+  }
+  if (fuente === "items") {
+    const { default: items } = await import("./items.json");
+    if (coleccion.ruta === "proyectos") {
+      return items
+        .filter(
+          (item) =>
+            item.coleccion === "proyectos" &&
+            item.slug !== "prj-001-plataforma-gestion-comercial"
+        )
+        .map((item) => ({ ...item, ...(detallesProyectos[item.slug] ?? {}) }));
+    }
+    if (coleccion.ruta === "laboratorio") {
+      return items
+        .filter((item) => item.coleccion === "laboratorio")
+        .map((item) => ({ ...item, ...(detallesLabs[item.slug] ?? {}) }));
+    }
+    return items.filter((item) => item.coleccion === coleccion.ruta);
+  }
+  return [];
+}
 
 export async function cargarItems(coleccion) {
   const fuente = FUENTES[coleccion?.ruta];
@@ -590,37 +681,26 @@ export async function cargarItems(coleccion) {
     return cacheItems.get(coleccion.ruta);
   }
 
-  let resultado;
-  if (fuente === "poc") {
-    resultado = pocs;
-  } else if (fuente === "almaviva") {
-    const modulo = await import("./almaviva.js");
-    resultado = modulo.productosAlmaviva;
-  } else if (fuente === "xms") {
-    const modulo = await import("./xms.js");
-    resultado = modulo.agentesXms;
-  } else if (fuente === "casosExito") {
-    const modulo = await import("./casosExito.js");
-    resultado = modulo.casosExito;
-  } else if (fuente === "items") {
-    const { default: items } = await import("./items.json");
-    if (coleccion.ruta === "proyectos") {
-      resultado = items
-        .filter((item) => item.coleccion === "proyectos" && item.slug !== "prj-001-plataforma-gestion-comercial")
-        .map((item) => ({ ...item, ...(detallesProyectos[item.slug] ?? {}) }));
-    } else if (coleccion.ruta === "laboratorio") {
-      resultado = items
-        .filter((item) => item.coleccion === "laboratorio")
-        .map((item) => ({ ...item, ...(detallesLabs[item.slug] ?? {}) }));
-    } else {
-      resultado = items.filter((item) => item.coleccion === coleccion.ruta);
-    }
-  } else {
-    resultado = [];
+  // 1) Intentar desde la API (items gestionados por el CMS)
+  const fromApi = await fetchFromApi(coleccion.ruta);
+  if (fromApi && fromApi.length > 0) {
+    cacheItems.set(coleccion.ruta, fromApi);
+    return fromApi;
   }
 
-  cacheItems.set(coleccion.ruta, resultado);
-  return resultado;
+  // 2) Fallback a archivos estáticos
+  const fallback = await loadStaticFallback(coleccion);
+  cacheItems.set(coleccion.ruta, fallback);
+  return fallback;
+}
+
+/** Limpia el cache (útil cuando el usuario publica cambios en el CMS). */
+export function invalidarCacheItems(ruta) {
+  if (ruta) {
+    cacheItems.delete(ruta);
+  } else {
+    cacheItems.clear();
+  }
 }
 
 /** Elementos con ficha propia (excluye los espacios reservados). */
