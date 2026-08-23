@@ -31,6 +31,18 @@ pub fn require_admin(claims: &Claims) -> Result<(), Response> {
     }
 }
 
+/// Permite acceso a administradores, editores y miembros del equipo.
+pub fn require_admin_or_editor(claims: &Claims) -> Result<(), Response> {
+    if claims.role == "admin" || claims.role == "editor" || claims.role == "member" {
+        Ok(())
+    } else {
+        Err(err(
+            StatusCode::FORBIDDEN,
+            "Se requiere rol de administrador, editor o miembro".to_string(),
+        ))
+    }
+}
+
 pub fn validate_enum(field: &str, value: &str, allowed: &[&str]) -> Result<(), Response> {
     if allowed.contains(&value) {
         Ok(())

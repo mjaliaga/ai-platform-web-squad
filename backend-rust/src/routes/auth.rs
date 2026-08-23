@@ -1,6 +1,6 @@
 use axum::{
-    extract::{Extension, State},
-    http::StatusCode,
+    extract::{Extension, Query, State},
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -11,19 +11,14 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+use crate::audit;
 use crate::middleware::auth::require_auth;
+use crate::middleware::csrf::{generate_csrf_token, set_csrf_cookie};
 use crate::models::{Claims, PublicUser, User};
-use crate::ratelimit::RateLimiter;
+use crate::pagination::PaginatedResponse;
+use crate::utils;
 use crate::validation::{error_response, internal_error, parse_duration_hours, require_admin, validate_required};
 use crate::AppState;
-
-static LOGIN_LIMITER: std::sync::OnceLock<RateLimiter> = std::sync::OnceLock::new();
-
-fn login_limiter() -> &'static RateLimiter {
-    LOGIN_LIMITER.get_or_init(|| {
-        RateLimiter::new(std::time::Duration::from_secs(15 * 60), 10)
-    })
-}
 
 #[derive(Debug, Deserialize)]
 pub struct LoginRequest {
@@ -49,10 +44,22 @@ impl IntoResponse for ApiError {
 
 pub async fn login(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Response, Response> {
+    let ip = utils::extract_ip(&headers);
+    let user_agent = utils::extract_user_agent(&headers);
+
     let rate_key = payload.email.trim().to_lowercase();
-    if !login_limiter().allow(&rate_key) {
+    if !state.rate_limiter.allow(&rate_key).await {
+        audit::log_login_failure(
+            &state.db,
+            &payload.email,
+            ip.clone(),
+            user_agent.clone(),
+            "rate_limited",
+        )
+        .await;
         return Err((
             StatusCode::TOO_MANY_REQUESTS,
             Json(ApiError { error: "Demasiados intentos de acceso, inténtalo más tarde".to_string() }),
@@ -61,7 +68,7 @@ pub async fn login(
     }
 
     let user: Option<User> = sqlx::query_as::<_, User>(
-        "SELECT id, name, email, password_hash, role, avatar_color, created_at, active, phone, linkedin, github FROM users WHERE email = ?"
+        "SELECT id, name, email, password_hash, role, avatar_color, created_at, active, phone, linkedin, github FROM users WHERE email = ? AND deleted_at IS NULL"
     )
     .bind(&payload.email)
     .fetch_optional(&state.db)
@@ -71,6 +78,14 @@ pub async fn login(
     let user = match user {
         Some(u) => u,
         None => {
+            audit::log_login_failure(
+                &state.db,
+                &payload.email,
+                ip.clone(),
+                user_agent.clone(),
+                "user_not_found",
+            )
+            .await;
             return Err((
                 StatusCode::UNAUTHORIZED,
                 Json(ApiError { error: "credenciales inválidas".to_string() }),
@@ -80,6 +95,14 @@ pub async fn login(
     };
 
     if user.active != 1 {
+        audit::log_login_failure(
+            &state.db,
+            &payload.email,
+            ip.clone(),
+            user_agent.clone(),
+            "account_disabled",
+        )
+        .await;
         return Err((
             StatusCode::FORBIDDEN,
             Json(ApiError { error: "Tu cuenta está desactivada. Contacta a un administrador.".to_string() }),
@@ -92,6 +115,14 @@ pub async fn login(
     })?;
 
     if !valid {
+        audit::log_login_failure(
+            &state.db,
+            &payload.email,
+            ip.clone(),
+            user_agent.clone(),
+            "bad_password",
+        )
+        .await;
         return Err((
             StatusCode::UNAUTHORIZED,
             Json(ApiError { error: "credenciales inválidas".to_string() }),
@@ -99,7 +130,8 @@ pub async fn login(
             .into_response());
     }
 
-    login_limiter().reset(&rate_key);
+    state.rate_limiter.reset(&rate_key).await;
+    audit::log_login_success(&state.db, &user.id, ip, user_agent).await;
 
     let expires_in_hours: i64 = parse_duration_hours(
         &std::env::var("JWT_EXPIRES_IN").unwrap_or_else(|_| "8h".to_string()),
@@ -130,33 +162,51 @@ pub async fn login(
 
     let cookie = Cookie::build(("tivit_token", token.clone()))
         .http_only(true)
-        .same_site(SameSite::Lax)
+        .same_site(SameSite::Strict)
         .secure(cookie_secure)
         .path("/")
         .max_age(cookie::time::Duration::seconds(max_age_secs))
         .build();
 
-    let response = (
+    let csrf_token = generate_csrf_token();
+    let mut response = (
         StatusCode::OK,
         [(axum::http::header::SET_COOKIE, cookie.to_string())],
         Json(LoginResponse { user: user.into() }),
     )
         .into_response();
 
+    set_csrf_cookie(response.headers_mut(), &csrf_token, cookie_secure);
+
     Ok(response)
 }
 
-pub async fn logout() -> impl IntoResponse {
+pub async fn logout(
+    Extension(claims): Extension<Claims>,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    audit::log_logout(&state.db, &claims.sub).await;
+
     let cookie = Cookie::build(("tivit_token", ""))
         .http_only(true)
-        .same_site(SameSite::Lax)
+        .same_site(SameSite::Strict)
+        .path("/")
+        .max_age(cookie::time::Duration::seconds(0))
+        .build();
+
+    let csrf_cookie = Cookie::build(("csrf_token", ""))
+        .http_only(true)
+        .same_site(SameSite::Strict)
         .path("/")
         .max_age(cookie::time::Duration::seconds(0))
         .build();
 
     (
         StatusCode::OK,
-        [(axum::http::header::SET_COOKIE, cookie.to_string())],
+        [
+            (axum::http::header::SET_COOKIE, cookie.to_string()),
+            (axum::http::header::SET_COOKIE, csrf_cookie.to_string()),
+        ],
         Json(serde_json::json!({ "ok": true })),
     )
 }
@@ -164,9 +214,9 @@ pub async fn logout() -> impl IntoResponse {
 pub async fn me(
     Extension(claims): Extension<Claims>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<PublicUser>, Response> {
+) -> Result<Response, Response> {
     let user: Option<User> = sqlx::query_as::<_, User>(
-        "SELECT id, name, email, password_hash, role, avatar_color, created_at, active, phone, linkedin, github FROM users WHERE id = ?"
+        "SELECT id, name, email, password_hash, role, avatar_color, created_at, active, phone, linkedin, github FROM users WHERE id = ? AND deleted_at IS NULL"
     )
     .bind(&claims.sub)
     .fetch_optional(&state.db)
@@ -174,7 +224,15 @@ pub async fn me(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     match user {
-        Some(u) => Ok(Json(u.into())),
+        Some(u) => {
+            let csrf_token = generate_csrf_token();
+            let cookie_secure = std::env::var("COOKIE_SECURE")
+                .map(|v| v == "true" || v == "1")
+                .unwrap_or(false);
+            let mut response = (StatusCode::OK, Json(PublicUser::from(u))).into_response();
+            set_csrf_cookie(response.headers_mut(), &csrf_token, cookie_secure);
+            Ok(response)
+        }
         None => Err((
             StatusCode::NOT_FOUND,
             Json(ApiError { error: "user not found".to_string() }),
@@ -190,15 +248,42 @@ pub async fn health() -> impl IntoResponse {
 pub async fn list_users(
     State(state): State<Arc<AppState>>,
     Extension(_claims): Extension<Claims>,
-) -> Result<Json<Vec<PublicUser>>, Response> {
-    let users: Vec<User> = sqlx::query_as::<_, User>(
-        "SELECT id, name, email, password_hash, role, avatar_color, created_at, active, phone, linkedin, github FROM users ORDER BY name"
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<PaginatedResponse<PublicUser>>, Response> {
+    let limit: i64 = params
+        .get("limit")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(50)
+        .clamp(1, 200);
+    let offset: i64 = params
+        .get("offset")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0)
+        .max(0);
+
+    let total: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL"
     )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    let users: Vec<User> = sqlx::query_as::<_, User>(
+        "SELECT id, name, email, password_hash, role, avatar_color, created_at, active, phone, linkedin, github \
+         FROM users WHERE deleted_at IS NULL ORDER BY name LIMIT ? OFFSET ?"
+    )
+    .bind(limit)
+    .bind(offset)
     .fetch_all(&state.db)
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    Ok(Json(users.into_iter().map(Into::into).collect()))
+    Ok(Json(PaginatedResponse {
+        items: users.into_iter().map(Into::into).collect(),
+        total: total.0,
+        limit,
+        offset,
+    }))
 }
 
 #[derive(Debug, Deserialize)]
@@ -237,10 +322,10 @@ pub async fn create_user(
     }
 
     let role = payload.role.as_deref().unwrap_or("member");
-    if role != "admin" && role != "member" {
+    if !matches!(role, "admin" | "member" | "editor") {
         return Err(error_response(
             StatusCode::BAD_REQUEST,
-            "Rol inválido: debe ser 'admin' o 'member'".to_string(),
+            "Rol inválido: debe ser 'admin', 'editor' o 'member'".to_string(),
         ));
     }
 
@@ -432,6 +517,8 @@ pub async fn change_password(
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
+    audit::log_password_change(&state.db, &claims.sub).await;
+
     Ok(Json(serde_json::json!({ "ok": true })).into_response())
 }
 
@@ -468,10 +555,10 @@ pub async fn update_user(
         }
     }
     if let Some(role) = &payload.role {
-        if role != "admin" && role != "member" {
+        if !matches!(role.as_str(), "admin" | "member" | "editor") {
             return Err(error_response(
                 StatusCode::BAD_REQUEST,
-                "Rol inválido: debe ser 'admin' o 'member'".to_string(),
+                "Rol inválido: debe ser 'admin', 'editor' o 'member'".to_string(),
             ));
         }
     }
@@ -518,10 +605,14 @@ pub async fn update_user(
     if let Some(role) = &payload.role {
         sets.push("role = ?");
         bindings.push(serde_json::json!(role));
+        audit::log_role_change(&state.db, &claims, &id, role).await;
     }
     if let Some(active) = payload.active {
         sets.push("active = ?");
         bindings.push(serde_json::json!(active));
+        if active == 0 {
+            audit::log_user_deactivated(&state.db, &claims, &id).await;
+        }
     }
 
     if !sets.is_empty() {
@@ -572,7 +663,9 @@ pub async fn delete_user(
         ));
     }
 
-    let existing: Option<(String,)> = sqlx::query_as("SELECT id FROM users WHERE id = ?")
+    let existing: Option<(String,)> = sqlx::query_as(
+        "SELECT id FROM users WHERE id = ? AND deleted_at IS NULL"
+    )
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -584,44 +677,63 @@ pub async fn delete_user(
         ));
     }
 
+    let now_ts = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    let mut tx = state.db.begin().await.map_err(|e| {
+        internal_error(&format!("db error: {e}"))
+    })?;
+
     sqlx::query("UPDATE tasks SET assignee_id = NULL WHERE assignee_id = ?")
         .bind(&id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    // `reporter_id` tiene ON DELETE CASCADE: reasignamos las tareas reportadas
-    // por el usuario para no perder trabajo al borrarlo.
+    // Reasignamos las tareas reportadas por el usuario al admin que ejecuta la
+    // acción para no perder trabajo. El soft delete mantiene el historial.
     sqlx::query("UPDATE tasks SET reporter_id = ? WHERE reporter_id = ?")
         .bind(&claims.sub)
         .bind(&id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     sqlx::query("UPDATE projects SET po_user_id = NULL WHERE po_user_id = ?")
         .bind(&id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
+    // Soft delete: en vez de borrar al usuario (y con él todas sus referencias
+    // históricas), lo marcamos como eliminado. Las queries ya filtran
+    // `deleted_at IS NULL`.
+    sqlx::query("UPDATE users SET deleted_at = ?, active = 0 WHERE id = ?")
+        .bind(&now_ts)
+        .bind(&id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    // Limpiamos las membresías de proyecto del usuario eliminado.
     sqlx::query("DELETE FROM project_members WHERE user_id = ?")
         .bind(&id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    sqlx::query("DELETE FROM notifications WHERE user_id = ?")
+    // Soft delete de las notificaciones del usuario.
+    sqlx::query("UPDATE notifications SET deleted_at = ? WHERE user_id = ?")
+        .bind(&now_ts)
         .bind(&id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    sqlx::query("DELETE FROM users WHERE id = ?")
-        .bind(&id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    tx.commit().await.map_err(|e| {
+        internal_error(&format!("db error: {e}"))
+    })?;
+
+    audit::log_user_deactivated(&state.db, &claims, &id).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
