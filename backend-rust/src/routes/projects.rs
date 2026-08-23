@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Extension, Path, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::Response,
     Json,
@@ -58,35 +58,81 @@ async fn build_project_with_stats(
 pub async fn list_projects(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<Claims>,
-) -> Result<Json<Vec<ProjectWithStats>>, Response> {
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<crate::pagination::PaginatedResponse<ProjectWithStats>>, Response> {
+    let limit: i64 = params
+        .get("limit")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(50)
+        .clamp(1, 200);
+    let offset: i64 = params
+        .get("offset")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0)
+        .max(0);
+
     let rows: Vec<Project> = if claims.role == "admin" {
         sqlx::query_as::<_, Project>(
-            "SELECT id, name, description, color, status, sector, code, po_user_id, created_at FROM projects WHERE status = 'active' ORDER BY name"
+            "SELECT id, name, description, color, status, sector, code, po_user_id, created_at \
+             FROM projects WHERE status = 'active' AND deleted_at IS NULL \
+             ORDER BY name LIMIT ? OFFSET ?"
         )
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
     } else {
         sqlx::query_as::<_, Project>(
             "SELECT DISTINCT p.id, p.name, p.description, p.color, p.status, p.sector, p.code, p.po_user_id, p.created_at \
              FROM projects p \
-             LEFT JOIN tasks t ON t.project_id = p.id \
+             LEFT JOIN tasks t ON t.project_id = p.id AND t.deleted_at IS NULL \
              LEFT JOIN project_members pm ON pm.project_id = p.id \
-             WHERE p.status = 'active' AND (t.assignee_id = ? OR pm.user_id = ?) \
-             ORDER BY p.name"
+             WHERE p.status = 'active' AND p.deleted_at IS NULL AND (t.assignee_id = ? OR pm.user_id = ?) \
+             ORDER BY p.name LIMIT ? OFFSET ?"
         )
         .bind(&claims.sub)
         .bind(&claims.sub)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
     }
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let mut result = Vec::with_capacity(rows.len());
+    let total: i64 = if claims.role == "admin" {
+        let r: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM projects WHERE status = 'active' AND deleted_at IS NULL"
+        )
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+        r.0
+    } else {
+        let r: (i64,) = sqlx::query_as(
+            "SELECT COUNT(DISTINCT p.id) FROM projects p \
+             LEFT JOIN tasks t ON t.project_id = p.id AND t.deleted_at IS NULL \
+             LEFT JOIN project_members pm ON pm.project_id = p.id \
+             WHERE p.status = 'active' AND p.deleted_at IS NULL AND (t.assignee_id = ? OR pm.user_id = ?)"
+        )
+        .bind(&claims.sub)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+        r.0
+    };
+
+    let mut items = Vec::with_capacity(rows.len());
     for p in rows {
-        result.push(build_project_with_stats(&state.db, p).await?);
+        items.push(build_project_with_stats(&state.db, p).await?);
     }
 
-    Ok(Json(result))
+    Ok(Json(crate::pagination::PaginatedResponse {
+        items,
+        total,
+        limit,
+        offset,
+    }))
 }
 
 pub async fn get_project(
@@ -530,7 +576,7 @@ pub async fn list_solicitudes(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
          estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
-         FROM tasks WHERE project_id = ? AND type = 'solicitud' \
+         FROM tasks WHERE project_id = ? AND type = 'solicitud' AND deleted_at IS NULL \
          ORDER BY CASE status \
            WHEN 'pendiente' THEN 0 \
            WHEN 'en_revision' THEN 1 \
@@ -544,10 +590,7 @@ pub async fn list_solicitudes(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let mut result = Vec::with_capacity(tasks.len());
-    for t in tasks {
-        result.push(crate::routes::tasks::load_task_details(&state.db, t).await?);
-    }
+    let result = crate::routes::tasks::batch_load_task_details(&state.db, tasks).await?;
 
     Ok(Json(result))
 }

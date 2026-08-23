@@ -77,7 +77,9 @@ export function Projects() {
   const [newMember, setNewMember] = useState({ user_id: "", role: "dev" });
 
   useEffect(() => {
-    api.users().then(setAllUsers).catch(() => {});
+    api.users().then((resp) => {
+      setAllUsers(Array.isArray(resp) ? resp : (resp?.items || []));
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {

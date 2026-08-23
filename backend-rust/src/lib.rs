@@ -5,21 +5,31 @@ use axum::Router;
 use sqlx::SqlitePool;
 use tower_http::cors::{Any, CorsLayer};
 
+pub mod audit;
+pub mod content;
 pub mod db;
 pub mod middleware;
 pub mod models;
+pub mod pagination;
 pub mod ratelimit;
+pub mod ratelimit_redis;
 pub mod routes;
+pub mod utils;
 pub mod validation;
+
+use crate::middleware::csrf::csrf_protect;
+use crate::ratelimit_redis::RateLimiterBackend;
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: SqlitePool,
     pub jwt_secret: String,
+    pub rate_limiter: RateLimiterBackend,
 }
 
 pub async fn build_router(state: Arc<AppState>) -> Router {
-    let public = routes::auth::public_router(state.clone());
+    let public = routes::auth::public_router(state.clone())
+        .merge(content::public::public_router(state.clone()));
     let protected = routes::auth::protected_router(state.clone())
         .merge(routes::tasks::router(state.clone()))
         .merge(routes::sprints::router(state.clone()))
@@ -28,7 +38,10 @@ pub async fn build_router(state: Arc<AppState>) -> Router {
         .merge(routes::watchers::router(state.clone()))
         .merge(routes::notifications::router(state.clone()))
         .merge(routes::team::router(state.clone()))
-        .merge(routes::projects::router(state.clone()));
+        .merge(routes::projects::router(state.clone()))
+        .merge(content::routes::router(state.clone()))
+        .merge(content::media::router(state.clone()))
+        .layer(axum::middleware::from_fn_with_state(state.clone(), csrf_protect));
 
     let cors_origins: Vec<String> = std::env::var("CORS_ORIGIN")
         .unwrap_or_else(|_| "http://localhost:8080".to_string())
@@ -57,6 +70,7 @@ pub async fn build_router(state: Arc<AppState>) -> Router {
                 axum::http::header::CONTENT_TYPE,
                 axum::http::header::AUTHORIZATION,
                 axum::http::header::COOKIE,
+                axum::http::header::HeaderName::from_static("x-csrf-token"),
             ])
             .allow_credentials(true)
     };

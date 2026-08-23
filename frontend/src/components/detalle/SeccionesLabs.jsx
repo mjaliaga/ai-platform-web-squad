@@ -29,6 +29,15 @@ const ICONOS = {
   Wrench,
 };
 
+/** Normaliza un item que puede venir como string (datos estáticos) o como objeto
+ *  `{value: "..."}` (datos del CMS) a un string renderizable. */
+function normalizarItem(item) {
+  if (item === null || item === undefined) return "";
+  if (typeof item === "string") return item;
+  if (typeof item === "object" && "value" in item) return String(item.value ?? "");
+  return String(item);
+}
+
 /** Secciones propias de Tivit Labs. Hoy solo AssistDev usa el ciclo de vida,
  *  los puntos clave, las ventajas y el stack agrupado. Si en el futuro hay
  *  otros productos con la misma estructura, basta con añadir los campos al
@@ -163,23 +172,26 @@ function PuntosClaveStrip({ puntos }) {
 function StackAgrupado({ grupos }) {
   return (
     <div className="mt-6 grid gap-4 md:grid-cols-2">
-      {grupos.map((grupo) => (
+      {grupos.map((grupo, idx) => (
         <div
-          key={grupo.categoria}
+          key={`${idx}-${grupo.categoria}`}
           className="rounded-2xl border border-labs-celeste-light bg-white p-5 shadow-sm"
         >
           <h4 className="text-sm font-semibold uppercase tracking-wide text-labs-celeste-dark">
             {grupo.categoria}
           </h4>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {grupo.tecnologias.map((tech) => (
-              <span
-                key={tech}
-                className="inline-flex items-center rounded-full bg-labs-celeste-light px-2.5 py-0.5 text-xs font-medium text-labs-celeste-dark"
-              >
-                {tech}
-              </span>
-            ))}
+            {grupo.tecnologias.map((tech, tidx) => {
+              const texto = normalizarItem(tech);
+              return (
+                <span
+                  key={`${tidx}-${texto}`}
+                  className="inline-flex items-center rounded-full bg-labs-celeste-light px-2.5 py-0.5 text-xs font-medium text-labs-celeste-dark"
+                >
+                  {texto}
+                </span>
+              );
+            })}
           </div>
         </div>
       ))}

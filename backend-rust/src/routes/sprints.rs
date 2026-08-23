@@ -411,29 +411,39 @@ pub async fn get_sprint_board(
         ("done", "Completado"),
     ];
 
-    let mut columns = Vec::with_capacity(statuses.len());
-    for (status, title) in statuses {
-        let tasks: Vec<Task> = sqlx::query_as::<_, Task>(
-            "SELECT id, code, title, description, type as task_type, status, priority, \
-             assignee_id, reporter_id, parent_id, epic_id, sprint_id, \
-             estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
-             FROM tasks WHERE status = ? AND sprint_id = ? AND parent_id IS NULL \
-             ORDER BY position ASC, created_at DESC"
-        )
-        .bind(status)
-        .bind(&id)
+    // Una sola query para todas las columnas del board del sprint.
+    let placeholders = statuses.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+    let sql = format!(
+        "SELECT id, code, title, description, type as task_type, status, priority, \
+         assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         FROM tasks WHERE status IN ({placeholders}) AND sprint_id = ? AND parent_id IS NULL AND deleted_at IS NULL \
+         ORDER BY status ASC, position ASC, created_at DESC"
+    );
+    let mut q = sqlx::query_as::<_, Task>(&sql);
+    for (status, _) in statuses.iter() {
+        q = q.bind(*status);
+    }
+    q = q.bind(&id);
+    let all_tasks: Vec<Task> = q
         .fetch_all(&state.db)
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-        let mut details = Vec::with_capacity(tasks.len());
-        for t in tasks {
-            details.push(crate::routes::tasks::load_task_details(&state.db, t).await?);
-        }
+    let all_details = crate::routes::tasks::batch_load_task_details(&state.db, all_tasks).await?;
+
+    let mut by_status: std::collections::HashMap<String, Vec<crate::models::TaskWithDetails>> = std::collections::HashMap::new();
+    for d in all_details {
+        by_status.entry(d.task.status.clone()).or_default().push(d);
+    }
+
+    let mut columns = Vec::with_capacity(statuses.len());
+    for (status, title) in statuses {
+        let tasks = by_status.remove(status).unwrap_or_default();
         columns.push(crate::routes::tasks::BoardColumn {
             status: status.to_string(),
             title: title.to_string(),
-            tasks: details,
+            tasks,
         });
     }
 

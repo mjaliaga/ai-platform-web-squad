@@ -23,6 +23,7 @@ async fn setup() -> (axum::Router, String) {
         std::env::set_var("SEED_ADMIN_PASSWORD", ADMIN_PASSWORD);
         std::env::set_var("SEED_ADMIN_NAME", "Admin Test");
         std::env::set_var("UPLOAD_DIR", upload_dir.to_str().unwrap());
+        tivit_portal_backend::middleware::csrf::disable_csrf_for_testing();
     });
 
     let db_path = std::env::temp_dir().join(format!(
@@ -39,9 +40,17 @@ async fn setup() -> (axum::Router, String) {
     db::run_migrations(&pool).await.unwrap();
     db::seed_admin(&pool).await.unwrap();
 
+    let rate_limiter = tivit_portal_backend::ratelimit_redis::create_rate_limiter(
+        None,
+        std::time::Duration::from_secs(15 * 60),
+        10,
+    )
+    .await;
+
     let state = Arc::new(AppState {
         db: pool,
-        jwt_secret: "test-secret".to_string(),
+        jwt_secret: "test-secret-for-testing-only-do-not-use-in-prod-please-32".to_string(),
+        rate_limiter,
     });
     let router = build_router(state).await;
     (router, db_path.display().to_string())
@@ -86,13 +95,21 @@ async fn login(router: &axum::Router, email: &str, password: &str) -> String {
         )
         .await
         .unwrap();
-    let cookie = res
+    let auth_cookie = res
         .headers()
         .get(header::SET_COOKIE)
         .unwrap()
         .to_str()
-        .unwrap();
-    cookie.split(';').next().unwrap().to_string()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
+
+    format!(
+        "{}; csrf_token={}",
+        auth_cookie, TEST_CSRF_TOKEN
+    )
 }
 
 fn authed_get(uri: &str, token: &str) -> Request<Body> {
@@ -469,11 +486,19 @@ async fn create_member(router: &axum::Router, admin_token: &str, email: &str) {
     assert_eq!(status, StatusCode::CREATED, "debería crear el miembro");
 }
 
+const TEST_CSRF_TOKEN: &str = "test-csrf-token-1234567890";
+
 fn json_req(method: &str, uri: &str, token: &str, body: &str) -> Request<Body> {
+    let cookie = if token.starts_with("tivit_token=") {
+        format!("{}; csrf_token={}", token, TEST_CSRF_TOKEN)
+    } else {
+        format!("tivit_token={}; csrf_token={}", token, TEST_CSRF_TOKEN)
+    };
     Request::builder()
         .method(method)
         .uri(uri)
-        .header("cookie", token)
+        .header("cookie", cookie)
+        .header("x-csrf-token", TEST_CSRF_TOKEN)
         .header("content-type", "application/json")
         .body(Body::from(body.to_string()))
         .unwrap()
@@ -685,7 +710,7 @@ async fn usuarios_admin() {
     // obtener id del member
     let (status, json) = get_json(&router, "/api/users", &token).await;
     assert_eq!(status, StatusCode::OK);
-    let member = json
+    let member = json["items"]
         .as_array()
         .unwrap()
         .iter()

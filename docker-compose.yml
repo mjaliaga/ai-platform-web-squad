@@ -4,23 +4,47 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: sqlite:///app/data/portal.db
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      JWT_SECRET: ${JWT_SECRET:-0e46c3b7bd505b9ac8a5c64d63458543615ad2fd30943d851b22a1a627b08f90}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       PORT: 3000
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-manuel.aliaga@tivit.com}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-tivit2026}
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Manuel Aliaga}
+      MEDIA_DIR: /app/media
+      UPLOAD_DIR: /app/data/uploads
     volumes:
       - tivit-db:/app/data
+      - tivit-media:/app/media
     networks:
       - tivit
+    depends_on:
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - tivit
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     logging:
       driver: json-file
       options:
@@ -39,6 +63,8 @@ services:
         condition: service_healthy
     ports:
       - "${PORT:-8080}:8080"
+    volumes:
+      - tivit-media:/usr/share/nginx/html/media-cms:ro
     networks:
       - tivit
     healthcheck:
@@ -55,6 +81,7 @@ services:
 
 volumes:
   tivit-db:
+  tivit-media:
 
 networks:
   tivit:

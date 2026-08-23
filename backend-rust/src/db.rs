@@ -50,6 +50,9 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
         ("014_users_phone", include_str!("../migrations/014_users_phone.sql")),
         ("015_indexes", include_str!("../migrations/015_indexes.sql")),
         ("016_social", include_str!("../migrations/016_social.sql")),
+        ("017_soft_deletes", include_str!("../migrations/017_soft_deletes.sql")),
+        ("018_performance_indexes", include_str!("../migrations/018_performance_indexes.sql")),
+        ("019_content_cms", include_str!("../migrations/019_content_cms.sql")),
     ];
 
     for (name, sql) in migrations {

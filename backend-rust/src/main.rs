@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 use tivit_portal_backend::{build_router, db, AppState};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -13,16 +14,41 @@ async fn main() -> anyhow::Result<()> {
 
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "sqlite://data/portal.db".to_string());
-    let jwt_secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "dev-secret-change-me".to_string());
+
+    let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+        tracing::error!("JWT_SECRET no está configurado. Generá uno con: openssl rand -hex 64");
+        std::process::exit(1);
+    });
+
+    if jwt_secret.len() < 32 {
+        tracing::error!(
+            "JWT_SECRET es demasiado corto ({}). Usá al menos 32 caracteres (recomendado 64+).",
+            jwt_secret.len()
+        );
+        std::process::exit(1);
+    }
+
+    if jwt_secret == "dev-secret-change-me" || jwt_secret == "change-me-in-production" {
+        tracing::error!("JWT_SECRET tiene el valor por defecto inseguro. Configurá un valor real.");
+        std::process::exit(1);
+    }
+
+    let redis_url = std::env::var("REDIS_URL").ok();
 
     let pool = db::create_pool(&database_url).await?;
     db::run_migrations(&pool).await?;
     db::seed_admin(&pool).await?;
 
+    let rate_limiter = tivit_portal_backend::ratelimit_redis::create_rate_limiter(
+        redis_url.as_deref(),
+        Duration::from_secs(15 * 60),
+        10,
+    ).await;
+
     let state = Arc::new(AppState {
         db: pool,
         jwt_secret,
+        rate_limiter,
     });
 
     let app = build_router(state).await;

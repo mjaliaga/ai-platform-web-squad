@@ -46,9 +46,9 @@ export function TaskEditPanel({ task, onClose, onUpdate, onDelete }) {
 
   useEffect(() => {
     Promise.all([api.users(), api.listSprints().catch(() => [])])
-      .then(([u, s]) => {
-        setUsers(u);
-        setSprints(s);
+      .then(([uResp, s]) => {
+        setUsers(Array.isArray(uResp) ? uResp : (uResp?.items || []));
+        setSprints(Array.isArray(s) ? s : (s?.items || []));
       })
       .catch(() => {});
   }, []);

@@ -17,9 +17,10 @@ export function NotificationBell() {
 
   async function refresh() {
     try {
-      const [c, list] = await Promise.all([api.unreadCount(), api.listNotifications()]);
+      const [c, listResp] = await Promise.all([api.unreadCount(), api.listNotifications()]);
       setCount(c.count);
-      setItems(list);
+      // listNotifications ahora devuelve PaginatedResponse { items, total, ... }
+      setItems(Array.isArray(listResp) ? listResp : (listResp?.items || []));
     } catch (e) {
       console.error(e);
     }

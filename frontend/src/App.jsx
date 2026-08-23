@@ -56,10 +56,53 @@ const ProjectLayout = lazy(() =>
   import("./pages/Portal/ProjectLayout").then((modulo) => ({ default: modulo.ProjectLayout }))
 );
 
+// CMS de Contenido Público
+const ContentManager = lazy(() =>
+  import("./pages/Portal/CMS/ContentManager").then((m) => ({ default: m.ContentManager }))
+);
+const CollectionListPage = lazy(() =>
+  import("./pages/Portal/CMS/CollectionListPage").then((m) => ({ default: m.CollectionListPage }))
+);
+const ItemEditorPage = lazy(() =>
+  import("./pages/Portal/CMS/ItemEditorPage").then((m) => ({ default: m.ItemEditorPage }))
+);
+const MediaManagerPage = lazy(() =>
+  import("./pages/Portal/CMS/MediaManagerPage").then((m) => ({ default: m.MediaManagerPage }))
+);
+const ContentAuditPage = lazy(() =>
+  import("./pages/Portal/CMS/ContentAuditPage").then((m) => ({ default: m.ContentAuditPage }))
+);
+
 function PageLoader() {
   return (
     <div className="flex min-h-screen items-center justify-center text-tivit-red">
       Cargando…
+    </div>
+  );
+}
+
+function ContentManagerIndex() {
+  return (
+    <div className="rounded-2xl border border-black/5 bg-white p-8 shadow-sm">
+      <h2 className="text-xl font-bold text-tivit-ink">Bienvenido al CMS</h2>
+      <p className="mt-2 text-sm text-tivit-ink/55">
+        Seleccioná una colección del panel izquierdo para empezar a editar el
+        contenido del sitio público. También podés administrar la{" "}
+        <a
+          href="/portal/cms/media"
+          className="font-semibold text-tivit-red hover:underline"
+        >
+          biblioteca de medios
+        </a>{" "}
+        o ver el{" "}
+        <a
+          href="/portal/cms/audit"
+          className="font-semibold text-tivit-red hover:underline"
+        >
+          historial de cambios
+        </a>
+        .
+      </p>
     </div>
   );
 }
@@ -118,6 +161,16 @@ function App() {
               <Route path="team" element={<Projects />} />
               <Route path="solicitudes" element={<Solicitudes />} />
               <Route path="tasks/new" element={<TaskForm />} />
+            </Route>
+
+            {/* CMS de contenido público (editor/admin) */}
+            <Route path="cms" element={<ContentManager />}>
+              <Route index element={<ContentManagerIndex />} />
+              <Route path=":collection" element={<CollectionListPage />} />
+              <Route path=":collection/new" element={<ItemEditorPage />} />
+              <Route path=":collection/:slug" element={<ItemEditorPage />} />
+              <Route path="media" element={<MediaManagerPage />} />
+              <Route path="audit" element={<ContentAuditPage />} />
             </Route>
           </Route>
         </Routes>

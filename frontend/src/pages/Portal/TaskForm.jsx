@@ -34,10 +34,10 @@ export function TaskForm() {
   useEffect(() => {
     const sprintParams = projectId ? { project: projectId } : {};
     Promise.all([api.users(), api.listSprints(sprintParams), api.listProjectsSimple()])
-      .then(([u, s, p]) => {
-        setUsers(u);
-        setSprints(s);
-        setProjects(p);
+      .then(([uResp, sResp, pResp]) => {
+        setUsers(Array.isArray(uResp) ? uResp : (uResp?.items || []));
+        setSprints(Array.isArray(sResp) ? sResp : (sResp?.items || []));
+        setProjects(Array.isArray(pResp) ? pResp : (pResp?.items || []));
       })
       .catch(console.error);
   }, []);

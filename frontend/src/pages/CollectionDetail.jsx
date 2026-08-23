@@ -536,18 +536,22 @@ export function CollectionDetail({ ruta }) {
               <section className="pt-12">
                 <Eyebrow>Autores</Eyebrow>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  {autores.map((autor) => (
-                    <div
-                      key={autor.nombre}
-                      className="flex items-center gap-3 rounded-2xl bg-tivit-red-light/50 p-4"
-                    >
-                      <AutorAvatar nombre={autor.nombre} foto={autor.foto} />
-                      <div>
-                        <p className="text-sm font-semibold text-tivit-ink">{autor.nombre}</p>
-                        {autor.rol && <p className="text-xs text-tivit-ink/60">{autor.rol}</p>}
+                  {autores.map((autor, idx) => {
+                    const nombre = autor?.nombre ?? String(autor ?? "");
+                    const rol = autor?.rol ?? "";
+                    return (
+                      <div
+                        key={`${idx}-${nombre}`}
+                        className="flex items-center gap-3 rounded-2xl bg-tivit-red-light/50 p-4"
+                      >
+                        <AutorAvatar nombre={nombre} foto={autor?.foto} />
+                        <div>
+                          <p className="text-sm font-semibold text-tivit-ink">{nombre}</p>
+                          {rol && <p className="text-xs text-tivit-ink/60">{rol}</p>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             </Reveal>
@@ -631,18 +635,23 @@ export function CollectionDetail({ ruta }) {
                   <section className="pt-10">
                     <Eyebrow>Cifras clave</Eyebrow>
                     <dl className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      {item.highlights.map((h) => (
-                        <div
-                          key={h.etiqueta}
-                          className="rounded-2xl border border-proyectos-orange-light bg-white/80 p-4 shadow-sm backdrop-blur-sm"
-                        >
-                          <dd className="text-3xl font-bold text-proyectos-orange-dark">{h.valor}</dd>
-                          <dt className="mt-1 text-xs font-semibold uppercase tracking-wide text-proyectos-orange">
-                            {h.etiqueta}
-                          </dt>
-                          <p className="mt-1 text-xs text-tivit-ink/60">{h.detalle}</p>
-                        </div>
-                      ))}
+                      {item.highlights.map((h, idx) => {
+                        const valor = h?.valor ?? String(h ?? "");
+                        const etiqueta = h?.etiqueta ?? "";
+                        const detalle = h?.detalle ?? "";
+                        return (
+                          <div
+                            key={`${idx}-${etiqueta}`}
+                            className="rounded-2xl border border-proyectos-orange-light bg-white/80 p-4 shadow-sm backdrop-blur-sm"
+                          >
+                            <dd className="text-3xl font-bold text-proyectos-orange-dark">{valor}</dd>
+                            <dt className="mt-1 text-xs font-semibold uppercase tracking-wide text-proyectos-orange">
+                              {etiqueta}
+                            </dt>
+                            <p className="mt-1 text-xs text-tivit-ink/60">{detalle}</p>
+                          </div>
+                        );
+                      })}
                     </dl>
                   </section>
                 </Reveal>

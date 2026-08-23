@@ -1,6 +1,15 @@
 import { ChipsStack } from "../ChipsStack";
 import { iniciales } from "../../lib/utils";
 
+/** Normaliza un item que puede venir como string (datos estáticos) o como objeto
+ *  `{value: "..."}` (datos del CMS) a un string renderizable. */
+function normalizarItem(item) {
+  if (item === null || item === undefined) return "";
+  if (typeof item === "string") return item;
+  if (typeof item === "object" && "value" in item) return String(item.value ?? "");
+  return String(item);
+}
+
 export function SidebarMeta({ item, stack, ruta }) {
   const xms = ruta === "xms";
   const almaviva = ruta === "almaviva";
@@ -170,17 +179,21 @@ function EquipoCard({ equipo, acento = "text-tivit-red" }) {
     <div className="mt-5 border-t border-gray-100 pt-5">
       <h3 className={`text-sm font-semibold uppercase tracking-wide ${acento}`}>Equipo desarrollador</h3>
       <ul className="mt-4 flex flex-col gap-3">
-        {equipo.map((miembro) => (
-          <li key={`${miembro.nombre}-${miembro.rol}`} className="flex items-center gap-3">
-            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${avatarClase}`}>
-              {iniciales(miembro.nombre)}
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-tivit-ink">{miembro.nombre}</p>
-              {miembro.rol && <p className="text-xs text-tivit-ink/60">{miembro.rol}</p>}
-            </div>
-          </li>
-        ))}
+        {equipo.map((miembro, idx) => {
+          const nombre = normalizarItem(miembro?.nombre ?? miembro);
+          const rol = normalizarItem(miembro?.rol ?? "");
+          return (
+            <li key={`${idx}-${nombre}`} className="flex items-center gap-3">
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${avatarClase}`}>
+                {iniciales(nombre)}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-tivit-ink">{nombre}</p>
+                {rol && <p className="text-xs text-tivit-ink/60">{rol}</p>}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -191,7 +204,7 @@ function TecnologiasCard({ stack, acento = "text-tivit-red" }) {
     <div className="mt-5 border-t border-gray-100 pt-5">
       <h3 className={`text-sm font-semibold uppercase tracking-wide ${acento}`}>Tecnologías</h3>
       <div className="mt-4">
-        <ChipsStack tecnologias={stack} limite={stack.length} />
+        <ChipsStack tecnologias={stack.filter(normalizarItem)} limite={stack.filter(normalizarItem).length} />
       </div>
     </div>
   );
@@ -199,13 +212,15 @@ function TecnologiasCard({ stack, acento = "text-tivit-red" }) {
 
 function IndustriasCard({ industrias, acento = "text-tivit-red" }) {
   if (!industrias || industrias.length === 0) return null;
+  const items = industrias.map(normalizarItem).filter(Boolean);
+  if (items.length === 0) return null;
   return (
     <div className="mt-5 border-t border-gray-100 pt-5">
       <h3 className={`text-sm font-semibold uppercase tracking-wide ${acento}`}>Industrias aplicables</h3>
       <ul className="mt-4 flex flex-wrap gap-1.5">
-        {industrias.map((industria) => (
+        {items.map((industria, idx) => (
           <li
-            key={industria}
+            key={`${idx}-${industria}`}
             className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700"
           >
             {industria}

@@ -186,19 +186,31 @@ export function TarjetaSeccion({ icono: Icono, titulo, children, tema = "tivit" 
   );
 }
 
+/** Normaliza un item que puede venir como string (datos estáticos) o como objeto
+ *  `{value: "..."}` (datos del CMS) a un string renderizable. */
+function normalizarItem(item) {
+  if (item === null || item === undefined) return "";
+  if (typeof item === "string") return item;
+  if (typeof item === "object" && "value" in item) return String(item.value ?? "");
+  return String(item);
+}
+
 /** Lista simple con icono por ítem, para dentro de las tarjetas. */
 export function ListaIcono({ items, icono: Icono = CircleCheck, tono = "text-tivit-red" }) {
   return (
     <ul className="flex flex-col gap-2.5">
-      {items.map((item, index) => (
-        <li
-          key={`${item}-${index}`}
-          className="flex items-start gap-2.5 text-sm leading-relaxed text-tivit-ink/75"
-        >
-          <Icono className={`mt-0.5 h-4 w-4 shrink-0 ${tono}`} aria-hidden="true" />
-          <span>{item}</span>
-        </li>
-      ))}
+      {items.map((item, index) => {
+        const texto = normalizarItem(item);
+        return (
+          <li
+            key={`${index}-${texto}`}
+            className="flex items-start gap-2.5 text-sm leading-relaxed text-tivit-ink/75"
+          >
+            <Icono className={`mt-0.5 h-4 w-4 shrink-0 ${tono}`} aria-hidden="true" />
+            <span>{texto}</span>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -290,6 +302,6 @@ function ParrafoBloque({ texto }) {
 
 /** Normaliza un campo que puede llegar como string o array a una lista. */
 function comoLista(valor) {
-  if (Array.isArray(valor)) return valor;
+  if (Array.isArray(valor)) return valor.map(normalizarItem);
   return valor ? [String(valor)] : [];
 }

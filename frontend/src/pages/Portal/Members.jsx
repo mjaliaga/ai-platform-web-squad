@@ -20,11 +20,11 @@ export function Members() {
   useEffect(() => {
     Promise.all([
       api.users(),
-      api.listProjects().catch(() => []),
+      api.listProjects().catch(() => ({ items: [] })),
     ])
-      .then(([users, projs]) => {
-        setMembers(users);
-        setProjects(projs);
+      .then(([usersResp, projsResp]) => {
+        setMembers(Array.isArray(usersResp) ? usersResp : (usersResp?.items || []));
+        setProjects(Array.isArray(projsResp) ? projsResp : (projsResp?.items || []));
       })
       .catch((e) => setError(e.message || "No se pudieron cargar los miembros"))
       .finally(() => setLoading(false));

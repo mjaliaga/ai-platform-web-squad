@@ -19,6 +19,8 @@ pub struct User {
     pub linkedin: Option<String>,
     #[sqlx(default)]
     pub github: Option<String>,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,6 +77,8 @@ pub struct Task {
     pub position: i32,
     pub created_at: String,
     pub updated_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -89,7 +93,9 @@ pub struct Sprint {
     pub risks: String,
     pub team_dependencies: String,
     pub third_party_dependencies: String,
-    created_at: String,
+    pub created_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -103,6 +109,8 @@ pub struct Project {
     pub code: String,
     pub po_user_id: Option<String>,
     pub created_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -140,6 +148,8 @@ pub struct TimeEntry {
     pub description: Option<String>,
     pub logged_at: String,
     pub created_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -153,6 +163,8 @@ pub struct Notification {
     pub message: String,
     pub is_read: i32,
     pub created_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -187,6 +199,8 @@ pub struct Comment {
     pub body: String,
     pub created_at: String,
     pub updated_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -199,6 +213,8 @@ pub struct Attachment {
     pub mime_type: Option<String>,
     pub size_bytes: i64,
     pub created_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -212,6 +228,8 @@ pub struct ActivityLog {
     pub new_value: Option<String>,
     pub metadata: Option<String>,
     pub created_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -284,6 +302,141 @@ pub struct AssigneeCount {
     pub assignee_id: Option<String>,
     pub assignee_name: Option<String>,
     pub count: i64,
+}
+
+// ============================================================================
+// CMS de Contenido Público
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ContentItem {
+    pub id: String,
+    pub collection: String,
+    pub slug: String,
+    pub data: String,
+    pub published: i32,
+    pub created_by: Option<String>,
+    pub updated_by: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContentItemOut {
+    pub id: String,
+    pub collection: String,
+    pub slug: String,
+    pub data: serde_json::Value,
+    pub published: bool,
+    pub created_by: Option<String>,
+    pub updated_by: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    pub creator: Option<PublicUser>,
+    pub updater: Option<PublicUser>,
+}
+
+impl From<ContentItem> for ContentItemOut {
+    fn from(item: ContentItem) -> Self {
+        let data: serde_json::Value = serde_json::from_str(&item.data)
+            .unwrap_or_else(|_| serde_json::json!({}));
+        Self {
+            id: item.id,
+            collection: item.collection,
+            slug: item.slug,
+            data,
+            published: item.published != 0,
+            created_by: item.created_by,
+            updated_by: item.updated_by,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            creator: None,
+            updater: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ContentMedia {
+    pub id: String,
+    pub filename: String,
+    pub stored_path: String,
+    pub mime_type: Option<String>,
+    pub size_bytes: i64,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub alt_text: Option<String>,
+    pub uploaded_by: Option<String>,
+    pub created_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ContentMediaOut {
+    pub id: String,
+    pub filename: String,
+    pub url: String,
+    pub mime_type: Option<String>,
+    pub size_bytes: i64,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub alt_text: Option<String>,
+    pub uploader: Option<PublicUser>,
+    pub created_at: String,
+}
+
+impl ContentMedia {
+    pub fn to_out(self, uploader: Option<PublicUser>) -> ContentMediaOut {
+        // Las imágenes del CMS se sirven bajo /cms-media/ para no chocar con
+        // las imágenes estáticas del sitio público que viven en /media/.
+        let url = format!("/cms-media/{}", self.filename);
+        ContentMediaOut {
+            id: self.id,
+            filename: self.filename,
+            url,
+            mime_type: self.mime_type,
+            size_bytes: self.size_bytes,
+            width: self.width,
+            height: self.height,
+            alt_text: self.alt_text,
+            uploader,
+            created_at: self.created_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CollectionInfo {
+    pub ruta: String,
+    pub nombre: String,
+    pub titulo: String,
+    pub intro: String,
+    pub campos: Vec<FieldDef>,
+    pub total_items: i64,
+    pub total_publicados: i64,
+    pub total_borradores: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FieldDef {
+    pub key: String,
+    pub label: String,
+    pub tipo: String,
+    pub requerido: bool,
+    pub descripcion: Option<String>,
+    pub placeholder: Option<String>,
+    pub opciones: Option<Vec<FieldOption>>,
+    pub item_label: Option<String>,
+    pub item_fields: Option<Vec<FieldDef>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FieldOption {
+    pub value: String,
+    pub label: String,
 }
 
 #[allow(dead_code)]

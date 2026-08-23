@@ -1,6 +1,32 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, downloadAttachment } from "../../lib/api";
+import {
+  useTask,
+  useComments,
+  useActivity,
+  useAttachments,
+  useSubtasks,
+  useDependencies,
+  useBlocking,
+  useTimeEntries,
+  useWatchers,
+  useUsers,
+  useSprints,
+  useMe,
+  useCreateComment,
+  useUpdateTask,
+  useUpdateTaskStatus,
+  useUploadAttachment,
+  useToggleWatch,
+  useToggleSubtask,
+  useLogTime,
+  useDeleteTimeEntry,
+  useAddDependency,
+  useRemoveDependency,
+  useCreateTask,
+} from "../../lib/queries";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   StatusBadge,
   TypeBadge,
@@ -27,22 +53,63 @@ const SOLICITUD_STATUSES = [
   { value: "resuelta", label: "Resuelta" },
 ];
 
+/** Normaliza un item que puede venir como string (datos estáticos) o como objeto
+ *  `{value: "..."}` (datos del CMS) a un string renderizable. */
+function normalizarItem(item) {
+  if (item === null || item === undefined) return "";
+  if (typeof item === "string") return item;
+  if (typeof item === "object" && "value" in item) return String(item.value ?? "");
+  return String(item);
+}
+
 export function TaskDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [task, setTask] = useState(null);
-  const [comments, setComments] = useState([]);
-  const [activity, setActivity] = useState([]);
-  const [attachments, setAttachments] = useState([]);
-  const [subtasks, setSubtasks] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [sprints, setSprints] = useState([]);
-  const [dependencies, setDependencies] = useState([]);
-  const [blocking, setBlocking] = useState([]);
-  const [timeEntries, setTimeEntries] = useState([]);
-  const [watchers, setWatchers] = useState([]);
-  const [isWatching, setIsWatching] = useState(false);
-  const [error, setError] = useState(null);
+  const qc = useQueryClient();
+
+  const taskQuery = useTask(id);
+  const commentsQuery = useComments(id);
+  const activityQuery = useActivity(id);
+  const attachmentsQuery = useAttachments(id);
+  const subtasksQuery = useSubtasks(id);
+  const dependenciesQuery = useDependencies(id);
+  const blockingQuery = useBlocking(id);
+  const timeQuery = useTimeEntries(id);
+  const watchersQuery = useWatchers(id);
+  const usersQuery = useUsers({ limit: 200 });
+  const sprintsQuery = useSprints({ limit: 200 });
+  const meQuery = useMe();
+
+  const task = taskQuery.data;
+  const comments = commentsQuery.data || [];
+  const activity = activityQuery.data || [];
+  const attachments = attachmentsQuery.data || [];
+  const subtasks = subtasksQuery.data || [];
+  const dependencies = dependenciesQuery.data || [];
+  const blocking = blockingQuery.data || [];
+  const timeEntries = timeQuery.data || [];
+  const watchers = watchersQuery.data || [];
+  const users = usersQuery.data?.items || usersQuery.data || [];
+  const sprints = sprintsQuery.data?.items || sprintsQuery.data || [];
+  const me = meQuery.data;
+
+  const isWatching = useMemo(
+    () => me && watchers.some((u) => u.id === me.id),
+    [me, watchers]
+  );
+
+  const updateTaskMut = useUpdateTask();
+  const updateStatusMut = useUpdateTaskStatus();
+  const createCommentMut = useCreateComment(id);
+  const uploadMut = useUploadAttachment(id);
+  const toggleWatchMut = useToggleWatch(id);
+  const toggleSubtaskMut = useToggleSubtask();
+  const logTimeMut = useLogTime(id);
+  const deleteTimeMut = useDeleteTimeEntry(id);
+  const addDepMut = useAddDependency(id);
+  const removeDepMut = useRemoveDependency(id);
+  const createSubtaskMut = useCreateTask();
+
   const [newComment, setNewComment] = useState("");
   const [showLogTime, setShowLogTime] = useState(false);
   const [timeForm, setTimeForm] = useState({ hours: "", description: "" });
@@ -50,81 +117,38 @@ export function TaskDetail() {
   const [depSearch, setDepSearch] = useState("");
   const [depResults, setDepResults] = useState([]);
 
-  useEffect(() => {
-    refresh();
-    api.users().then(setUsers).catch(console.error);
-    api.listSprints().then(setSprints).catch(console.error);
-  }, [id]);
-
-  async function refresh() {
-    try {
-      const [t, c, a, at, st, deps, bl, te, w] = await Promise.all([
-        api.getTask(id),
-        api.listComments(id),
-        api.listActivity(id),
-        api.listAttachments(id),
-        api.listSubtasks(id).catch(() => []),
-        api.listDependencies(id).catch(() => []),
-        api.listBlocking(id).catch(() => []),
-        api.listTimeEntries(id).catch(() => []),
-        api.listWatchers(id).catch(() => []),
-      ]);
-      setTask(t);
-      setComments(c);
-      setActivity(a);
-      setAttachments(at);
-      setSubtasks(st);
-      setDependencies(deps);
-      setBlocking(bl);
-      setTimeEntries(te);
-      setWatchers(w);
-      const me = await api.me().catch(() => null);
-      if (me) {
-        setIsWatching(w.some((u) => u.id === me.id));
-      }
-    } catch (e) {
-      setError(e.message);
-    }
-  }
-
   async function submitComment(e) {
     e.preventDefault();
     if (!newComment.trim()) return;
     try {
-      await api.createComment(id, newComment);
+      await createCommentMut.mutateAsync(newComment);
       setNewComment("");
-      const [c, a] = await Promise.all([api.listComments(id), api.listActivity(id)]);
-      setComments(c);
-      setActivity(a);
-    } catch (e) {
-      alert(e.message);
+    } catch (err) {
+      alert(err.message);
     }
   }
 
   async function handleFieldChange(field, value) {
     try {
-      await api.updateTask(id, { [field]: value });
-      refresh();
-    } catch (e) {
-      alert(e.message);
+      await updateTaskMut.mutateAsync({ id, payload: { [field]: value } });
+    } catch (err) {
+      alert(err.message);
     }
   }
 
   async function handleStatusChange(newStatus) {
     try {
-      await api.updateTaskStatus(id, newStatus);
-      refresh();
-    } catch (e) {
-      alert(e.message);
+      await updateStatusMut.mutateAsync({ id, status: newStatus });
+    } catch (err) {
+      alert(err.message);
     }
   }
 
   async function handleSprintChange(sprintId) {
     try {
-      await api.updateTask(id, { sprint_id: sprintId || null });
-      refresh();
-    } catch (e) {
-      alert(e.message);
+      await updateTaskMut.mutateAsync({ id, payload: { sprint_id: sprintId || null } });
+    } catch (err) {
+      alert(err.message);
     }
   }
 
@@ -132,23 +156,18 @@ export function TaskDetail() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      await api.uploadAttachment(id, file);
-      const at = await api.listAttachments(id);
-      setAttachments(at);
-      const a = await api.listActivity(id);
-      setActivity(a);
+      await uploadMut.mutateAsync(file);
     } catch (err) {
       alert(err.message);
     }
     e.target.value = "";
   }
 
-  async function toggleSubtask(subId, completed) {
+  async function handleToggleSubtask(subId, completed) {
     try {
-      await api.toggleSubtask(subId, completed);
-      refresh();
-    } catch (e) {
-      alert(e.message);
+      await toggleSubtaskMut.mutateAsync({ id: subId, completed });
+    } catch (err) {
+      alert(err.message);
     }
   }
 
@@ -156,10 +175,16 @@ export function TaskDetail() {
     const title = prompt("Título de la subtarea:");
     if (!title) return;
     try {
-      await api.createTask({ title, parent_id: id, status: "todo", priority: "medium", type: "tarea" });
-      refresh();
-    } catch (e) {
-      alert(e.message);
+      await createSubtaskMut.mutateAsync({
+        title,
+        parent_id: id,
+        status: "todo",
+        priority: "medium",
+        type: "tarea",
+      });
+      qc.invalidateQueries({ queryKey: ["subtasks"] });
+    } catch (err) {
+      alert(err.message);
     }
   }
 
@@ -167,38 +192,31 @@ export function TaskDetail() {
     e.preventDefault();
     if (!timeForm.hours) return;
     try {
-      await api.logTime(id, Number(timeForm.hours), timeForm.description || null);
+      await logTimeMut.mutateAsync({
+        hours: Number(timeForm.hours),
+        description: timeForm.description || null,
+      });
       setTimeForm({ hours: "", description: "" });
       setShowLogTime(false);
-      refresh();
-    } catch (e) {
-      alert(e.message);
+    } catch (err) {
+      alert(err.message);
     }
   }
 
   async function handleDeleteTime(entryId) {
     if (!confirm("¿Eliminar esta entrada de tiempo?")) return;
     try {
-      await api.deleteTimeEntry(id, entryId);
-      refresh();
-    } catch (e) {
-      alert(e.message);
+      await deleteTimeMut.mutateAsync(entryId);
+    } catch (err) {
+      alert(err.message);
     }
   }
 
   async function toggleWatch() {
     try {
-      if (isWatching) {
-        await api.unwatchTask(id);
-        setIsWatching(false);
-      } else {
-        await api.watchTask(id);
-        setIsWatching(true);
-      }
-      const w = await api.listWatchers(id);
-      setWatchers(w);
-    } catch (e) {
-      alert(e.message);
+      await toggleWatchMut.mutateAsync(isWatching);
+    } catch (err) {
+      alert(err.message);
     }
   }
 
@@ -218,22 +236,20 @@ export function TaskDetail() {
 
   async function addDep(depId) {
     try {
-      await api.addDependency(id, depId);
+      await addDepMut.mutateAsync(depId);
       setShowAddDep(false);
       setDepSearch("");
       setDepResults([]);
-      refresh();
-    } catch (e) {
-      alert(e.message);
+    } catch (err) {
+      alert(err.message);
     }
   }
 
   async function removeDep(depId) {
     try {
-      await api.removeDependency(id, depId);
-      refresh();
-    } catch (e) {
-      alert(e.message);
+      await removeDepMut.mutateAsync(depId);
+    } catch (err) {
+      alert(err.message);
     }
   }
 
@@ -242,12 +258,12 @@ export function TaskDetail() {
     try {
       await api.deleteTask(id);
       navigate("/portal");
-    } catch (e) {
-      alert(e.message);
+    } catch (err) {
+      alert(err.message);
     }
   }
 
-  if (error) return <div className="text-alert">Error: {error}</div>;
+  if (taskQuery.error) return <div className="text-alert">Error: {taskQuery.error.message}</div>;
   if (!task) return <div className="text-tivit-ink/60">Cargando tarea…</div>;
 
   return (
@@ -276,8 +292,8 @@ export function TaskDetail() {
 
           {task.labels?.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {task.labels.map((l) => (
-                <AreaBadge key={l} area={l} />
+              {task.labels.map((l, idx) => (
+                <AreaBadge key={`${idx}-${normalizarItem(l)}`} area={normalizarItem(l)} />
               ))}
             </div>
           )}
@@ -296,38 +312,38 @@ export function TaskDetail() {
           />
 
           <div className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-tivit-ink/80">
-                  Subtareas ({task.completed_subtask_count}/{task.subtask_count})
-                </h2>
-                <button
-                  onClick={createSubtask}
-                  className="rounded-lg border border-tivit-red/30 px-3 py-1 text-xs font-semibold text-tivit-red hover:bg-tivit-red hover:text-white"
-                >
-                  + Agregar
-                </button>
-              </div>
-              {subtasks.length === 0 ? (
-                <p className="text-sm text-tivit-ink/50">Sin subtareas.</p>
-              ) : (
-                <div className="space-y-2">
-                  {subtasks.map((st) => (
-                    <label key={st.id} className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-tivit-red-light/40">
-                      <input
-                        type="checkbox"
-                        checked={st.status === "done"}
-                        onChange={(e) => toggleSubtask(st.id, e.target.checked)}
-                        className="h-4 w-4 accent-tivit-red"
-                      />
-                      <span className={`flex-1 text-sm ${st.status === "done" ? "text-tivit-ink/40 line-through" : "text-tivit-ink"}`}>
-                        {st.title}
-                      </span>
-                      <PriorityBadge priority={st.priority} />
-                    </label>
-                  ))}
-                </div>
-              )}
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-tivit-ink/80">
+                Subtareas ({task.completed_subtask_count}/{task.subtask_count})
+              </h2>
+              <button
+                onClick={createSubtask}
+                className="rounded-lg border border-tivit-red/30 px-3 py-1 text-xs font-semibold text-tivit-red hover:bg-tivit-red hover:text-white"
+              >
+                + Agregar
+              </button>
             </div>
+            {subtasks.length === 0 ? (
+              <p className="text-sm text-tivit-ink/50">Sin subtareas.</p>
+            ) : (
+              <div className="space-y-2">
+                {subtasks.map((st) => (
+                  <label key={st.id} className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-tivit-red-light/40">
+                    <input
+                      type="checkbox"
+                      checked={st.status === "done"}
+                      onChange={(e) => handleToggleSubtask(st.id, e.target.checked)}
+                      className="h-4 w-4 accent-tivit-red"
+                    />
+                    <span className={`flex-1 text-sm ${st.status === "done" ? "text-tivit-ink/40 line-through" : "text-tivit-ink"}`}>
+                      {st.title}
+                    </span>
+                    <PriorityBadge priority={st.priority} />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-tivit-ink/80">
@@ -363,10 +379,10 @@ export function TaskDetail() {
               <div className="mt-2 flex justify-end">
                 <button
                   type="submit"
-                  disabled={!newComment.trim()}
+                  disabled={!newComment.trim() || createCommentMut.isPending}
                   className="rounded-lg bg-tivit-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-tivit-red-dark disabled:opacity-40"
                 >
-                  Comentar
+                  {createCommentMut.isPending ? "Enviando…" : "Comentar"}
                 </button>
               </div>
             </form>
@@ -489,7 +505,8 @@ export function TaskDetail() {
 
             <button
               onClick={toggleWatch}
-              className={`mt-3 w-full rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              disabled={toggleWatchMut.isPending}
+              className={`mt-3 w-full rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
                 isWatching
                   ? "border border-tivit-red bg-tivit-red/10 text-tivit-red"
                   : "border border-black/10 text-tivit-ink hover:bg-tivit-red-light"
@@ -552,9 +569,10 @@ export function TaskDetail() {
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="flex-1 rounded-lg bg-tivit-red px-3 py-2 text-xs font-semibold text-white hover:bg-tivit-red-dark"
+                    disabled={logTimeMut.isPending}
+                    className="flex-1 rounded-lg bg-tivit-red px-3 py-2 text-xs font-semibold text-white hover:bg-tivit-red-dark disabled:opacity-50"
                   >
-                    Registrar
+                    {logTimeMut.isPending ? "Registrando…" : "Registrar"}
                   </button>
                   <button
                     type="button"
@@ -617,8 +635,13 @@ export function TaskDetail() {
               )}
             </div>
             <label className="mt-3 block cursor-pointer rounded-lg border-2 border-dashed border-tivit-red/30 p-3 text-center text-xs font-semibold text-tivit-red transition hover:bg-tivit-red/5">
-              + Subir archivo
-              <input type="file" onChange={handleFileUpload} className="hidden" />
+              {uploadMut.isPending ? "Subiendo…" : "+ Subir archivo"}
+              <input
+                type="file"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={uploadMut.isPending}
+              />
             </label>
           </div>
 
@@ -808,6 +831,8 @@ function describeActivity(a) {
       return `agregó dependencia con ${a.new_value}`;
     case "time_logged":
       return `registró ${a.new_value}`;
+    case "deleted":
+      return `eliminó la tarea`;
     default:
       return a.action;
   }

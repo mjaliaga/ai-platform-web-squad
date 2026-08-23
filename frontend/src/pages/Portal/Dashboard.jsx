@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Megaphone,
@@ -16,6 +15,14 @@ import {
   ListTodo,
 } from "lucide-react";
 import { api } from "../../lib/api";
+import {
+  useDashboard,
+  useDashboardMe,
+  useActiveSprint,
+  useTasks,
+  useProjects,
+  useAnnouncements,
+} from "../../lib/queries";
 import { useAuth } from "../../context/AuthContext";
 import {
   TypeBadge,
@@ -40,33 +47,22 @@ function parseGoals(goal) {
 export function Dashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const [stats, setStats] = useState(null);
-  const [activeSprint, setActiveSprint] = useState(null);
-  const [announcements, setAnnouncements] = useState([]);
-  const [myTasks, setMyTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const statsPromise = isAdmin ? api.dashboard() : api.dashboardMe();
-    Promise.all([
-      statsPromise,
-      api.getActiveSprint().catch(() => null),
-      api.listAnnouncements().catch(() => []),
-      api.listTasks({ assignee: user?.id }).catch(() => []),
-      isAdmin ? api.listProjects().catch(() => []) : Promise.resolve([]),
-    ])
-      .then(([s, sprint, anns, tasks, projs]) => {
-        setStats(s);
-        setActiveSprint(sprint);
-        setAnnouncements(anns);
-        setMyTasks(tasks);
-        setProjects(projs);
-      })
-      .catch((e) => setError(e.message));
-  }, [user?.id, isAdmin]);
+  const statsQuery = isAdmin ? useDashboard() : useDashboardMe();
+  const sprintQuery = useActiveSprint();
+  const tasksQuery = useTasks({ assignee: user?.id, limit: 50 });
+  const projectsQuery = useProjects({ limit: 12 });
+  const announcementsQuery = useAnnouncements({ limit: 10 });
 
-  if (error) return <div className="text-alert">Error: {error}</div>;
+  const stats = statsQuery.data;
+  const activeSprint = sprintQuery.data;
+  const myTasks = tasksQuery.data?.items || tasksQuery.data || [];
+  const projects = isAdmin ? (projectsQuery.data?.items || []) : [];
+  const announcements =
+    announcementsQuery.data?.items || announcementsQuery.data || [];
+
+  if (statsQuery.error)
+    return <div className="text-alert">Error: {statsQuery.error.message}</div>;
   if (!stats) return <div className="text-tivit-ink/60">Cargando…</div>;
 
   const statusMap = Object.fromEntries(stats.by_status.map((s) => [s.status, s.count]));

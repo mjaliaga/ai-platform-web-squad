@@ -1,8 +1,28 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "oxc"],
+  "plugins": ["react", "oxc", "import", "jsdoc", "next"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "react/jsx-key": "error",
+    "react/jsx-no-duplicate-props": "error",
+    "react/self-closing-comp": "warn",
+    "react/no-array-index-key": "warn",
+    "react/no-unstable-nested-components": "warn",
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-debugger": "error",
+    "no-var": "error",
+    "prefer-const": "warn",
+    "eqeqeq": ["error", "smart"],
+    "no-throw-literal": "warn",
+    "no-return-await": "warn",
+    "import/no-duplicates": "warn"
+  },
+  "settings": {
+    "react": {
+      "version": "19.0"
+    }
+  },
+  "ignorePatterns": ["dist/**", "node_modules/**", "src/lib/types.js"]
 }

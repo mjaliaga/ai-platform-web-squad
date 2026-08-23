@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown } from "lucide-react";
+import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown, FileEdit } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { NotificationBell } from "./components/NotificationBell";
 
@@ -8,6 +8,10 @@ const links = [
   { to: "/portal", label: "Inicio", icon: Home, end: true },
   { to: "/portal/projects", label: "Proyectos", icon: FolderKanban },
   { to: "/portal/members", label: "Miembros", icon: Users },
+];
+
+const editorLinks = [
+  { to: "/portal/cms", label: "Contenido", icon: FileEdit },
 ];
 
 export function PortalLayout() {
@@ -65,6 +69,13 @@ export function PortalLayout() {
                   {l.label}
                 </NavLink>
               ))}
+              {(user?.role === "admin" || user?.role === "editor") &&
+                editorLinks.map((l) => (
+                  <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
+                    <l.icon className="h-4 w-4" aria-hidden="true" />
+                    {l.label}
+                  </NavLink>
+                ))}
             </nav>
           </div>
 
@@ -152,6 +163,13 @@ export function PortalLayout() {
                   {l.label}
                 </NavLink>
               ))}
+              {(user?.role === "admin" || user?.role === "editor") &&
+                editorLinks.map((l) => (
+                  <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
+                    <l.icon className="h-4 w-4" aria-hidden="true" />
+                    {l.label}
+                  </NavLink>
+                ))}
             </div>
           </nav>
         )}

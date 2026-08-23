@@ -1,9 +1,35 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
+function getCsrfToken() {
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [name, ...rest] = cookie.trim().split("=");
+    if (name === "csrf_token") {
+      return decodeURIComponent(rest.join("="));
+    }
+  }
+  return null;
+}
+
 async function request(path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const isMutating = ["POST", "PATCH", "PUT", "DELETE"].includes(method);
+
+  const headers = {
+    ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+    ...options.headers,
+  };
+
+  if (isMutating) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
+  }
+
   const res = await fetch(`${API_URL}${path}`, {
     credentials: "include",
-    headers: options.body instanceof FormData ? {} : { "Content-Type": "application/json" },
+    headers,
     ...options,
   });
 
@@ -176,6 +202,61 @@ export const api = {
   listNotifications: () => request("/notifications"),
   unreadCount: () => request("/notifications/unread"),
   markNotificationsRead: () => request("/notifications/read", { method: "POST" }),
+
+  // --- CMS de contenido público ---
+  listCollections: () => request("/content/collections"),
+  getSchema: (collection) => request(`/content/schemas/${collection}`),
+  listContent: (collection, params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") qs.append(k, v);
+    });
+    const q = qs.toString();
+    return request(`/content/${collection}${q ? `?${q}` : ""}`);
+  },
+  getContentItem: (collection, slug) =>
+    request(`/content/${collection}/${slug}`),
+  createContentItem: (collection, payload) =>
+    request(`/content/${collection}`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateContentItem: (collection, slug, payload) =>
+    request(`/content/${collection}/${slug}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteContentItem: (collection, slug) =>
+    request(`/content/${collection}/${slug}`, { method: "DELETE" }),
+  publishContentItem: (collection, slug, published) =>
+    request(`/content/${collection}/${slug}/publish`, {
+      method: "POST",
+      body: JSON.stringify({ published }),
+    }),
+  duplicateContentItem: (collection, slug) =>
+    request(`/content/${collection}/${slug}/duplicate`, { method: "POST" }),
+  listContentAudit: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/content/audit${qs ? `?${qs}` : ""}`);
+  },
+
+  // --- Media ---
+  listMedia: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/media${qs ? `?${qs}` : ""}`);
+  },
+  uploadMedia: (file, alt) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    if (alt) fd.append("alt", alt);
+    return request("/media", { method: "POST", body: fd });
+  },
+  updateMedia: (id, payload) =>
+    request(`/media/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteMedia: (id) => request(`/media/${id}`, { method: "DELETE" }),
 };
 
 export async function downloadAttachment(taskId, attachmentId, filename) {

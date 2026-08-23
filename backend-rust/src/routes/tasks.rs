@@ -104,10 +104,7 @@ pub async fn list_tasks(
         internal_error(&format!("db error: {e}"))
     })?;
 
-    let mut result = Vec::with_capacity(tasks.len());
-    for task in tasks {
-        result.push(load_task_details(&state.db, task).await?);
-    }
+    let result = batch_load_task_details(&state.db, tasks).await?;
 
     Ok(Json(result))
 }
@@ -542,24 +539,75 @@ pub async fn delete_task(
 ) -> Result<StatusCode, Response> {
     require_admin(&claims)?;
 
-    let attachments: Vec<Attachment> = sqlx::query_as::<_, Attachment>(
-        "SELECT id, task_id, uploader_id, filename, stored_path, mime_type, size_bytes, created_at \
-         FROM attachments WHERE task_id = ?"
+    let existing: Option<(String,)> = sqlx::query_as(
+        "SELECT id FROM tasks WHERE id = ? AND deleted_at IS NULL"
     )
     .bind(&id)
-    .fetch_all(&state.db)
+    .fetch_optional(&state.db)
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    if existing.is_none() {
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Tarea no encontrada".to_string(),
+        ));
+    }
 
-    sqlx::query("DELETE FROM tasks WHERE id = ?")
+    let now_ts = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    let mut tx = state.db.begin().await.map_err(|e| {
+        internal_error(&format!("db error: {e}"))
+    })?;
+
+    sqlx::query("UPDATE tasks SET deleted_at = ? WHERE id = ?")
+        .bind(&now_ts)
         .bind(&id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    for att in &attachments {
-        let _ = std::fs::remove_file(&att.stored_path);
-    }
+    sqlx::query("UPDATE comments SET deleted_at = ? WHERE task_id = ?")
+        .bind(&now_ts)
+        .bind(&id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    sqlx::query("UPDATE attachments SET deleted_at = ? WHERE task_id = ?")
+        .bind(&now_ts)
+        .bind(&id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    sqlx::query("UPDATE time_entries SET deleted_at = ? WHERE task_id = ?")
+        .bind(&now_ts)
+        .bind(&id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    sqlx::query("UPDATE activity_log SET deleted_at = ? WHERE task_id = ?")
+        .bind(&now_ts)
+        .bind(&id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    tx.commit().await.map_err(|e| {
+        internal_error(&format!("db error: {e}"))
+    })?;
+
+    log_activity(
+        &state.db,
+        &id,
+        &claims.sub,
+        "deleted",
+        None,
+        None,
+        None,
+        None,
+    )
+    .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -590,46 +638,60 @@ pub async fn get_board(
         ("done", "Completado"),
     ];
 
+    // 1) Traer todas las tareas que matchean en una sola query.
+    let mut where_parts = vec![
+        "parent_id IS NULL".to_string(),
+        "deleted_at IS NULL".to_string(),
+    ];
+    let mut binds: Vec<String> = Vec::new();
+    let placeholders = statuses.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+    where_parts.push(format!("status IN ({})", placeholders));
+    for (status, _) in statuses {
+        binds.push(status.to_string());
+    }
+    if mine {
+        where_parts.push("assignee_id = ?".to_string());
+        binds.push(claims.sub.clone());
+    }
+    if let Some(pid) = project {
+        where_parts.push("project_id = ?".to_string());
+        binds.push(pid.to_string());
+    }
+
+    let sql = format!(
+        "SELECT id, code, title, description, type as task_type, status, priority, \
+         assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         FROM tasks WHERE {} ORDER BY status ASC, position ASC, created_at DESC",
+        where_parts.join(" AND ")
+    );
+
+    let mut q = sqlx::query_as::<_, Task>(&sql);
+    for b in &binds {
+        q = q.bind(b);
+    }
+    let all_tasks: Vec<Task> = q
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    // 2) Batch load de detalles.
+    let all_details = batch_load_task_details(&state.db, all_tasks).await?;
+
+    // 3) Agrupar por status.
+    let mut by_status: HashMap<String, Vec<TaskWithDetails>> = HashMap::new();
+    for d in all_details {
+        by_status.entry(d.task.status.clone()).or_default().push(d);
+    }
+
     let mut columns = Vec::with_capacity(statuses.len());
     for (status, title) in statuses {
-        let mut where_parts = vec![
-            format!("status = '{}'", status),
-            "parent_id IS NULL".to_string(),
-        ];
-        let mut binds: Vec<String> = Vec::new();
-
-        if mine {
-            where_parts.push("assignee_id = ?".to_string());
-            binds.push(claims.sub.clone());
-        }
-        if let Some(pid) = project {
-            where_parts.push("project_id = ?".to_string());
-            binds.push(pid.to_string());
-        }
-
-        let sql = format!(
-            "SELECT id, code, title, description, type as task_type, status, priority, \
-             assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-             estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
-             FROM tasks WHERE {} ORDER BY position ASC, created_at DESC",
-            where_parts.join(" AND ")
-        );
-
-        let mut q = sqlx::query_as::<_, Task>(&sql);
-        for b in &binds {
-            q = q.bind(b);
-        }
-
-        let tasks: Vec<Task> = q
-            .fetch_all(&state.db)
-            .await
-            .map_err(|e| internal_error(&format!("db error: {e}")))?;
-
-        let mut details = Vec::with_capacity(tasks.len());
-        for t in tasks {
-            details.push(load_task_details(&state.db, t).await?);
-        }
-        columns.push(BoardColumn { status: status.to_string(), title: title.to_string(), tasks: details });
+        let tasks = by_status.remove(status).unwrap_or_default();
+        columns.push(BoardColumn {
+            status: status.to_string(),
+            title: title.to_string(),
+            tasks,
+        });
     }
 
     Ok(Json(BoardResponse { columns }))
@@ -652,7 +714,11 @@ pub async fn get_backlog(
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
          estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at";
 
-    let mut where_parts = vec!["status = 'backlog'".to_string(), "parent_id IS NULL".to_string()];
+    let mut where_parts = vec![
+        "status = 'backlog'".to_string(),
+        "parent_id IS NULL".to_string(),
+        "deleted_at IS NULL".to_string(),
+    ];
     let mut binds: Vec<String> = Vec::new();
     if mine { where_parts.push("assignee_id = ?".to_string()); binds.push(claims.sub.clone()); }
     if let Some(pid) = project { where_parts.push("project_id = ?".to_string()); binds.push(pid.to_string()); }
@@ -663,8 +729,7 @@ pub async fn get_backlog(
     let rows: Vec<Task> = q.fetch_all(&state.db).await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let mut details = Vec::with_capacity(rows.len());
-    for t in rows { details.push(load_task_details(&state.db, t).await?); }
+    let details = batch_load_task_details(&state.db, rows).await?;
 
     Ok(Json(BacklogResponse { tasks: details }))
 }
@@ -987,15 +1052,14 @@ pub async fn list_subtasks(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
          estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
-         FROM tasks WHERE parent_id = ? ORDER BY position ASC, created_at ASC"
+         FROM tasks WHERE parent_id = ? AND deleted_at IS NULL ORDER BY position ASC, created_at ASC"
     )
     .bind(&parent_id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let mut result = Vec::with_capacity(tasks.len());
-    for t in tasks { result.push(load_task_details(&state.db, t).await?); }
+    let result = batch_load_task_details(&state.db, tasks).await?;
     Ok(Json(result))
 }
 
@@ -1216,6 +1280,131 @@ pub async fn load_task_details(db: &SqlitePool, task: Task) -> Result<TaskWithDe
         comment_count,
         attachment_count,
     })
+}
+
+/// Carga los detalles (assignee, reporter, labels, contadores) para un lote de
+/// tareas en un número fijo de queries, evitando el patrón N+1 de
+/// `load_task_details`.
+pub async fn batch_load_task_details(
+    db: &SqlitePool,
+    tasks: Vec<Task>,
+) -> Result<Vec<TaskWithDetails>, Response> {
+    if tasks.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let task_ids: Vec<&str> = tasks.iter().map(|t| t.id.as_str()).collect();
+
+    // 1) Usuarios (assignee + reporter) en una sola query
+    let mut user_ids: Vec<&str> = Vec::new();
+    for t in &tasks {
+        if let Some(aid) = &t.assignee_id {
+            user_ids.push(aid);
+        }
+        user_ids.push(&t.reporter_id);
+    }
+    let users = batch_users(db, &user_ids).await;
+
+    // 2) Labels en una sola query (WHERE task_id IN (...))
+    let placeholders: Vec<String> = task_ids.iter().map(|_| "?".to_string()).collect();
+    let labels_sql = format!(
+        "SELECT task_id, label FROM task_labels WHERE task_id IN ({}) AND task_id NOT IN (SELECT id FROM tasks WHERE deleted_at IS NOT NULL)",
+        placeholders.join(",")
+    );
+    let mut q = sqlx::query_as::<_, (String, String)>(&labels_sql);
+    for tid in &task_ids {
+        q = q.bind(tid);
+    }
+    let labels_rows: Vec<(String, String)> = q.fetch_all(db).await.unwrap_or_default();
+    let mut labels_by_task: HashMap<String, Vec<String>> = HashMap::new();
+    for (tid, label) in labels_rows {
+        labels_by_task.entry(tid).or_default().push(label);
+    }
+
+    // 3) Conteos de subtareas agrupados por parent
+    let subtask_sql = format!(
+        "SELECT parent_id, \
+                COUNT(*) AS total, \
+                COALESCE(SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END), 0) AS done \
+         FROM tasks WHERE parent_id IN ({}) AND deleted_at IS NULL \
+         GROUP BY parent_id",
+        placeholders.join(",")
+    );
+    let mut q = sqlx::query_as::<_, (String, i64, i64)>(&subtask_sql);
+    for tid in &task_ids {
+        q = q.bind(tid);
+    }
+    let subtask_rows: Vec<(String, i64, i64)> = q.fetch_all(db).await.unwrap_or_default();
+    let mut subtasks_by_task: HashMap<String, (i64, i64)> = HashMap::new();
+    for (pid, total, done) in subtask_rows {
+        subtasks_by_task.insert(pid, (total, done));
+    }
+
+    // 4) Conteos de comentarios
+    let comments_sql = format!(
+        "SELECT task_id, COUNT(*) FROM comments WHERE task_id IN ({}) AND deleted_at IS NULL GROUP BY task_id",
+        placeholders.join(",")
+    );
+    let mut q = sqlx::query_as::<_, (String, i64)>(&comments_sql);
+    for tid in &task_ids {
+        q = q.bind(tid);
+    }
+    let comments_rows: Vec<(String, i64)> = q.fetch_all(db).await.unwrap_or_default();
+    let mut comments_by_task: HashMap<String, i64> = HashMap::new();
+    for (tid, c) in comments_rows {
+        comments_by_task.insert(tid, c);
+    }
+
+    // 5) Conteos de adjuntos
+    let attachments_sql = format!(
+        "SELECT task_id, COUNT(*) FROM attachments WHERE task_id IN ({}) AND deleted_at IS NULL GROUP BY task_id",
+        placeholders.join(",")
+    );
+    let mut q = sqlx::query_as::<_, (String, i64)>(&attachments_sql);
+    for tid in &task_ids {
+        q = q.bind(tid);
+    }
+    let attachments_rows: Vec<(String, i64)> = q.fetch_all(db).await.unwrap_or_default();
+    let mut attachments_by_task: HashMap<String, i64> = HashMap::new();
+    for (tid, a) in attachments_rows {
+        attachments_by_task.insert(tid, a);
+    }
+
+    // 6) Ensamblar el resultado
+    let mut result = Vec::with_capacity(tasks.len());
+    for task in tasks {
+        let assignee = task
+            .assignee_id
+            .as_ref()
+            .and_then(|aid| users.get(aid).cloned());
+        let reporter = users
+            .get(&task.reporter_id)
+            .cloned()
+            .ok_or_else(|| {
+                error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Reporter no encontrado".to_string(),
+                )
+            })?;
+        let labels = labels_by_task.remove(&task.id).unwrap_or_default();
+        let (subtask_count, completed_subtask_count) =
+            subtasks_by_task.get(&task.id).copied().unwrap_or((0, 0));
+        let comment_count = comments_by_task.get(&task.id).copied().unwrap_or(0);
+        let attachment_count = attachments_by_task.get(&task.id).copied().unwrap_or(0);
+
+        result.push(TaskWithDetails {
+            task,
+            assignee,
+            reporter,
+            labels,
+            subtask_count,
+            completed_subtask_count,
+            comment_count,
+            attachment_count,
+        });
+    }
+
+    Ok(result)
 }
 
 pub async fn batch_users(db: &SqlitePool, ids: &[&str]) -> HashMap<String, PublicUser> {

@@ -44,7 +44,9 @@ pub async fn require_auth(
     .map_err(|_| StatusCode::UNAUTHORIZED)?
     .claims;
 
-    let active: Option<(i32,)> = sqlx::query_as("SELECT active FROM users WHERE id = ?")
+    let active: Option<(i32, Option<String>)> = sqlx::query_as(
+        "SELECT active, deleted_at FROM users WHERE id = ?"
+    )
         .bind(&claims.sub)
         .fetch_optional(&state.db)
         .await
@@ -52,7 +54,8 @@ pub async fn require_auth(
         .flatten();
 
     match active {
-        Some((1,)) => {}
+        Some((1, None)) => {}
+        Some((1, Some(_))) => return Err(StatusCode::UNAUTHORIZED),
         Some(_) => return Err(StatusCode::FORBIDDEN),
         None => return Err(StatusCode::UNAUTHORIZED),
     }

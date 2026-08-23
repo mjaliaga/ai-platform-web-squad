@@ -57,8 +57,16 @@ export function SeccionesCasosExito({ item }) {
   );
 }
 
-/** Normaliza un campo que puede llegar como string o array a una lista. */
+/** Normaliza un campo que puede llegar como string o array a una lista.
+ *  Los items del CMS pueden venir como objetos `{value: "..."}`. */
 function comoLista(valor) {
-  if (Array.isArray(valor)) return valor;
+  if (Array.isArray(valor)) {
+    return valor.map((item) => {
+      if (item === null || item === undefined) return "";
+      if (typeof item === "string") return item;
+      if (typeof item === "object" && "value" in item) return String(item.value ?? "");
+      return String(item);
+    });
+  }
   return valor ? [String(valor)] : [];
 }
