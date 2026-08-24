@@ -48,13 +48,19 @@ async function uploadFile(path, file) {
   return request(path, { method: "POST", body: formData });
 }
 
+function unwrapPaginated(resp) {
+  if (Array.isArray(resp)) return resp;
+  if (resp && Array.isArray(resp.items)) return resp.items;
+  return [];
+}
+
 export const api = {
   login: (email, password) =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   logout: () => request("/auth/logout", { method: "POST" }),
   me: () => request("/auth/me"),
 
-  users: () => request("/users"),
+  users: async () => unwrapPaginated(await request("/users")),
   getUserStats: (id) => request(`/users/${id}/stats`),
   createUser: (payload) =>
     request("/users", { method: "POST", body: JSON.stringify(payload) }),
@@ -88,7 +94,7 @@ export const api = {
     request(`/wiki/${slug}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteWiki: (slug) => request(`/wiki/${slug}`, { method: "DELETE" }),
 
-  listProjects: () => request("/projects"),
+  listProjects: async () => unwrapPaginated(await request("/projects")),
   listProjectsSimple: () => request("/projects/list"),
   getProject: (id) => request(`/projects/${id}`),
   createProject: (payload) =>
@@ -199,20 +205,20 @@ export const api = {
   watchTask: (taskId) => request(`/tasks/${taskId}/watch`, { method: "POST" }),
   unwatchTask: (taskId) => request(`/tasks/${taskId}/watch`, { method: "DELETE" }),
 
-  listNotifications: () => request("/notifications"),
+  listNotifications: async () => unwrapPaginated(await request("/notifications")),
   unreadCount: () => request("/notifications/unread"),
   markNotificationsRead: () => request("/notifications/read", { method: "POST" }),
 
   // --- CMS de contenido público ---
   listCollections: () => request("/content/collections"),
   getSchema: (collection) => request(`/content/schemas/${collection}`),
-  listContent: (collection, params = {}) => {
+  listContent: async (collection, params = {}) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== "") qs.append(k, v);
     });
     const q = qs.toString();
-    return request(`/content/${collection}${q ? `?${q}` : ""}`);
+    return unwrapPaginated(await request(`/content/${collection}${q ? `?${q}` : ""}`));
   },
   getContentItem: (collection, slug) =>
     request(`/content/${collection}/${slug}`),
@@ -235,15 +241,15 @@ export const api = {
     }),
   duplicateContentItem: (collection, slug) =>
     request(`/content/${collection}/${slug}/duplicate`, { method: "POST" }),
-  listContentAudit: (params = {}) => {
+  listContentAudit: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request(`/content/audit${qs ? `?${qs}` : ""}`);
+    return unwrapPaginated(await request(`/content/audit${qs ? `?${qs}` : ""}`));
   },
 
   // --- Media ---
-  listMedia: (params = {}) => {
+  listMedia: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request(`/media${qs ? `?${qs}` : ""}`);
+    return unwrapPaginated(await request(`/media${qs ? `?${qs}` : ""}`));
   },
   uploadMedia: (file, alt) => {
     const fd = new FormData();

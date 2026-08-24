@@ -55,7 +55,7 @@ export function CollectionListPage() {
     );
   }
 
-  const items = data?.items || [];
+  const items = Array.isArray(data) ? data : (data?.items || []);
 
   return (
     <div className="space-y-5">
@@ -237,7 +237,7 @@ export function CollectionListPage() {
       )}
 
       <p className="text-xs text-tivit-ink/45">
-        Mostrando {items.length} de {data?.total ?? 0} items
+        Mostrando {items.length} de {data?.total ?? items.length} items
       </p>
     </div>
   );

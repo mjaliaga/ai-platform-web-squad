@@ -89,8 +89,8 @@ export function TaskDetail() {
   const blocking = blockingQuery.data || [];
   const timeEntries = timeQuery.data || [];
   const watchers = watchersQuery.data || [];
-  const users = usersQuery.data?.items || usersQuery.data || [];
-  const sprints = sprintsQuery.data?.items || sprintsQuery.data || [];
+  const users = Array.isArray(usersQuery.data) ? usersQuery.data : (usersQuery.data?.items || []);
+  const sprints = Array.isArray(sprintsQuery.data) ? sprintsQuery.data : (sprintsQuery.data?.items || []);
   const me = meQuery.data;
 
   const isWatching = useMemo(

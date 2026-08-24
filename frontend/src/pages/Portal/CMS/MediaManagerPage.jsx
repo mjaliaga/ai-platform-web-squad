@@ -39,7 +39,7 @@ export function MediaManagerPage() {
     }
   }
 
-  const items = data?.items || [];
+  const items = Array.isArray(data) ? data : (data?.items || []);
 
   return (
     <div className="space-y-5">
@@ -162,7 +162,7 @@ export function MediaManagerPage() {
       )}
 
       <p className="text-xs text-tivit-ink/45">
-        Total: {data?.total ?? 0} archivos
+        Total: {data?.total ?? items.length} archivos
       </p>
     </div>
   );

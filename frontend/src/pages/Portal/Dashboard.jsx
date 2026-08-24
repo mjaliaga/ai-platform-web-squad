@@ -56,10 +56,11 @@ export function Dashboard() {
 
   const stats = statsQuery.data;
   const activeSprint = sprintQuery.data;
-  const myTasks = tasksQuery.data?.items || tasksQuery.data || [];
-  const projects = isAdmin ? (projectsQuery.data?.items || []) : [];
-  const announcements =
-    announcementsQuery.data?.items || announcementsQuery.data || [];
+  const myTasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : (tasksQuery.data?.items || []);
+  const projects = isAdmin ? (Array.isArray(projectsQuery.data) ? projectsQuery.data : (projectsQuery.data?.items || [])) : [];
+  const announcements = Array.isArray(announcementsQuery.data)
+    ? announcementsQuery.data
+    : (announcementsQuery.data?.items || []);
 
   if (statsQuery.error)
     return <div className="text-alert">Error: {statsQuery.error.message}</div>;

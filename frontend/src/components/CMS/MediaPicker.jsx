@@ -33,7 +33,7 @@ export function MediaPicker({ onSelect, onClose, kind = "image" }) {
     }
   }
 
-  const items = data?.items || [];
+  const items = Array.isArray(data) ? data : (data?.items || []);
 
   return (
     <div

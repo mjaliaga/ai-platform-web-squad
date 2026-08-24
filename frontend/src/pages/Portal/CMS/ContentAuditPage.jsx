@@ -19,7 +19,7 @@ export function ContentAuditPage() {
   const params = filter ? { collection: filter, limit: 200 } : { limit: 200 };
   const { data, isLoading } = useContentAudit(params);
 
-  const items = data?.items || [];
+  const items = Array.isArray(data) ? data : (data?.items || []);
 
   return (
     <div className="space-y-5">
