@@ -48,7 +48,7 @@ async function uploadFile(path, file) {
   return request(path, { method: "POST", body: formData });
 }
 
-function unwrapPaginated(resp) {
+export function unwrapPaginated(resp) {
   if (Array.isArray(resp)) return resp;
   if (resp && Array.isArray(resp.items)) return resp.items;
   return [];
@@ -109,6 +109,17 @@ export const api = {
   removeProjectMember: (projectId, userId) =>
     request(`/projects/${projectId}/members/${userId}`, { method: "DELETE" }),
   getProjectSolicitudes: (projectId) => request(`/projects/${projectId}/solicitudes`),
+  getProjectProgress: (projectId) => request(`/projects/${projectId}/progress`),
+  getProjectBySlug: (slug) => request(`/projects/by-slug/${slug}`),
+  setProjectPublished: (id, published) =>
+    request(`/projects/${id}/publish`, { method: "POST", body: JSON.stringify({ published }) }),
+  setProjectReservado: (id, reservado) =>
+    request(`/projects/${id}/reservado`, { method: "POST", body: JSON.stringify({ reservado }) }),
+  listPublicProjects: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return unwrapPaginated(await request(`/projects/list/public${qs ? `?${qs}` : ""}`));
+  },
+  getPublicProjectBySlug: (slug) => request(`/projects/public/${slug}`),
 
   dashboardMe: () => request("/dashboard/me"),
 
@@ -144,6 +155,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ body }),
     }),
+  editComment: (taskId, commentId, body) =>
+    request(`/tasks/${taskId}/comments/${commentId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ body }),
+    }),
+  deleteComment: (taskId, commentId) =>
+    request(`/tasks/${taskId}/comments/${commentId}`, { method: "DELETE" }),
 
   listActivity: (taskId) => request(`/tasks/${taskId}/activity`),
 
@@ -200,6 +218,11 @@ export const api = {
     }),
   deleteTimeEntry: (taskId, entryId) =>
     request(`/tasks/${taskId}/time/${entryId}`, { method: "DELETE" }),
+  editTimeEntry: (taskId, entryId, hours, description) =>
+    request(`/tasks/${taskId}/time/${entryId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ hours, description }),
+    }),
 
   listWatchers: (taskId) => request(`/tasks/${taskId}/watchers`),
   watchTask: (taskId) => request(`/tasks/${taskId}/watch`, { method: "POST" }),
@@ -263,6 +286,77 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   deleteMedia: (id) => request(`/media/${id}`, { method: "DELETE" }),
+
+  listEpics: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/epics${qs ? `?${qs}` : ""}`);
+  },
+  getEpic: (id) => request(`/epics/${id}`),
+  createEpic: (payload) =>
+    request(`/epics`, { method: "POST", body: JSON.stringify(payload) }),
+  updateEpic: (id, payload) =>
+    request(`/epics/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteEpic: (id) => request(`/epics/${id}`, { method: "DELETE" }),
+
+  listVersions: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/versions${qs ? `?${qs}` : ""}`);
+  },
+  getVersion: (id) => request(`/versions/${id}`),
+  createVersion: (payload) =>
+    request(`/versions`, { method: "POST", body: JSON.stringify(payload) }),
+  updateVersion: (id, payload) =>
+    request(`/versions/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteVersion: (id) => request(`/versions/${id}`, { method: "DELETE" }),
+  assignVersion: (versionId, taskId, relationship = "fix") =>
+    request(`/versions/${versionId}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ task_id: taskId, relationship }),
+    }),
+  unassignVersion: (versionId, taskId) =>
+    request(`/versions/${versionId}/tasks/${taskId}`, { method: "DELETE" }),
+
+  listWorkflows: () => request("/workflows"),
+  getWorkflow: (id) => request(`/workflows/${id}`),
+  createWorkflow: (payload) =>
+    request(`/workflows`, { method: "POST", body: JSON.stringify(payload) }),
+  deleteWorkflow: (id) => request(`/workflows/${id}`, { method: "DELETE" }),
+  addWorkflowStatus: (workflowId, payload) =>
+    request(`/workflows/${workflowId}/statuses`, { method: "POST", body: JSON.stringify(payload) }),
+  addWorkflowTransition: (workflowId, payload) =>
+    request(`/workflows/${workflowId}/transitions`, { method: "POST", body: JSON.stringify(payload) }),
+
+  listSavedFilters: () => request("/saved-filters"),
+  createSavedFilter: (payload) =>
+    request(`/saved-filters`, { method: "POST", body: JSON.stringify(payload) }),
+  updateSavedFilter: (id, payload) =>
+    request(`/saved-filters/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteSavedFilter: (id) => request(`/saved-filters/${id}`, { method: "DELETE" }),
+  executeSavedFilter: (id) => request(`/saved-filters/${id}/execute`),
+  searchTasks: (query, limit = 50, offset = 0) =>
+    request(`/tasks/search`, {
+      method: "POST",
+      body: JSON.stringify({ query, limit, offset }),
+    }),
+
+  getProjectReports: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/reports/project${qs ? `?${qs}` : ""}`);
+  },
+
+  listTodos: () => request("/todos"),
+  createTodo: (payload) =>
+    request("/todos", { method: "POST", body: JSON.stringify(payload) }),
+  updateTodo: (id, payload) =>
+    request(`/todos/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteTodo: (id) =>
+    request(`/todos/${id}`, { method: "DELETE" }),
+
+  listCertifications: () => request("/certifications"),
+  createCertification: (payload) =>
+    request("/certifications", { method: "POST", body: JSON.stringify(payload) }),
+  deleteCertification: (id) =>
+    request(`/certifications/${id}`, { method: "DELETE" }),
 };
 
 export async function downloadAttachment(taskId, attachmentId, filename) {

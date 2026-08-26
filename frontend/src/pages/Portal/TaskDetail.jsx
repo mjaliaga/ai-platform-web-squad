@@ -79,6 +79,11 @@ export function TaskDetail() {
   const usersQuery = useUsers({ limit: 200 });
   const sprintsQuery = useSprints({ limit: 200 });
   const meQuery = useMe();
+  const [epics, setEpics] = useState([]);
+
+  useEffect(() => {
+    api.listEpics().then((d) => setEpics(Array.isArray(d) ? d : [])).catch(() => setEpics([]));
+  }, []);
 
   const task = taskQuery.data;
   const comments = commentsQuery.data || [];
@@ -116,6 +121,13 @@ export function TaskDetail() {
   const [showAddDep, setShowAddDep] = useState(false);
   const [depSearch, setDepSearch] = useState("");
   const [depResults, setDepResults] = useState([]);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [editingTimeEntry, setEditingTimeEntry] = useState(null);
+  const [editTimeForm, setEditTimeForm] = useState({ hours: "", description: "" });
 
   async function submitComment(e) {
     e.preventDefault();
@@ -126,6 +138,49 @@ export function TaskDetail() {
     } catch (err) {
       alert(err.message);
     }
+  }
+
+  async function saveTitle() {
+    if (!editTitle.trim()) return;
+    try {
+      await handleFieldChange("title", editTitle.trim());
+      setEditingTitle(false);
+    } catch (err) { alert(err.message); }
+  }
+
+  async function saveDescription() {
+    try {
+      await handleFieldChange("description", editDesc.trim() || null);
+      setEditingDesc(false);
+    } catch (err) { alert(err.message); }
+  }
+
+  async function addLabel() {
+    const label = newLabel.trim();
+    if (!label) return;
+    const current = task.labels || [];
+    if (current.some((l) => normalizarItem(l) === label)) return;
+    try {
+      await handleFieldChange("labels", [...current, label]);
+      setNewLabel("");
+    } catch (err) { alert(err.message); }
+  }
+
+  async function removeLabel(labelToRemove) {
+    const current = (task.labels || []).filter((l) => normalizarItem(l) !== labelToRemove);
+    try {
+      await handleFieldChange("labels", current);
+    } catch (err) { alert(err.message); }
+  }
+
+  async function handleEditTimeEntry(entryId) {
+    const hours = parseFloat(editTimeForm.hours);
+    if (isNaN(hours) || hours <= 0) { alert("Horas inválidas"); return; }
+    try {
+      await api.editTimeEntry(id, entryId, hours, editTimeForm.description.trim() || null);
+      timeQuery.refetch();
+      setEditingTimeEntry(null);
+    } catch (err) { alert(err.message); }
   }
 
   async function handleFieldChange(field, value) {
@@ -284,19 +339,85 @@ export function TaskDetail() {
               <TypeBadge type={task.type} />
               <span className="font-mono text-sm text-tivit-ink/60">{task.code}</span>
             </div>
-            <h1 className="text-2xl font-bold text-tivit-ink">{task.title}</h1>
-            {task.description && (
-              <div className="mt-4 whitespace-pre-wrap text-tivit-ink/80">{task.description}</div>
+            {editingTitle ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
+                  autoFocus
+                  className="flex-1 rounded-xl border border-tivit-red bg-white px-3.5 py-2 text-2xl font-bold text-tivit-ink outline-none focus:ring-2 focus:ring-tivit-red/20"
+                />
+                <button onClick={saveTitle} className="rounded-full bg-tivit-red px-3 py-1 text-xs font-semibold text-white hover:bg-tivit-red-dark">Guardar</button>
+                <button onClick={() => setEditingTitle(false)} className="rounded-full border border-tivit-red-light px-3 py-1 text-xs font-semibold text-tivit-ink hover:bg-tivit-red-light">Cancelar</button>
+              </div>
+            ) : (
+              <h1
+                className="text-2xl font-bold text-tivit-ink cursor-pointer hover:text-tivit-red transition"
+                onClick={() => { setEditTitle(task.title); setEditingTitle(true); }}
+                title="Clic para editar"
+              >
+                {task.title}
+              </h1>
+            )}
+            {editingDesc ? (
+              <div className="mt-4">
+                <textarea
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  rows={4}
+                  className="w-full rounded-xl border border-tivit-red bg-white px-3.5 py-2.5 text-sm text-tivit-ink outline-none focus:ring-2 focus:ring-tivit-red/20 resize-y"
+                />
+                <div className="mt-2 flex gap-2">
+                  <button onClick={saveDescription} className="rounded-full bg-tivit-red px-3 py-1 text-xs font-semibold text-white hover:bg-tivit-red-dark">Guardar</button>
+                  <button onClick={() => setEditingDesc(false)} className="rounded-full border border-tivit-red-light px-3 py-1 text-xs font-semibold text-tivit-ink hover:bg-tivit-red-light">Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {task.description && (
+                  <div
+                    className="mt-4 whitespace-pre-wrap text-tivit-ink/80 cursor-pointer hover:text-tivit-red transition"
+                    onClick={() => { setEditDesc(task.description || ""); setEditingDesc(true); }}
+                    title="Clic para editar"
+                  >
+                    {task.description}
+                  </div>
+                )}
+                {!task.description && (
+                  <button
+                    onClick={() => { setEditDesc(""); setEditingDesc(true); }}
+                    className="mt-2 text-xs text-tivit-ink/40 hover:text-tivit-red"
+                  >
+                    + Agregar descripción
+                  </button>
+                )}
+              </>
             )}
           </div>
 
           {task.labels?.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {task.labels.map((l, idx) => (
-                <AreaBadge key={`${idx}-${normalizarItem(l)}`} area={normalizarItem(l)} />
+                <span key={`${idx}-${normalizarItem(l)}`} className="flex items-center gap-1">
+                  <AreaBadge area={normalizarItem(l)} />
+                  <button onClick={() => removeLabel(normalizarItem(l))} className="text-tivit-ink/30 hover:text-alert text-xs">&times;</button>
+                </span>
               ))}
             </div>
           )}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Agregar label..."
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLabel(); } }}
+              className="rounded-lg border border-tivit-red-light bg-white px-2 py-1 text-xs outline-none focus:border-tivit-red"
+            />
+            <button onClick={addLabel} className="text-xs font-semibold text-tivit-red hover:underline">+ Agregar</button>
+          </div>
 
           <DependenciesSection
             taskId={id}
@@ -352,16 +473,26 @@ export function TaskDetail() {
 
             <div className="space-y-4">
               {comments.map((c) => (
-                <div key={c.id} className="flex gap-3">
-                  <UserAvatar user={c.author} />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-tivit-ink">{c.author.name}</span>
-                      <span className="text-xs text-tivit-ink/50">{formatRelative(c.created_at)}</span>
-                    </div>
-                    <CommentBody body={c.body} users={users} />
-                  </div>
-                </div>
+                <CommentItem
+                  key={c.id}
+                  comment={c}
+                  currentUser={me}
+                  taskId={id}
+                  users={users}
+                  onEdit={async (newBody) => {
+                    try {
+                      await api.editComment(id, c.id, newBody);
+                      commentsQuery.refetch();
+                    } catch (e) { alert(e.message); }
+                  }}
+                  onDelete={async () => {
+                    if (!window.confirm("¿Eliminar este comentario?")) return;
+                    try {
+                      await api.deleteComment(id, c.id);
+                      commentsQuery.refetch();
+                    } catch (e) { alert(e.message); }
+                  }}
+                />
               ))}
               {comments.length === 0 && (
                 <p className="text-sm text-tivit-ink/50">Sé el primero en comentar.</p>
@@ -441,6 +572,35 @@ export function TaskDetail() {
               </select>
             </DetailRow>
 
+            <DetailRow label="Story points">
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={task.story_points ?? ""}
+                onChange={(e) => handleFieldChange("story_points", e.target.value ? Number(e.target.value) : null)}
+                className="w-20 rounded border border-black/10 px-2 py-1 text-xs"
+                placeholder="—"
+              />
+            </DetailRow>
+
+            {task.status === "done" && (
+              <DetailRow label="Resolución">
+                <select
+                  value={task.resolution || ""}
+                  onChange={(e) => handleFieldChange("resolution", e.target.value || null)}
+                  className="rounded border border-black/10 px-2 py-1 text-xs"
+                >
+                  <option value="">—</option>
+                  <option value="fixed">Resuelto</option>
+                  <option value="wont_fix">No se corregirá</option>
+                  <option value="duplicate">Duplicado</option>
+                  <option value="done">Completado</option>
+                  <option value="cannot_reproduce">No reproducible</option>
+                </select>
+              </DetailRow>
+            )}
+
             <DetailRow label="Asignado">
               <select
                 value={task.assignee_id || ""}
@@ -466,6 +626,21 @@ export function TaskDetail() {
                 {sprints.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name} {s.is_active === 1 ? "✓" : ""}
+                  </option>
+                ))}
+              </select>
+            </DetailRow>
+
+            <DetailRow label="Epic">
+              <select
+                value={task.epic_id || ""}
+                onChange={(e) => handleFieldChange("epic_id", e.target.value || null)}
+                className="rounded border border-black/10 px-2 py-1 text-xs"
+              >
+                <option value="">Sin epic</option>
+                {epics.map((e) => (
+                  <option key={e.epic.id} value={e.epic.id}>
+                    {e.epic.name}
                   </option>
                 ))}
               </select>
@@ -522,25 +697,50 @@ export function TaskDetail() {
             </h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {timeEntries.map((te) => (
-                <div key={te.id} className="flex items-start gap-2 rounded-lg border border-black/5 p-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-sm font-semibold text-tivit-ink">
-                        {te.hours.toFixed(1)} h
-                      </span>
-                      <button
-                        onClick={() => handleDeleteTime(te.id)}
-                        className="text-xs text-alert hover:underline"
-                      >
-                        ×
-                      </button>
+                <div key={te.id} className="rounded-lg border border-black/5 p-2">
+                  {editingTimeEntry === te.id ? (
+                    <div className="space-y-2">
+                      <input
+                        type="number"
+                        step="0.25"
+                        value={editTimeForm.hours}
+                        onChange={(e) => setEditTimeForm({ ...editTimeForm, hours: e.target.value })}
+                        className="w-full rounded-lg border border-tivit-red px-3 py-1.5 text-sm focus:outline-none"
+                        autoFocus
+                      />
+                      <input
+                        type="text"
+                        value={editTimeForm.description}
+                        onChange={(e) => setEditTimeForm({ ...editTimeForm, description: e.target.value })}
+                        placeholder="Descripción"
+                        className="w-full rounded-lg border border-tivit-red px-3 py-1.5 text-sm focus:outline-none"
+                      />
+                      <div className="flex gap-1">
+                        <button onClick={() => handleEditTimeEntry(te.id)} className="rounded-full bg-tivit-red px-2 py-0.5 text-xs font-semibold text-white hover:bg-tivit-red-dark">Guardar</button>
+                        <button onClick={() => setEditingTimeEntry(null)} className="rounded-full border border-tivit-red-light px-2 py-0.5 text-xs font-semibold text-tivit-ink hover:bg-tivit-red-light">Cancelar</button>
+                      </div>
                     </div>
-                    <div className="text-xs text-tivit-ink/60">{te.user.name}</div>
-                    {te.description && (
-                      <div className="mt-1 text-xs text-tivit-ink/70">{te.description}</div>
-                    )}
-                    <div className="mt-1 text-xs text-tivit-ink/40">{formatRelative(te.logged_at)}</div>
-                  </div>
+                  ) : (
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-sm font-semibold text-tivit-ink">{te.hours.toFixed(1)} h</span>
+                          <div className="flex gap-1">
+                            {te.user?.id === me?.id && (
+                              <button
+                                onClick={() => { setEditingTimeEntry(te.id); setEditTimeForm({ hours: String(te.hours), description: te.description || "" }); }}
+                                className="text-xs text-tivit-ink/40 hover:text-tivit-red"
+                              >Editar</button>
+                            )}
+                            <button onClick={() => handleDeleteTime(te.id)} className="text-xs text-alert hover:underline">×</button>
+                          </div>
+                        </div>
+                        <div className="text-xs text-tivit-ink/60">{te.user.name}</div>
+                        {te.description && <div className="mt-1 text-xs text-tivit-ink/70">{te.description}</div>}
+                        <div className="mt-1 text-xs text-tivit-ink/40">{formatRelative(te.logged_at)}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               {timeEntries.length === 0 && (
@@ -775,6 +975,46 @@ function DetailRow({ label, children }) {
     <div className="mb-3 last:mb-0">
       <div className="mb-1 text-xs font-semibold text-tivit-ink/50">{label}</div>
       <div>{children}</div>
+    </div>
+  );
+}
+
+function CommentItem({ comment: c, currentUser, taskId, users, onEdit, onDelete }) {
+  const [editing, setEditing] = useState(false);
+  const [editBody, setEditBody] = useState(c.body);
+  const isOwner = currentUser?.id === c.author?.id;
+
+  return (
+    <div className="flex gap-3 group">
+      <UserAvatar user={c.author} />
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-tivit-ink">{c.author.name}</span>
+          <span className="text-xs text-tivit-ink/50">{formatRelative(c.created_at)}</span>
+          {isOwner && !editing && (
+            <span className="ml-auto flex gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button onClick={() => { setEditing(true); setEditBody(c.body); }} className="text-xs text-tivit-ink/40 hover:text-tivit-red">Editar</button>
+              <button onClick={onDelete} className="text-xs text-tivit-ink/40 hover:text-alert">Eliminar</button>
+            </span>
+          )}
+        </div>
+        {editing ? (
+          <div className="mt-2">
+            <textarea
+              rows={3}
+              value={editBody}
+              onChange={(e) => setEditBody(e.target.value)}
+              className="w-full rounded-lg border border-tivit-red p-3 text-sm focus:outline-none focus:ring-2 focus:ring-tivit-red/20"
+            />
+            <div className="mt-2 flex gap-2">
+              <button onClick={async () => { if (editBody.trim()) { await onEdit(editBody.trim()); setEditing(false); } }} className="rounded-full bg-tivit-red px-3 py-1 text-xs font-semibold text-white hover:bg-tivit-red-dark">Guardar</button>
+              <button onClick={() => setEditing(false)} className="rounded-full border border-tivit-red-light px-3 py-1 text-xs font-semibold text-tivit-ink hover:bg-tivit-red-light">Cancelar</button>
+            </div>
+          </div>
+        ) : (
+          <CommentBody body={c.body} users={users} />
+        )}
+      </div>
     </div>
   );
 }

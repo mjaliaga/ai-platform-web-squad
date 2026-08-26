@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useParams } from "react-router-dom";
-import { FolderKanban, ArrowLeft } from "lucide-react";
+import { FolderKanban, ArrowLeft, LayoutGrid, Calendar, Activity, Settings, Clock } from "lucide-react";
 import { api } from "../../lib/api";
 
 const tabs = [
   { to: "", label: "Resumen", end: true },
+  { to: "board", label: "Board", icon: LayoutGrid },
+  { to: "time-tracking", label: "Tiempo", icon: Clock },
+  { to: "calendar", label: "Calendario", icon: Calendar },
+  { to: "activity", label: "Actividad", icon: Activity },
   { to: "sprints", label: "Sprints" },
   { to: "feed", label: "Anuncios" },
   { to: "solicitudes", label: "Solicitudes" },
   { to: "team", label: "Equipo" },
+  { to: "settings", label: "Configuración", icon: Settings },
 ];
 
 export function ProjectLayout() {
@@ -49,19 +54,21 @@ export function ProjectLayout() {
       <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-black/5 pb-px text-sm font-medium">
         {tabs.map((t) => {
           const to = t.to === "" ? `/portal/projects/${id}` : `/portal/projects/${id}/${t.to}`;
+          const Icon = t.icon;
           return (
             <NavLink
               key={t.to}
               to={to}
               end={t.end}
               className={({ isActive }) =>
-                `whitespace-nowrap border-b-2 px-3 py-2.5 transition ${
+                `flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 transition ${
                   isActive
                     ? "border-tivit-red text-tivit-red"
                     : "border-transparent text-tivit-ink/60 hover:border-tivit-ink/20 hover:text-tivit-ink"
                 }`
               }
             >
+              {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
               {t.label}
             </NavLink>
           );

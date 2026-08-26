@@ -48,9 +48,15 @@ export function Dashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
-  const statsQuery = isAdmin ? useDashboard() : useDashboardMe();
+  const meStatsQuery = useDashboardMe();
+  const adminStatsQuery = useDashboard();
+  const statsQuery = isAdmin ? adminStatsQuery : meStatsQuery;
+
   const sprintQuery = useActiveSprint();
-  const tasksQuery = useTasks({ assignee: user?.id, limit: 50 });
+  const tasksQuery = useTasks(
+    user?.id ? { assignee: user.id, limit: 50 } : { limit: 50 },
+    { enabled: !!user?.id },
+  );
   const projectsQuery = useProjects({ limit: 12 });
   const announcementsQuery = useAnnouncements({ limit: 10 });
 
@@ -78,14 +84,12 @@ export function Dashboard() {
   const myTodo = myByStatus.todo || [];
   const myReview = myByStatus.review || [];
 
-  const staleTasks = stats.recent_activity.length > 0
-    ? myTasks.filter((t) => {
-        if (t.status === "done" || t.status === "backlog") return false;
-        const updated = toDate(t.updated_at);
-        const threeDaysAgo = Date.now() - 3 * 24 * 3600 * 1000;
-        return updated ? updated.getTime() < threeDaysAgo : false;
-      })
-    : [];
+  const staleTasks = myTasks.filter((t) => {
+    if (t.status === "done" || t.status === "backlog") return false;
+    const updated = toDate(t.updated_at);
+    const threeDaysAgo = Date.now() - 3 * 24 * 3600 * 1000;
+    return updated ? updated.getTime() < threeDaysAgo : false;
+  });
 
   return (
     <div className="space-y-8">

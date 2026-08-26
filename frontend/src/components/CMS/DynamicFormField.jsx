@@ -102,6 +102,19 @@ export function DynamicFormField({ field, value, onChange, error }) {
     case "media":
       return <MediaFieldEditor value={value} onChange={handleChange} />;
 
+    case "boolean":
+      return (
+        <label className="flex items-center gap-3 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={!!value}
+            onChange={(e) => handleChange(e.target.checked)}
+            className="h-4 w-4 rounded border-black/20 text-tivit-red focus:ring-tivit-red/30"
+          />
+          <span className="text-sm text-tivit-ink/70">{field.label}</span>
+        </label>
+      );
+
     case "icon":
       return <IconInput value={value || ""} onChange={handleChange} error={error} />;
 

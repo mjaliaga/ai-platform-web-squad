@@ -274,6 +274,27 @@ pub async fn create_item(
         ));
     }
 
+    // Validar código único por colección (si se proporciona)
+    if let Some(codigo) = payload.data.get("codigo").and_then(|v| v.as_str()) {
+        if !codigo.is_empty() {
+            let code_exists: Option<(String,)> =
+                sqlx::query_as(
+                    "SELECT id FROM content_items WHERE collection = ? AND json_extract(data, '$.codigo') = ? AND deleted_at IS NULL",
+                )
+                .bind(&collection)
+                .bind(codigo)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| internal_error(&format!("db error: {e}")))?;
+            if code_exists.is_some() {
+                return Err(error_response(
+                    StatusCode::CONFLICT,
+                    format!("Ya existe un item con el código '{}' en la colección '{}'", codigo, collection),
+                ));
+            }
+        }
+    }
+
     let id = Uuid::new_v4().to_string();
     let data_str = serde_json::to_string(&payload.data).unwrap_or_else(|_| "{}".to_string());
     let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
@@ -346,6 +367,28 @@ pub async fn update_item(
             ))
         }
     };
+
+    // Validar código único por colección (excluyendo el item actual)
+    if let Some(codigo) = payload.data.get("codigo").and_then(|v| v.as_str()) {
+        if !codigo.is_empty() {
+            let code_exists: Option<(String,)> =
+                sqlx::query_as(
+                    "SELECT id FROM content_items WHERE collection = ? AND json_extract(data, '$.codigo') = ? AND id != ? AND deleted_at IS NULL",
+                )
+                .bind(&collection)
+                .bind(codigo)
+                .bind(&row.id)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| internal_error(&format!("db error: {e}")))?;
+            if code_exists.is_some() {
+                return Err(error_response(
+                    StatusCode::CONFLICT,
+                    format!("Ya existe otro item con el código '{}' en la colección '{}'", codigo, collection),
+                ));
+            }
+        }
+    }
 
     let data_str = serde_json::to_string(&payload.data).unwrap_or_else(|_| "{}".to_string());
     let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();

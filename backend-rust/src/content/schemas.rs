@@ -99,7 +99,6 @@ fn object_field(
 /// Devuelve el schema declarativo de una colección a partir de su `ruta`.
 pub fn schema_for(ruta: &str) -> Option<Vec<FieldDef>> {
     match ruta {
-        "proyectos" => Some(proyectos_schema()),
         "casos-de-exito" => Some(casos_exito_schema()),
         "laboratorio" => Some(laboratorio_schema()),
         "poc" => Some(poc_schema()),
@@ -109,10 +108,9 @@ pub fn schema_for(ruta: &str) -> Option<Vec<FieldDef>> {
     }
 }
 
-/// Lista todas las rutas de colecciones soportadas.
+/// Lista todas las rutas de colecciones soportadas (proyectos migrado a projects table).
 pub fn all_collections() -> &'static [&'static str] {
     &[
-        "proyectos",
         "casos-de-exito",
         "laboratorio",
         "poc",
@@ -162,6 +160,33 @@ pub fn validate_data(
         }
     }
 
+    // Validar que los valores de select estén en las opciones permitidas
+    for f in fields.iter() {
+        if let Some(ref opciones) = f.opciones {
+            if let Some(valor) = obj.get(&f.key).and_then(|v| v.as_str()) {
+                if !valor.is_empty() && !opciones.iter().any(|o| o.value == valor) {
+                    let allowed: Vec<&str> = opciones.iter().map(|o| o.value.as_str()).collect();
+                    return Err(format!(
+                        "Campo '{}' tiene valor '{}' no válido. Opciones: {:?}",
+                        f.label, valor, allowed
+                    ));
+                }
+            }
+        }
+    }
+
+    // Validar tipo number
+    for f in fields.iter().filter(|f| f.tipo == "number") {
+        if let Some(v) = obj.get(&f.key) {
+            if !v.is_null() && !v.is_number() {
+                return Err(format!(
+                    "Campo '{}' debe ser numérico, se recibió '{}'",
+                    f.label, v
+                ));
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -180,6 +205,7 @@ fn proyectos_schema() -> Vec<FieldDef> {
     let estado_opts = vec![
         opt("Desplegado", "Desplegado"),
         opt("En desarrollo", "En desarrollo"),
+        opt("En evaluación", "En evaluación"),
         opt("Operativo", "Operativo"),
         opt("Operativo / En evolución", "Operativo / En evolución"),
         opt("Operativo / Demostración funcional", "Operativo / Demostración funcional"),
@@ -258,6 +284,8 @@ fn proyectos_schema() -> Vec<FieldDef> {
         field("documentoDrive", "Documento Google Drive (URL)", "url", false, Some("Enlace de visualización de Google Docs o Drive")),
         field("documentacion", "Documentación (URL)", "url", false, None),
         field("urlProyecto", "URL del proyecto", "url", false, None),
+        field("videoPlaceholder", "Mostrar placeholder de video", "boolean", false, Some("Si está activo, se muestra un placeholder en lugar del reproductor de video")),
+        field("reservado", "Reservado (oculto en público)", "boolean", false, Some("Si está activo, el item no se muestra en la lista pública")),
         array_field("galeria", "Galería", "Imagen", vec![
             field("url", "URL imagen", "media", true, None),
             field("alt", "Texto alternativo", "text", false, None),
@@ -285,6 +313,35 @@ fn casos_exito_schema() -> Vec<FieldDef> {
         opt("Pausado", "Pausado"),
     ];
 
+    let moneda_opts = vec![
+        opt("USD", "USD"),
+        opt("PEN", "PEN"),
+        opt("EUR", "EUR"),
+        opt("CLP", "CLP"),
+    ];
+
+    let equipo_fields = vec![
+        field("nombre", "Nombre", "text", true, None),
+        field("rol", "Rol", "text", true, None),
+    ];
+
+    let video_fields = vec![
+        select_field(
+            "tipo",
+            "Tipo",
+            vec![
+                opt("youtube", "YouTube"),
+                opt("vimeo", "Vimeo"),
+                opt("drive", "Google Drive"),
+                opt("archivo", "Archivo local"),
+                opt("mp4", "MP4 directo"),
+            ],
+            true,
+            None,
+        ),
+        field("url", "URL", "url", true, None),
+    ];
+
     vec![
         field("slug", "Slug (URL)", "slug", true, None),
         field("codigo", "Código", "text", false, None),
@@ -293,7 +350,8 @@ fn casos_exito_schema() -> Vec<FieldDef> {
         field("pais", "País", "text", false, None),
         select_field("estado", "Estado", estado_opts, true, None),
         field("plazo", "Plazo", "text", false, None),
-        field("precio", "Precio", "text", false, None),
+        field("precioValor", "Precio (valor numérico)", "number", false, None),
+        select_field("precioMoneda", "Moneda", moneda_opts, false, None),
         field("cliente", "Cliente", "text", false, None),
         field("descripcion", "Descripción", "textarea", true, None),
         field("perfil", "Perfil del cliente", "richtext", false, None),
@@ -302,6 +360,18 @@ fn casos_exito_schema() -> Vec<FieldDef> {
         array_field("stack", "Stack", "Tecnología", vec![
             field("value", "Tecnología", "text", true, None),
         ], None),
+        array_field("equipo", "Equipo", "Persona", equipo_fields, None),
+        array_field("galeria", "Galería", "Imagen", vec![
+            field("url", "URL imagen", "media", true, None),
+            field("alt", "Texto alternativo", "text", false, None),
+        ], None),
+        object_field(
+            "videoPromocional",
+            "Video promocional",
+            video_fields,
+            None,
+        ),
+        field("urlProyecto", "URL del proyecto", "url", false, None),
     ]
 }
 
@@ -400,6 +470,22 @@ fn laboratorio_schema() -> Vec<FieldDef> {
 fn poc_schema() -> Vec<FieldDef> {
     let tipo_opts = vec![opt("Interno", "Interno"), opt("Externo", "Externo")];
 
+    let estado_opts = vec![
+        opt("Desplegado", "Desplegado"),
+        opt("En desarrollo", "En desarrollo"),
+        opt("En evaluación", "En evaluación"),
+        opt("Operativo", "Operativo"),
+        opt("Operativo / En evolución", "Operativo / En evolución"),
+        opt("Operativo / Demostración funcional", "Operativo / Demostración funcional"),
+        opt("Implementado en Producción", "Implementado en Producción"),
+        opt("Implementado en Pre-Producción", "Implementado en Pre-Producción"),
+        opt("Video Demo", "Video Demo"),
+        opt("En Producción", "En Producción"),
+        opt("Pausado", "Pausado"),
+        opt("Cancelado", "Cancelado"),
+        opt("En preparación", "En preparación"),
+    ];
+
     let highlight_fields = vec![
         field("valor", "Valor", "text", true, None),
         field("etiqueta", "Etiqueta", "text", true, None),
@@ -412,7 +498,7 @@ fn poc_schema() -> Vec<FieldDef> {
         field("nombreComercial", "Nombre comercial", "text", true, None),
         field("nombreProyecto", "Nombre del proyecto", "text", false, None),
         select_field("tipo", "Tipo", tipo_opts, true, None),
-        field("estado", "Estado", "text", true, None),
+        select_field("estado", "Estado", estado_opts, true, None),
         field("version", "Versión", "text", false, None),
         field("tipoSolucion", "Tipo de solución", "text", false, None),
         field("cliente", "Cliente", "text", false, None),
@@ -448,6 +534,8 @@ fn poc_schema() -> Vec<FieldDef> {
             None,
         ),
         field("documentoDrive", "Documento Google Drive (URL)", "url", false, None),
+        field("videoPlaceholder", "Mostrar placeholder de video", "boolean", false, Some("Si está activo, se muestra un placeholder en lugar del reproductor de video")),
+        field("reservado", "Reservado (oculto en público)", "boolean", false, Some("Si está activo, el item no se muestra en la lista pública")),
         array_field("galeria", "Galería", "Imagen", vec![
             field("url", "URL imagen", "media", true, None),
             field("alt", "Texto alternativo", "text", false, None),

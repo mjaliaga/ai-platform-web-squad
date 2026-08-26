@@ -73,6 +73,11 @@ export function ItemEditorPage() {
           errs[f.key] = "Solo minúsculas, números y guiones";
         }
       }
+      if (f.opciones && data[f.key]) {
+        if (!f.opciones.some((o) => o.value === data[f.key])) {
+          errs[f.key] = "Valor inválido para esta opción";
+        }
+      }
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -135,7 +140,8 @@ export function ItemEditorPage() {
       "cliente",
       "pais",
       "plazo",
-      "precio",
+      "precioValor",
+      "precioMoneda",
       "tipoSolucion",
     ];
     const mediaKeys = [
@@ -145,8 +151,10 @@ export function ItemEditorPage() {
       "documentacion",
       "urlProyecto",
       "documentoDrive",
+      "videoPlaceholder",
     ];
 
+    // Filter by schema presence so only fields that exist in the collection are shown
     const basics = schema.filter((f) => basicKeys.includes(f.key));
     const media = schema.filter((f) => mediaKeys.includes(f.key));
     const remaining = schema.filter(

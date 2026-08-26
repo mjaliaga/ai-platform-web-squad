@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown, FileEdit } from "lucide-react";
+import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown, FileEdit, CheckSquare, Award } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { NotificationBell } from "./components/NotificationBell";
 
 const links = [
   { to: "/portal", label: "Inicio", icon: Home, end: true },
-  { to: "/portal/projects", label: "Proyectos", icon: FolderKanban },
-  { to: "/portal/members", label: "Miembros", icon: Users },
+  { to: "/portal/todos", label: "Mis Tareas", icon: CheckSquare },
+  { to: "/portal/projects", label: "Proyecto", icon: FolderKanban },
+];
+
+const adminLinks = [
+  { to: "/portal/certifications", label: "Certificaciones", icon: Award },
 ];
 
 const editorLinks = [
@@ -49,8 +53,8 @@ export function PortalLayout() {
           scrolled ? "shadow-sm" : ""
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
+          <div className="flex shrink-0 items-center gap-3">
             <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="TIVIT">
               <img src="/media/logos/logo-tivit-tile.png" alt="TIVIT" className="h-8 w-auto" />
               <div className="hidden flex-col leading-tight sm:flex">
@@ -62,22 +66,34 @@ export function PortalLayout() {
                 </span>
               </div>
             </Link>
-            <nav className="ml-2 hidden items-center gap-1 lg:flex" aria-label="Principal">
-              {links.map((l) => (
+          </div>
+
+          <nav className="hidden items-center gap-1 xl:gap-1.5 lg:flex" aria-label="Principal">
+            {links.map((l) => (
+              <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
+                <l.icon className="h-4 w-4" aria-hidden="true" />
+                {l.label}
+              </NavLink>
+            ))}
+            {user?.role === "admin" &&
+              adminLinks.map((l) => (
                 <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
                   <l.icon className="h-4 w-4" aria-hidden="true" />
                   {l.label}
                 </NavLink>
               ))}
-              {(user?.role === "admin" || user?.role === "editor") &&
-                editorLinks.map((l) => (
-                  <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
-                    <l.icon className="h-4 w-4" aria-hidden="true" />
-                    {l.label}
-                  </NavLink>
-                ))}
-            </nav>
-          </div>
+            <NavLink to="/portal/members" className={navLinkClass}>
+              <Users className="h-4 w-4" aria-hidden="true" />
+              Miembros
+            </NavLink>
+            {(user?.role === "admin" || user?.role === "editor") &&
+              editorLinks.map((l) => (
+                <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
+                  <l.icon className="h-4 w-4" aria-hidden="true" />
+                  {l.label}
+                </NavLink>
+              ))}
+          </nav>
 
           <div className="flex shrink-0 items-center gap-2">
             <NotificationBell />
@@ -163,6 +179,17 @@ export function PortalLayout() {
                   {l.label}
                 </NavLink>
               ))}
+              {user?.role === "admin" &&
+                adminLinks.map((l) => (
+                  <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
+                    <l.icon className="h-4 w-4" aria-hidden="true" />
+                    {l.label}
+                  </NavLink>
+                ))}
+              <NavLink to="/portal/members" className={navLinkClass}>
+                <Users className="h-4 w-4" aria-hidden="true" />
+                Miembros
+              </NavLink>
               {(user?.role === "admin" || user?.role === "editor") &&
                 editorLinks.map((l) => (
                   <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>

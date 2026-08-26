@@ -1,4 +1,4 @@
-export function VideoPlaceholder() {
+export function VideoPlaceholder({ nombre = "este proyecto" }) {
   return (
     <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-tivit-red-light bg-tivit-red-light/25 px-6 text-center">
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 text-tivit-red" aria-hidden="true">
@@ -8,7 +8,7 @@ export function VideoPlaceholder() {
       </span>
       <p className="font-semibold text-tivit-red-dark">Video promocional en preparación</p>
       <p className="max-w-md text-sm text-tivit-ink/60">
-        Próximamente podrás conocer Mercado Público Management en funcionamiento.
+        Próximamente podrás conocer {nombre} en funcionamiento.
       </p>
     </div>
   );

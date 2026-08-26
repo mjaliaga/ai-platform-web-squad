@@ -12,241 +12,15 @@ export const team = [
 ];
 
 /**
- * Las cuatro colecciones del sitio (Proyectos, Casos de éxito, Laboratorio y PoC)
- * comparten la misma forma, y por eso comparten también las mismas páginas de
- * listado y detalle.
+ * Los items de "proyectos" y "laboratorio" se cargan de forma incremental
+ * desde archivos JSON (data/items.json) o desde la API pública del CMS.
+ * "almaviva", "xms", "casos-de-exito" y "poc" se cargan desde módulos de
+ * datos propios (almaviva.js, xms.js, casosExito.js, poc.js).
  *
- * Los items de "proyectos" y "laboratorio" se cargan de forma incremental desde
- * CSVs (data/*.csv) con el script scripts/cargar_proyectos.py, que genera
- * src/data/items.json. "almaviva", "xms" y "casos-de-exito" se cargan desde
- * módulos de datos propios (almaviva.js, xms.js, casosExito.js). Cada item
- * admite estos campos:
- *
- *   slug             (obligatorio) identificador para la URL: /coleccion/slug
- *   coleccion        colección a la que pertenece (proyectos, casos-de-exito, …)
- *   nombreComercial  título mostrado en tarjetas y ficha
- *   nombreProyecto   nombre oficial (subtítulo en la ficha, si difiere)
- *   codigo           código interno, p. ej. "PRJ-009"
- *   tipo             área (solo "Interno" o "Externo")
- *   estado           p. ej. "Desplegado"
- *   cliente          p. ej. "Antamina"
- *   descripcion      resumen de una o dos líneas
- *   equipo           [{ nombre, rol }]  → "Manuel Aliaga (Líder Técnico)" en CSV
- *   videoPromocional video comercial  → "youtube|URL", "vimeo|URL", "archivo|/ruta"
- *   videoTecnico     video técnico (mismo formato)
- *   documentacion    URL de la documentación
- *   galeria          lista de rutas de imágenes "/media/proyectos/<slug>/xxx.jpg"
- *   stack            lista de tecnologías
- *   problemas        lista de problemas a enfrentar
- *   resultados       lista de resultados
- *   reservado        true → borrador oculto: no se muestra hasta estar listo
- *
- * Los campos vacíos no se muestran en la ficha. Si el item no tiene contenido
- * (sin descripción, videos, equipo, stack, problemas ni resultados) la ficha
- * muestra un aviso de "en preparación".
+ * Los items de proyectos y casos-de-exito ahora se almacenan en la BD via CMS.
+ * El frontend carga primero desde la API; si la BD está vacía, cae al fallback
+ * estático de los archivos JSON/JS.
  */
-
-const detallesProyectos = {
-  "prj-009-automatizacion-qa": {
-    nombreComercial: "TivitQA — Automatización de Documentación QA",
-    nombreProyecto: "Plataforma de automatización y asistencia para documentación QA",
-    cliente: "Externo",
-    estado: "Desplegado",
-    version: "v1.0.0",
-    tipoSolucion: "Plataforma web de automatización y asistencia QA",
-    videoPromocional: { tipo: "youtube", url: "https://www.youtube.com/watch?v=40dzhwuRF1g" },
-    videoTecnico: null,
-    documentacion: null,
-    urlProyecto: "https://docs.empresa.com/prj-009",
-    videoPlaceholder: false,
-    galeria: [],
-    descripcion:
-      "Plataforma que automatiza la generación de documentación QA a partir de requerimientos y secuencias de capturas de pantalla.",
-    descripcionLarga:
-      "TivitQA utiliza inteligencia artificial con Gemini para transformar documentos de requerimientos y flujos visuales en entregables de calidad estructurados. Genera matrices de casos de prueba clásicas, matrices Gherkin y especificaciones completas de casos de uso, reduciendo el trabajo manual y estandarizando la documentación entre equipos QA.",
-    stack: [
-      "Python",
-      "Flask",
-      "FastAPI",
-      "React",
-      "TypeScript",
-      "Vite",
-      "PostgreSQL",
-      "SQLAlchemy",
-      "Gemini / Vertex AI",
-      "Google Cloud Storage",
-      "Microsoft SSO",
-      "Socket.IO",
-      "Google Cloud Run",
-      "Docker",
-    ],
-    problemas: [
-      "Elaboración manual, lenta e inconsistente de matrices de prueba",
-      "Dificultad para transformar documentos PDF y DOCX en casos estructurados",
-      "Falta de estandarización entre entregables de distintos analistas QA",
-      "Complejidad para documentar flujos funcionales a partir de capturas de pantalla",
-      "Riesgo de omitir escenarios, secuencias alternativas y condiciones relevantes",
-      "Necesidad de mantener numeración y continuidad entre distintas generaciones",
-    ],
-    queHicimos: [
-      "Implementamos generación automática de matrices a partir de documentos PDF, DOCX y TXT",
-      "Incorporamos tres tipos de salida: matriz clásica, matriz Gherkin y especificación de casos de uso",
-      "Integramos Gemini AI y Vertex AI para analizar requerimientos, capturas y flujos funcionales",
-      "Construimos exportaciones basadas en plantillas oficiales: Excel para matrices y Word para casos de uso",
-      "Desarrollamos generación incremental con numeración secuencial de casos de prueba y casos de uso",
-      "Implementamos Microsoft SSO, almacenamiento en Google Cloud, actualizaciones en tiempo real y controles de seguridad",
-    ],
-    resultados: [
-      "Plataforma desplegada y operativa sobre Google Cloud",
-      "Generación automatizada de matrices clásicas y Gherkin",
-      "Especificaciones de casos de uso desde secuencias de capturas de pantalla",
-      "Exportación de matrices en Excel y documentos de casos de uso en Word",
-      "Diagramas UML generados automáticamente para bloques temáticos",
-      "Continuidad de numeración y actualización de estados en tiempo real",
-      "Auditoría de seguridad completada y vulnerabilidades críticas remediadas",
-    ],
-  },
-  "prj-010-analisis-mercado-publico": {
-    nombreComercial: "Mercado Público Management",
-    nombreProyecto: "Plataforma de inteligencia para licitaciones públicas chilenas",
-    cliente: "Interno",
-    estado: "Desplegado",
-    version: "v1.0.0",
-    tipoSolucion: "Plataforma web de inteligencia para licitaciones",
-    videoPromocional: { tipo: "youtube", url: "https://www.youtube.com/watch?v=Sd_p2Be00B4" },
-    videoTecnico: null,
-    documentacion: null,
-    urlProyecto: "https://docs.empresa.com/prj-010",
-    videoPlaceholder: true,
-    galeria: [],
-    descripcion:
-      "Plataforma de inteligencia para gestionar, buscar y analizar licitaciones públicas chilenas de Mercado Público.",
-    descripcionLarga:
-      "Mercado Público Management centraliza el seguimiento de oportunidades de mercadopublico.cl y convierte grandes volúmenes de licitaciones, actas y documentos PDF en información accionable. La plataforma combina búsqueda tradicional y lenguaje natural, análisis documental con inteligencia artificial, alertas multicanal e inteligencia competitiva para ayudar a los equipos a decidir dónde participar y cómo mejorar sus propuestas.",
-    stack: [
-      ".NET 8",
-      "C#",
-      "ASP.NET Core",
-      "React",
-      "TypeScript",
-      "PostgreSQL",
-      "Dapper",
-      "SignalR",
-      "Redis",
-      "Gemini / Vertex AI",
-      "Google Cloud Run",
-      "Playwright",
-    ],
-    problemas: [
-      "Seguimiento manual y diario de licitaciones y aclaraciones",
-      "Gran volumen de información difícil de filtrar con búsquedas literales",
-      "Análisis lento y propenso a errores de actas y documentos PDF",
-      "Poca visibilidad sobre competidores, ofertas y resultados históricos",
-      "Alertas imprecisas y criterios poco consistentes para decidir un go/no-go",
-    ],
-    queHicimos: [
-      "Implementamos la sincronización automática de licitaciones mediante la API oficial y procesos programados",
-      "Incorporamos búsqueda semántica con Gemini y degradación controlada a búsqueda tradicional",
-      "Creamos un workspace por licitación para analizar actas y validar documentos enviados",
-      "Desarrollamos alertas configurables por palabra clave, monto, organismo y tipo de licitación",
-      "Construimos inteligencia competitiva sobre participación, montos ofertados y adjudicaciones",
-      "Separamos API, sincronización, scraping y análisis en servicios escalables sobre Google Cloud",
-    ],
-    resultados: [
-      "Versión v1.0.0 desplegada en producción sobre Google Cloud",
-      "Sincronización automática, búsqueda semántica y análisis de actas con IA",
-      "Dashboard ejecutivo con indicadores de licitaciones ganadas y perdidas",
-      "Alertas por aplicación, correo electrónico y Telegram",
-      "Flujo colaborativo con responsables, comentarios y decisión go/no-go",
-    ],
-  },
-  "prj-018-deskflow-ai-xcally": {
-    nombreComercial: "DeskFlow AI — Agente Virtual Inteligente para Mesa de Ayuda en XCALLY",
-    nombreProyecto: "Agente virtual de voz para Mesa de Ayuda integrado con XCALLY",
-    cliente: "Interno",
-    estado: "En desarrollo",
-    version: "En desarrollo",
-    tipoSolucion: "Agente Virtual Inteligente de voz para Mesa de Ayuda / Prueba de Concepto (PoC)",
-    videoPromocional: { tipo: "youtube", url: "https://www.youtube.com/watch?v=A7vS4M2inUw" },
-    videoTecnico: null,
-    documentacion: null,
-    urlProyecto: null,
-    videoPlaceholder: false,
-    galeria: [],
-    descripcion:
-      "Agente virtual de voz para Mesa de Ayuda integrado con XCALLY Motion / Cally Square que transforma procedimientos de soporte en conversaciones guiadas y acciones automatizadas.",
-    descripcionLarga:
-      "Desarrolla una prueba de concepto de agente virtual de voz para Mesa de Ayuda integrado con XCALLY Motion / Cally Square. Está orientado a transformar procedimientos de soporte en conversaciones guiadas y acciones automatizadas. Su alcance funcional validado incluye el cambio/restablecimiento de contraseña y tratamiento de cuentas bloqueadas, captura segura de documento de identidad, mantenimiento de contexto, ejecución controlada de operaciones y escalamiento a Mesa de Servicio. Combina XCALLY, Google STT/TTS, FastAPI, LangGraph, Vertex AI Gemini, Cloud Run, Firestore y Cloud Spanner.",
-    queHicimos: [
-      "Modelado de procedimientos: análisis y transformación de instrucciones operativas (ej. cambio de contraseña vía portales Microsoft y TIVIT) en comportamientos conversacionales",
-      "Construcción del flujo en XCALLY: uso de bloques nativos en Cally Square para Google TTS/ASR, captura DTMF, consumo REST, ruteo condicional (GoToIf), reproducción dinámica y escalamiento",
-      "Orquestador desacoplado: API con FastAPI y LangGraph en Cloud Run que desacopla la telefonía del cerebro conversacional y reduce la interfaz de XCALLY a cuatro rutas (CONTINUE, COLLECT_IDENTITY, COMPLETE, ESCALATE)",
-      "Capa NLP/NLU con Gemini: integración de Vertex AI Gemini para comprensión contextual y variaciones lingüísticas controladas, manteniendo deterministas las consultas y operaciones sensibles",
-      "Persistencia de contexto: implementación de Firestore por identificador de llamada para conservar el estado multiturno y datos pendientes",
-      "Dominio corporativo simulado: base de datos en Cloud Spanner para consultar empleados, estados de cuenta y simular operaciones de restablecimiento y desbloqueo tipo AD",
-      "Captura y validación de identidad: ingreso seguro de documento mediante teclado telefónico (DTMF) separado del reconocimiento de voz",
-      "Pruebas y calidad: implementación de pruebas unitarias e integración (166 aprobadas, 94 % de cobertura global, validación con Ruff y MyPy)",
-    ],
-    highlights: [
-      { valor: "166", etiqueta: "Pruebas aprobadas", detalle: "Unitarias e integración" },
-      { valor: "94%", etiqueta: "Cobertura global", detalle: "Ruff + MyPy" },
-      { valor: "4", etiqueta: "Rutas de integración", detalle: "CONTINUE · COLLECT_IDENTITY · COMPLETE · ESCALATE" },
-      { valor: "Multi", etiqueta: "Contexto multiturno", detalle: "Estado persistente por llamada" },
-    ],
-  },
-  "prj-008-tivit-soc": {
-    nombreComercial: "TivitSOC — Centro de Operaciones de Seguridad Inteligente",
-    nombreProyecto: "Plataforma de monitoreo, análisis y gobernanza de incidentes de ciberseguridad",
-    cliente: "Interno",
-    estado: "Operativo / En evolución",
-    version: "1.0.0",
-    tipoSolucion: "Plataforma web de gestión y monitoreo SOC con IA",
-    videoPromocional: { tipo: "youtube", url: "https://www.youtube.com/watch?v=oi5Jr7ExlMs" },
-    videoTecnico: null,
-    documentacion: null,
-    urlProyecto: null,
-    videoPlaceholder: false,
-    galeria: [],
-    descripcion:
-      "Plataforma que centraliza, enriquece y gestiona el flujo operativo de eventos de seguridad mediante inteligencia artificial y supervisión de analistas.",
-    descripcionLarga:
-      "TivitSOC centraliza la recepción, análisis y resolución de eventos de seguridad dentro de un flujo gobernado y trazable. Integra inteligencia artificial para acelerar la contextualización de incidentes mediante análisis automatizado y mentoría operativa (Copilot), permitiendo a los analistas evaluar observables (IoCs), gestionar clientes y auditar decisiones críticas en tiempo real.",
-    queHicimos: [
-      "Diseño de un pipeline de eventos estructurado en cinco fases: Ingesta, Threat Intel, Análisis, Reporte y Notificación",
-      "Integración de un motor de inteligencia artificial y mentoría tipo Copilot para análisis de payloads y recomendaciones de mitigación",
-      "Módulo interactivo de observables basado en grafos para correlacionar IPs, dominios y hashes con tickets",
-      "Panel de control centralizado con métricas clave (MTTD, tasa de falsos positivos, volumen y severidad)",
-      "Módulos de gestión multicliente y administración de analistas con control de monitoreo activo",
-      "Exportación de datos en formatos CSV, Excel para analistas y reportes ejecutivos en PDF",
-    ],
-  },
-  "prj-017-tivit-acv": {
-    nombreComercial: "TivitACV — Asistente Comercial de Planillas ACV",
-    nombreProyecto: "Plataforma de analítica financiera y asistencia conversacional con IA",
-    cliente: "Interno",
-    estado: "Operativo",
-    version: "1.0.0",
-    tipoSolucion: "Plataforma analítica y asistente virtual de finanzas comerciales",
-    videoPromocional: { tipo: "youtube", url: "https://www.youtube.com/watch?v=H-brqU897YM" },
-    videoTecnico: null,
-    documentacion: null,
-    urlProyecto: null,
-    videoPlaceholder: false,
-    galeria: [],
-    descripcion:
-      "Plataforma que centraliza el seguimiento del Annual Contract Value (ACV), el control presupuestario y la consulta ágil de planillas comerciales.",
-    descripcionLarga:
-      "TivitACV combina un dashboard ejecutivo de indicadores comerciales con un asistente conversacional dotado de inteligencia artificial y reglas de gobernanza de dominio. Facilita el análisis comparativo de metas, variaciones entre cortes semanales/mensuales y la exploración de métricas financieras por país y línea de negocio a partir de planillas estructuradas.",
-    queHicimos: [
-      "Dashboard ejecutivo con KPIs clave: ACV acumulado, presupuesto YTD, pipeline total/avanzado y cumplimiento",
-      "Visualización comparativa de variaciones y desgloses multidimensionales por país y línea de negocio",
-      "Asistente conversacional con IA gobernada (guardrails) restringido exclusivamente a datos financieros y comerciales",
-      "Ingesta flexible de documentos mediante carga directa de archivos Excel y vinculación de carpetas en Google Drive",
-      "Historial de sesiones de chat con guardado automático, conteo de interacciones y títulos editables",
-      "Exportación directa de dashboards a reportes PDF estructurados y módulo de administración de usuarios y permisos",
-    ],
-  },
-};
 
 /** Detalle enriquecido de los items de Tivit Labs. Se mergea sobre los items
  *  base del CSV `data/laboratorio.csv` (mismo patrón que `detallesProyectos`). */
@@ -301,67 +75,7 @@ const FUENTES = {
   xms: "xms",
 };
 
-// PoC de TivitVision — Video Analítica Inteligente con IA.
-const pocs = [
-  {
-    slug: "prj-vis-03-tivit-vision",
-    codigo: "PRJ-VIS-03",
-    nombreComercial: "TivitVision — Plataforma de Video Analítica Inteligente con IA",
-    nombreProyecto:
-      "Plataforma de visión computacional, analítica en tiempo real y seguridad operativa",
-    tipo: "Interno",
-    estado: "Operativo / Demostración funcional",
-    cliente: "Interno",
-    descripcion:
-      "Plataforma que procesa flujos de video para automatizar la detección de incidentes de seguridad laboral, control de zonas y monitoreo patrimonial.",
-    descripcionLarga:
-      "TivitVision utiliza modelos de visión artificial e inteligencia artificial generativa para transformar cámaras de seguridad convencionales en sensores analíticos avanzados. Permite delimitar zonas interactivas en video para monitorear el cumplimiento de EPP, detectar riesgos de atropello, controlar tiempos de espera y colas en almacenes, e identificar intrusiones fuera de horario laboral, generando clips de evidencia y reportes forenses automatizados.",
-    videoPromocional: { tipo: "youtube", url: "https://www.youtube.com/watch?v=pt2iC9Sc7u0" },
-    problemas: [
-      "Imposibilidad de supervisar manualmente múltiples transmisiones de video en simultáneo 24/7",
-      "Incumplimiento no detectado de Equipos de Protección Personal (EPP) en zonas de alto riesgo operativo",
-      "Riesgos críticos de accidentes y atropellos por interacción cercana entre maquinaria/vehículos y personas",
-      "Falta de visibilidad sobre ineficiencias operativas, tiempos excesivos de espera y congestión de colas en almacenes",
-      "Intrusiones e ingresos no autorizados en horarios no laborales difíciles de auditar de forma inmediata",
-      "Extracción lenta y manual de clips de video al momento de documentar o auditar incidentes de seguridad",
-    ],
-    queHicimos: [
-      "Motor de dibujo y configuración de polígonos interactivos para delimitar zonas sobre las transmisiones de video",
-      "Analítica de seguridad laboral (HSE) para detectar omisión de EPP (casco, lentes, guantes, overol y chaleco de alta visibilidad)",
-      "Modelos de detección de riesgo de atropello que calculan distancias entre personas y vehículos junto con velocidades aproximadas",
-      "Algoritmos para analítica de almacén: medición de tiempos de permanencia, detección de demoras en atención y aforo en colas",
-      "IA generativa para el resumen automatizado de eventos críticos (descripción de sujetos, vestimenta y comportamiento) y recorte automático de clips de evidencia",
-      "Dashboard de analítica histórica con matriz de riesgo temporal, salud de cámaras, geolocalización y editor de prompts para personalización de reglas de IA",
-    ],
-    resultados: [
-      "Detección y notificación casi instantánea de anomalías operativas y faltas de seguridad",
-      "Reducción de riesgos de accidentes mediante cálculo continuo de proximidad y uso de distractores (celular al conducir)",
-      "Generación automatizada de fragmentos de video y análisis forense como evidencia accionable",
-      "Supervisión patrimonial perimetral con reglas programables según calendarios y horarios no laborales",
-      "Centralización multisede con geolocalización y monitoreo del estado operativo de las cámaras",
-      "Optimización de flujos de atención y tiempos de servicio en almacenes",
-    ],
-    stack: [
-      "Python",
-      "OpenCV",
-      "PyTorch / YOLO",
-      "FastAPI",
-      "React",
-      "TypeScript",
-      "Vite",
-      "WebSockets",
-      "LLM / Vision AI Frameworks",
-      "Docker",
-      "Cloud Run",
-    ],
-    equipo: [
-      { nombre: "Jesús Huerta", rol: "Ingeniero IA" },
-      { nombre: "Manuel Aliaga", rol: "Líder Técnico" },
-      { nombre: "Sergio Aguas", rol: "Arquitecto" },
-    ],
-    videoPlaceholder: false,
-  },
-];
+// PoC data is now in ./poc.js (lazy-loaded)
 
 export const colecciones = {
   proyectos: {
@@ -581,7 +295,7 @@ export function getColeccion(ruta) {
  * 1. Primero intenta leer de la API pública (`/api/public/content/:collection`).
  *    Esta API devuelve los items gestionados por el CMS (solo publicados).
  * 2. Si la API responde vacío (BD sin items), cae al fallback estático
- *    (items.json, casosExito.js, almaviva.js, xms.js, pocs).
+ *    (items.json, casosExito.js, almaviva.js, xms.js, poc.js).
  *
  * El resultado se cachea por ruta para evitar re-importar y re-filtrar en cada
  * llamada. Esto permite migrar gradualmente los items al CMS sin perder el
@@ -606,12 +320,50 @@ function normalizarItemApi(item) {
 
   const result = { ...item };
 
+  // Parse JSON strings for array fields (from projects table flat columns)
+  const arrayFields = ["equipo", "stack", "problemas", "que_hicimos", "queHicimos", "resultados", "highlights", "galeria"];
+  for (const campo of arrayFields) {
+    const val = result[campo];
+    if (typeof val === "string" && val.startsWith("[")) {
+      try {
+        result[campo] = JSON.parse(val);
+      } catch {
+        // leave as-is
+      }
+    }
+  }
+
+  // Parse JSON strings for object fields
+  const objectFields = ["video_promocional", "videoPromocional", "video_tecnico", "videoTecnico"];
+  for (const campo of objectFields) {
+    const val = result[campo];
+    if (typeof val === "string" && val.startsWith("{")) {
+      try {
+        result[campo] = JSON.parse(val);
+      } catch {
+        // leave as-is
+      }
+    }
+  }
+
+  // Map snake_case to camelCase for projects table fields
+  if (result.nombre_comercial && !result.nombreComercial) result.nombreComercial = result.nombre_comercial;
+  if (result.descripcion_larga && !result.descripcionLarga) result.descripcionLarga = result.descripcion_larga;
+  if (result.tipo_solucion && !result.tipoSolucion) result.tipoSolucion = result.tipo_solucion;
+  if (result.video_promocional && !result.videoPromocional) result.videoPromocional = result.video_promocional;
+  if (result.video_tecnico && !result.videoTecnico) result.videoTecnico = result.video_tecnico;
+  if (result.documento_drive && !result.documentoDrive) result.documentoDrive = result.documento_drive;
+  if (result.url_proyecto && !result.urlProyecto) result.urlProyecto = result.url_proyecto;
+  if (result.video_placeholder !== undefined && result.videoPlaceholder === undefined) result.videoPlaceholder = !!result.video_placeholder;
+  if (result.que_hicimos && !result.queHicimos) result.queHicimos = result.que_hicimos;
+
+  // Use slug as codigo fallback
+  if (!result.codigo && result.code) result.codigo = result.code;
+
   for (const campo of Object.keys(result)) {
     const val = result[campo];
     if (!Array.isArray(val) || val.length === 0) continue;
 
-    // ¿Es un array de objetos { value: "..." }?
-    // Lo detectamos comprobando el primer elemento que sea un objeto con solo "value".
     const esArrayDeValue = val.some(
       (entry) =>
         entry !== null &&
@@ -635,6 +387,8 @@ function normalizarItemApi(item) {
   return result;
 }
 
+// Estrategia híbrida: prioriza la BD (content_items), cae a fallback estático si la BD está vacía.
+// Ver docs/CONTENT-FLOW.md para documentación completa del flujo.
 async function fetchFromApi(ruta) {
   const base = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
   const url = `${base}/public/content/${ruta}?limit=500`;
@@ -643,6 +397,13 @@ async function fetchFromApi(ruta) {
     if (!res.ok) return null;
     const json = await res.json();
     if (!json?.items || json.items.length === 0) return null;
+
+    // Proyectos: items are flat columns from projects table
+    if (ruta === "proyectos") {
+      return json.items.map((item) => normalizarItemApi(item));
+    }
+
+    // Other collections: items have item.data from content_items table
     return json.items.map((item) => normalizarItemApi(item.data));
   } catch {
     return null;
@@ -652,7 +413,8 @@ async function fetchFromApi(ruta) {
 async function loadStaticFallback(coleccion) {
   const fuente = FUENTES[coleccion.ruta];
   if (fuente === "poc") {
-    return pocs;
+    const modulo = await import("./poc.js");
+    return modulo.pocs;
   }
   if (fuente === "almaviva") {
     const modulo = await import("./almaviva.js");
@@ -669,13 +431,7 @@ async function loadStaticFallback(coleccion) {
   if (fuente === "items") {
     const { default: items } = await import("./items.json");
     if (coleccion.ruta === "proyectos") {
-      return items
-        .filter(
-          (item) =>
-            item.coleccion === "proyectos" &&
-            item.slug !== "prj-001-plataforma-gestion-comercial"
-        )
-        .map((item) => ({ ...item, ...(detallesProyectos[item.slug] ?? {}) }));
+      return items.filter((item) => item.coleccion === "proyectos");
     }
     if (coleccion.ruta === "laboratorio") {
       return items

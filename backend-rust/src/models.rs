@@ -79,6 +79,10 @@ pub struct Task {
     pub updated_at: String,
     #[sqlx(default)]
     pub deleted_at: Option<String>,
+    #[sqlx(default)]
+    pub story_points: Option<i64>,
+    #[sqlx(default)]
+    pub resolution: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -111,6 +115,53 @@ pub struct Project {
     pub created_at: String,
     #[sqlx(default)]
     pub deleted_at: Option<String>,
+    // CMS fields
+    #[sqlx(default)]
+    pub slug: Option<String>,
+    #[sqlx(default)]
+    pub published: Option<i64>,
+    #[sqlx(default)]
+    pub reservado: Option<i64>,
+    #[sqlx(default)]
+    pub tipo: Option<String>,
+    #[sqlx(default)]
+    pub version: Option<String>,
+    #[sqlx(default)]
+    pub tipo_solucion: Option<String>,
+    #[sqlx(default)]
+    pub cliente: Option<String>,
+    #[sqlx(default)]
+    pub nombre_comercial: Option<String>,
+    #[sqlx(default)]
+    pub descripcion_larga: Option<String>,
+    #[sqlx(default)]
+    pub equipo: Option<String>,
+    #[sqlx(default)]
+    pub stack: Option<String>,
+    #[sqlx(default)]
+    pub problemas: Option<String>,
+    #[sqlx(default)]
+    pub que_hicimos: Option<String>,
+    #[sqlx(default)]
+    pub resultados: Option<String>,
+    #[sqlx(default)]
+    pub highlights: Option<String>,
+    #[sqlx(default)]
+    pub galeria: Option<String>,
+    #[sqlx(default)]
+    pub video_promocional: Option<String>,
+    #[sqlx(default)]
+    pub video_tecnico: Option<String>,
+    #[sqlx(default)]
+    pub documento_drive: Option<String>,
+    #[sqlx(default)]
+    pub documentacion: Option<String>,
+    #[sqlx(default)]
+    pub url_proyecto: Option<String>,
+    #[sqlx(default)]
+    pub video_placeholder: Option<i64>,
+    #[sqlx(default)]
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

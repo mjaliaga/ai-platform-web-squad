@@ -2,6 +2,10 @@
 // Colección pública con código "casos-de-exito". Consolida exclusivamente los
 // casos de éxito implementados en clientes corporativos y sector público.
 // Cada caso incluye perfil del cliente, alcance, detalle técnico y stack.
+//
+// Campos normalizados (agosto 2026):
+// - precioValor / precioMoneda: split del campo "precio" original
+// - equipo, galeria, videoPromocional, urlProyecto: alineados con schema
 
 export const casosExito = [
   {
@@ -12,17 +16,22 @@ export const casosExito = [
     pais: "Perú",
     estado: "Implementado en Producción",
     plazo: "2 meses",
-    precio: "USD 8.000",
+    precioValor: 8000,
+    precioMoneda: "USD",
     cliente: "ADP",
     descripcion:
       "Extracción automática de metadatos de documentos PDF con IA generativa para autocompletar el portal SharePoint de ADP.",
     perfil:
       "Operador privado responsable de la gestión, operación y desarrollo de aeropuertos regionales del Perú.",
     alcance:
-      "Situación inicial: el proceso de carga de documentos en el portal SharePoint de ADP exige que los usuarios ingresen manualmente los campos clave asociados a cada documento. Este proceso manual está expuesto a errores y genera una carga operativa significativa en tiempo y esfuerzo.\n\nAlcance del proyecto: oportunidad de mejora mediante la automatización de la extracción de información de los documentos PDF cargados, utilizando IA generativa (ChatGPT) para identificar y extraer automáticamente los datos relevantes y completar los campos correspondientes en la interfaz existente de SharePoint.\n\nCampos a extraer automáticamente:\nDependencia\nAsunto\nCódigo de proyecto\nFecha\nRemitente",
+      "Situación inicial:\n\nEl proceso de carga de documentos en el portal SharePoint de ADP exige que los usuarios ingresen manualmente los campos clave asociados a cada documento. Este proceso manual está expuesto a errores y genera una carga operativa significativa en tiempo y esfuerzo.\n\nAlcance del proyecto:\n\nOportunidad de mejora mediante la automatización de la extracción de información de los documentos PDF cargados, utilizando IA generativa (ChatGPT) para identificar y extraer automáticamente los datos relevantes y completar los campos correspondientes en la interfaz existente de SharePoint.\n\nCampos a extraer automáticamente:\n\nDependencia\nAsunto\nCódigo de proyecto\nFecha\nRemitente",
     detalleTecnico:
       "El alcance de la solución contempla la implementación de una integración directa entre ChatGPT y la interfaz existente desarrollada en .NET, considerando los siguientes componentes:\n- Integración mediante Power Automate, Logic Apps o API Management: la solicitud para completar los campos se realiza mediante un flujo automatizado que recupera y procesa la información del documento cargado.\n- Autocompletado de campos: los valores identificados y propuestos por ChatGPT se muestran automáticamente en los campos y listas desplegables de la interfaz de SharePoint.\n- Edición y validación por el usuario: el usuario puede revisar y modificar cualquiera de los valores propuestos cuando la información extraída sea incorrecta, imprecisa o incompleta.\n- Registro de diferencias y retroalimentación: los valores modificados se almacenan en una base de datos SQL, generando un histórico de correcciones para mejorar progresivamente la precisión de la solución.\n- Monitoreo y auditoría: la información extraída y las modificaciones quedan registradas para fines de trazabilidad, auditoría y control interno.",
     stack: [".NET", "Power Automate", "Logic Apps", "API Management"],
+    equipo: [],
+    galeria: [],
+    videoPromocional: null,
+    urlProyecto: null,
   },
   {
     slug: "ce-02-access-fan-portal-video-fan",
@@ -32,7 +41,8 @@ export const casosExito = [
     pais: "Argentina",
     estado: "Implementado en Pre-Producción",
     plazo: "3 meses",
-    precio: "USD 5.000",
+    precioValor: 5000,
+    precioMoneda: "USD",
     cliente: "AccessFan",
     descripcion:
       "Plataforma web para la recepción, análisis, moderación y aprobación de videos enviados por hinchas, integrada a AccessFan.",
@@ -50,6 +60,10 @@ export const casosExito = [
       "Cloud Logging",
       "IA / Video Analytics",
     ],
+    equipo: [],
+    galeria: [],
+    videoPromocional: null,
+    urlProyecto: null,
   },
   {
     slug: "ce-03-chatbot-mantenimiento-antamina",
@@ -59,7 +73,8 @@ export const casosExito = [
     pais: "Perú",
     estado: "Implementado en Producción",
     plazo: "3 meses",
-    precio: "USD 55.000 (75% Portal + 25% Chatbot AI)",
+    precioValor: 55000,
+    precioMoneda: "USD",
     cliente: "Minera Antamina",
     descripcion:
       "Portal web de mantenimiento de maquinaria con dashboard centralizado, seguimiento de órdenes de trabajo y módulo GenAI de consultas por lenguaje natural.",
@@ -84,6 +99,10 @@ export const casosExito = [
       "React / Angular / Vue.js",
       "Python / Node.js / Java",
     ],
+    equipo: [],
+    galeria: [],
+    videoPromocional: null,
+    urlProyecto: null,
   },
   {
     slug: "ce-04-paas-bigdata-subsecretaria-transporte",
@@ -93,7 +112,8 @@ export const casosExito = [
     pais: "Chile",
     estado: "Implementado en Producción",
     plazo: "3 meses",
-    precio: null,
+    precioValor: null,
+    precioMoneda: null,
     cliente: "Subsecretaría de Transporte",
     descripcion:
       "Plataforma PaaS de Big Data sobre AWS para gestionar y analizar grandes volúmenes de datos semiestructurados del sistema de transporte de Chile.",
@@ -117,6 +137,10 @@ export const casosExito = [
       "Amazon QuickSight",
       "Power BI",
     ],
+    equipo: [],
+    galeria: [],
+    videoPromocional: null,
+    urlProyecto: null,
   },
   {
     slug: "ce-05-azure-data-platform-makers150",
@@ -126,7 +150,8 @@ export const casosExito = [
     pais: "Perú",
     estado: "Implementado en Producción",
     plazo: "3 meses",
-    precio: "PEN 125.500",
+    precioValor: 125500,
+    precioMoneda: "PEN",
     cliente: "Makers150",
     descripcion:
       "Azure Data Platform con Microsoft Fabric para integrar, transformar y explotar grandes volúmenes de información mediante Power BI.",
@@ -144,6 +169,10 @@ export const casosExito = [
       "Azure Key Vault",
       "Power BI",
     ],
+    equipo: [],
+    galeria: [],
+    videoPromocional: null,
+    urlProyecto: null,
   },
   {
     slug: "ce-06-cloud-data-lakehouse-pacifico-salud",
@@ -153,7 +182,8 @@ export const casosExito = [
     pais: "Perú",
     estado: "Implementado en Producción",
     plazo: "4 meses",
-    precio: "PEN 61.910",
+    precioValor: 61910,
+    precioMoneda: "PEN",
     cliente: "Pacífico Salud",
     descripcion:
       "Cloud Data Lakehouse en Microsoft Azure para centralizar, integrar y procesar información de salud y seguros con gobernanza de datos.",
@@ -172,5 +202,9 @@ export const casosExito = [
       "Azure DevOps",
       "Terraform",
     ],
+    equipo: [],
+    galeria: [],
+    videoPromocional: null,
+    urlProyecto: null,
   },
 ];

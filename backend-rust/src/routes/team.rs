@@ -57,6 +57,14 @@ pub async fn list_announcements(
     Extension(claims): Extension<Claims>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<Vec<AnnouncementWithAuthor>>, Response> {
+    let limit: u32 = params.get("limit")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(50)
+        .min(200);
+    let offset: u32 = params.get("offset")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
     let (sql, binds): (String, Vec<String>) = if let Some(pid) = params.get("project") {
         // Verify membership (admin bypasses)
         if claims.role != "admin" {
@@ -76,16 +84,20 @@ pub async fn list_announcements(
             }
         }
         (
-            "SELECT id, author_id, title, body, pinned, project_id, created_at FROM announcements \
-             WHERE project_id = ? ORDER BY pinned DESC, created_at DESC LIMIT 50"
-                .to_string(),
+            format!(
+                "SELECT id, author_id, title, body, pinned, project_id, created_at FROM announcements \
+                 WHERE project_id = ? ORDER BY pinned DESC, created_at DESC LIMIT {} OFFSET {}",
+                limit, offset
+            ),
             vec![pid.clone()],
         )
     } else {
         (
-            "SELECT id, author_id, title, body, pinned, project_id, created_at FROM announcements \
-             WHERE project_id IS NULL ORDER BY pinned DESC, created_at DESC LIMIT 50"
-                .to_string(),
+            format!(
+                "SELECT id, author_id, title, body, pinned, project_id, created_at FROM announcements \
+                 WHERE project_id IS NULL ORDER BY pinned DESC, created_at DESC LIMIT {} OFFSET {}",
+                limit, offset
+            ),
             vec![],
         )
     };

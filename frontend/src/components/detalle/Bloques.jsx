@@ -50,6 +50,18 @@ const TEMAS = {
       numero: "bg-proyectos-orange text-white",
     },
   },
+  poc: {
+    titulo: "text-poc-blue-dark",
+    problema: {
+      caja: "border-poc-blue-light bg-poc-blue-light/40 text-tivit-ink/75",
+      icono: "text-poc-blue-dark",
+    },
+    paso: {
+      linea: "before:bg-poc-blue-light",
+      caja: "border-poc-blue-light/70 bg-white",
+      numero: "bg-poc-blue text-white",
+    },
+  },
 };
 
 export function Bloque({ titulo, children, tema = "tivit" }) {

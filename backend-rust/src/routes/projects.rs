@@ -73,8 +73,12 @@ pub async fn list_projects(
 
     let rows: Vec<Project> = if claims.role == "admin" {
         sqlx::query_as::<_, Project>(
-            "SELECT id, name, description, color, status, sector, code, po_user_id, created_at \
-             FROM projects WHERE status = 'active' AND deleted_at IS NULL \
+            "SELECT id, name, description, color, status, sector, code, po_user_id, created_at, deleted_at, \
+             slug, published, reservado, tipo, version, tipo_solucion, cliente, nombre_comercial, \
+             descripcion_larga, equipo, stack, problemas, que_hicimos, resultados, highlights, \
+             galeria, video_promocional, video_tecnico, documento_drive, documentacion, \
+             url_proyecto, video_placeholder, updated_at \
+             FROM projects WHERE status = 'active' AND deleted_at IS NULL AND slug IS NULL \
              ORDER BY name LIMIT ? OFFSET ?"
         )
         .bind(limit)
@@ -83,11 +87,15 @@ pub async fn list_projects(
         .await
     } else {
         sqlx::query_as::<_, Project>(
-            "SELECT DISTINCT p.id, p.name, p.description, p.color, p.status, p.sector, p.code, p.po_user_id, p.created_at \
+            "SELECT DISTINCT p.id, p.name, p.description, p.color, p.status, p.sector, p.code, p.po_user_id, p.created_at, p.deleted_at, \
+             p.slug, p.published, p.reservado, p.tipo, p.version, p.tipo_solucion, p.cliente, p.nombre_comercial, \
+             p.descripcion_larga, p.equipo, p.stack, p.problemas, p.que_hicimos, p.resultados, p.highlights, \
+             p.galeria, p.video_promocional, p.video_tecnico, p.documento_drive, p.documentacion, \
+             p.url_proyecto, p.video_placeholder, p.updated_at \
              FROM projects p \
              LEFT JOIN tasks t ON t.project_id = p.id AND t.deleted_at IS NULL \
              LEFT JOIN project_members pm ON pm.project_id = p.id \
-             WHERE p.status = 'active' AND p.deleted_at IS NULL AND (t.assignee_id = ? OR pm.user_id = ?) \
+             WHERE p.status = 'active' AND p.deleted_at IS NULL AND p.slug IS NULL AND (t.assignee_id = ? OR pm.user_id = ?) \
              ORDER BY p.name LIMIT ? OFFSET ?"
         )
         .bind(&claims.sub)
@@ -101,7 +109,7 @@ pub async fn list_projects(
 
     let total: i64 = if claims.role == "admin" {
         let r: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM projects WHERE status = 'active' AND deleted_at IS NULL"
+            "SELECT COUNT(*) FROM projects WHERE status = 'active' AND deleted_at IS NULL AND slug IS NULL"
         )
         .fetch_one(&state.db)
         .await
@@ -112,7 +120,7 @@ pub async fn list_projects(
             "SELECT COUNT(DISTINCT p.id) FROM projects p \
              LEFT JOIN tasks t ON t.project_id = p.id AND t.deleted_at IS NULL \
              LEFT JOIN project_members pm ON pm.project_id = p.id \
-             WHERE p.status = 'active' AND p.deleted_at IS NULL AND (t.assignee_id = ? OR pm.user_id = ?)"
+             WHERE p.status = 'active' AND p.deleted_at IS NULL AND p.slug IS NULL AND (t.assignee_id = ? OR pm.user_id = ?)"
         )
         .bind(&claims.sub)
         .bind(&claims.sub)
@@ -140,7 +148,11 @@ pub async fn get_project(
     Path(id): Path<String>,
 ) -> Result<Json<ProjectWithStats>, Response> {
     let project: Option<Project> = sqlx::query_as::<_, Project>(
-        "SELECT id, name, description, color, status, sector, code, po_user_id, created_at FROM projects WHERE id = ?"
+        "SELECT id, name, description, color, status, sector, code, po_user_id, created_at, deleted_at, \
+         slug, published, reservado, tipo, version, tipo_solucion, cliente, nombre_comercial, \
+         descripcion_larga, equipo, stack, problemas, que_hicimos, resultados, highlights, \
+         galeria, video_promocional, video_tecnico, documento_drive, documentacion, \
+         url_proyecto, video_placeholder, updated_at FROM projects WHERE id = ?"
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -297,6 +309,8 @@ pub struct UpdateProjectRequest {
     pub code: Option<String>,
     #[serde(default)]
     pub po_user_id: Option<Option<String>>,
+    #[serde(default)]
+    pub slug: Option<Option<String>>,
 }
 
 pub async fn update_project(
@@ -374,6 +388,10 @@ pub async fn update_project(
         sets.push("po_user_id = ?");
         bindings.push(serde_json::json!(po));
     }
+    if let Some(slug) = &payload.slug {
+        sets.push("slug = ?");
+        bindings.push(serde_json::json!(slug));
+    }
 
     if !sets.is_empty() {
         let sql = format!("UPDATE projects SET {} WHERE id = ?", sets.join(", "));
@@ -392,7 +410,7 @@ pub async fn update_project(
     }
 
     let row = sqlx::query_as::<_, Project>(
-        "SELECT id, name, description, color, status, sector, code, po_user_id, created_at FROM projects WHERE id = ?"
+        "SELECT id, name, description, color, status, sector, code, po_user_id, created_at, slug FROM projects WHERE id = ?"
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -428,6 +446,36 @@ pub async fn delete_project(
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     sqlx::query("UPDATE sprints SET project_id = NULL WHERE project_id = ?")
+        .bind(&id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    sqlx::query("DELETE FROM epics WHERE project_id = ?")
+        .bind(&id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    sqlx::query("DELETE FROM versions WHERE project_id = ?")
+        .bind(&id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    sqlx::query("DELETE FROM workflows WHERE project_id = ?")
+        .bind(&id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    sqlx::query("DELETE FROM saved_filters WHERE project_id = ?")
+        .bind(&id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    sqlx::query("DELETE FROM project_members WHERE project_id = ?")
         .bind(&id)
         .execute(&state.db)
         .await
@@ -559,7 +607,7 @@ pub async fn list_projects_simple(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Project>>, Response> {
     let rows: Vec<Project> = sqlx::query_as::<_, Project>(
-        "SELECT id, name, description, color, status, sector, code, po_user_id, created_at FROM projects WHERE status = 'active' ORDER BY name"
+        "SELECT id, name, description, color, status, sector, code, po_user_id, created_at FROM projects WHERE status = 'active' AND slug IS NULL ORDER BY name"
     )
     .fetch_all(&state.db)
     .await
@@ -575,7 +623,7 @@ pub async fn list_solicitudes(
     let tasks: Vec<crate::models::Task> = sqlx::query_as::<_, crate::models::Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE project_id = ? AND type = 'solicitud' AND deleted_at IS NULL \
          ORDER BY CASE status \
            WHEN 'pendiente' THEN 0 \
@@ -595,6 +643,213 @@ pub async fn list_solicitudes(
     Ok(Json(result))
 }
 
+pub async fn get_project_by_slug(
+    State(state): State<Arc<AppState>>,
+    Path(slug): Path<String>,
+) -> Result<Json<ProjectWithStats>, Response> {
+    let project: Option<Project> = sqlx::query_as::<_, Project>(
+        "SELECT id, name, description, color, status, sector, code, po_user_id, created_at, deleted_at, \
+         slug, published, reservado, tipo, version, tipo_solucion, cliente, nombre_comercial, \
+         descripcion_larga, equipo, stack, problemas, que_hicimos, resultados, highlights, \
+         galeria, video_promocional, video_tecnico, documento_drive, documentacion, \
+         url_proyecto, video_placeholder, updated_at FROM projects WHERE slug = ?"
+    )
+    .bind(&slug)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    match project {
+        Some(p) => Ok(Json(build_project_with_stats(&state.db, p).await?)),
+        None => Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Proyecto no encontrado".to_string(),
+        )),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct PublishBody {
+    pub published: bool,
+}
+
+pub async fn set_published(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(body): Json<PublishBody>,
+) -> Result<Json<serde_json::Value>, Response> {
+    let val: i64 = if body.published { 1 } else { 0 };
+    let result = sqlx::query("UPDATE projects SET published = ?, updated_at = datetime('now') WHERE id = ?")
+        .bind(val)
+        .bind(&id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    if result.rows_affected() == 0 {
+        return Err(error_response(StatusCode::NOT_FOUND, "Proyecto no encontrado".to_string()));
+    }
+
+    Ok(Json(serde_json::json!({ "ok": true, "published": body.published })))
+}
+
+#[derive(Deserialize)]
+pub struct ReserveBody {
+    pub reservado: bool,
+}
+
+pub async fn set_reservado(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(body): Json<ReserveBody>,
+) -> Result<Json<serde_json::Value>, Response> {
+    let val: i64 = if body.reservado { 1 } else { 0 };
+    let result = sqlx::query("UPDATE projects SET reservado = ?, updated_at = datetime('now') WHERE id = ?")
+        .bind(val)
+        .bind(&id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    if result.rows_affected() == 0 {
+        return Err(error_response(StatusCode::NOT_FOUND, "Proyecto no encontrado".to_string()));
+    }
+
+    Ok(Json(serde_json::json!({ "ok": true, "reservado": body.reservado })))
+}
+
+// ============================================================================
+// Public endpoints (no auth required)
+// ============================================================================
+
+pub async fn public_list_projects(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<crate::pagination::PaginatedResponse<Project>>, Response> {
+    let limit: i64 = params
+        .get("limit")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(50)
+        .clamp(1, 200);
+    let offset: i64 = params
+        .get("offset")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0)
+        .max(0);
+
+    let rows: Vec<Project> = sqlx::query_as::<_, Project>(
+        "SELECT id, name, description, color, status, sector, code, po_user_id, created_at, deleted_at, \
+         slug, published, reservado, tipo, version, tipo_solucion, cliente, nombre_comercial, \
+         descripcion_larga, equipo, stack, problemas, que_hicimos, resultados, highlights, \
+         galeria, video_promocional, video_tecnico, documento_drive, documentacion, \
+         url_proyecto, video_placeholder, updated_at \
+         FROM projects WHERE published = 1 AND reservado = 0 AND deleted_at IS NULL AND slug IS NOT NULL \
+         ORDER BY name LIMIT ? OFFSET ?"
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    let total: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM projects WHERE published = 1 AND reservado = 0 AND deleted_at IS NULL AND slug IS NOT NULL"
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    Ok(Json(crate::pagination::PaginatedResponse {
+        items: rows,
+        total: total.0,
+        limit,
+        offset,
+    }))
+}
+
+pub async fn public_get_project_by_slug(
+    State(state): State<Arc<AppState>>,
+    Path(slug): Path<String>,
+) -> Result<Json<Project>, Response> {
+    let project: Option<Project> = sqlx::query_as::<_, Project>(
+        "SELECT id, name, description, color, status, sector, code, po_user_id, created_at, deleted_at, \
+         slug, published, reservado, tipo, version, tipo_solucion, cliente, nombre_comercial, \
+         descripcion_larga, equipo, stack, problemas, que_hicimos, resultados, highlights, \
+         galeria, video_promocional, video_tecnico, documento_drive, documentacion, \
+         url_proyecto, video_placeholder, updated_at \
+         FROM projects WHERE slug = ? AND deleted_at IS NULL"
+    )
+    .bind(&slug)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    match project {
+        Some(p) => Ok(Json(p)),
+        None => Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Proyecto no encontrado".to_string(),
+        )),
+    }
+}
+
+#[derive(serde::Serialize, sqlx::FromRow)]
+pub struct ProjectProgress {
+    pub total_tasks: i64,
+    pub done_tasks: i64,
+    pub in_progress_tasks: i64,
+    pub todo_tasks: i64,
+    pub review_tasks: i64,
+    pub backlog_tasks: i64,
+    pub total_estimate_hours: f64,
+    pub total_spent_hours: f64,
+    pub completion_pct: f64,
+}
+
+pub async fn get_project_progress(
+    State(state): State<Arc<AppState>>,
+    Extension(_claims): Extension<Claims>,
+    Path(id): Path<String>,
+) -> Result<Json<ProjectProgress>, Response> {
+    let existing: Option<(String,)> = sqlx::query_as("SELECT id FROM projects WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    if existing.is_none() {
+        return Err(error_response(StatusCode::NOT_FOUND, "Proyecto no encontrado".to_string()));
+    }
+
+    let stats: ProjectProgress = sqlx::query_as::<_, ProjectProgress>(
+        "SELECT \
+         COUNT(*) as total_tasks, \
+         SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done_tasks, \
+         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tasks, \
+         SUM(CASE WHEN status = 'todo' THEN 1 ELSE 0 END) as todo_tasks, \
+         SUM(CASE WHEN status = 'review' THEN 1 ELSE 0 END) as review_tasks, \
+         SUM(CASE WHEN status = 'backlog' THEN 1 ELSE 0 END) as backlog_tasks, \
+         COALESCE(SUM(estimate_hours), 0.0) as total_estimate_hours, \
+         COALESCE(SUM(time_spent_hours), 0.0) as total_spent_hours, \
+         CASE WHEN COUNT(*) = 0 THEN 0.0 ELSE ROUND(100.0 * SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) / COUNT(*), 1) END as completion_pct \
+         FROM tasks WHERE project_id = ? AND deleted_at IS NULL"
+    )
+    .bind(&id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    Ok(Json(stats))
+}
+
+pub fn public_router(state: Arc<AppState>) -> axum::Router {
+    use axum::routing::get;
+
+    axum::Router::new()
+        .route("/api/projects/list/public", get(public_list_projects))
+        .route("/api/projects/public/:slug", get(public_get_project_by_slug))
+        .with_state(state)
+}
+
 pub fn router(state: Arc<AppState>) -> axum::Router {
     use axum::{
         middleware,
@@ -608,11 +863,15 @@ pub fn router(state: Arc<AppState>) -> axum::Router {
             "/api/projects/:id",
             get(get_project).patch(update_project).delete(delete_project),
         )
+        .route("/api/projects/by-slug/:slug", get(get_project_by_slug))
         .route("/api/projects/:id/members", post(add_member))
         .route("/api/projects/:id/members/:uid",
             patch(update_member_role).delete(remove_member),
         )
         .route("/api/projects/:id/solicitudes", get(list_solicitudes))
+        .route("/api/projects/:id/progress", get(get_project_progress))
+        .route("/api/projects/:id/publish", post(set_published))
+        .route("/api/projects/:id/reservado", post(set_reservado))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth))
         .with_state(state)
 }

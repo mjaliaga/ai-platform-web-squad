@@ -1,57 +1,46 @@
 [
   {
-    "coleccion": "laboratorio",
     "slug": "lab-001-ia-infraestructura-cpu-only",
     "codigo": "LAB-001",
     "nombreComercial": "Inteligencia Artificial en Infraestructura CPU Only",
     "nombreProyecto": "",
     "tipo": "Interno",
-    "categoria": "Investigación",
     "estado": null,
-    "documentoDrive": "https://docs.google.com/document/d/1Bzh1GzB9w6nVUBjDEBsR5Bqn8YsunVuv9OK-S8dXM1A/edit?usp=sharing",
     "cliente": null,
     "descripcion": "Investigación sobre el uso de inteligencia artificial en infraestructura de data centers en Latinoamérica.",
     "descripcionLarga": "Este estudio analiza el estado actual y las oportunidades de la inteligencia artificial en infraestructuras de data centers que operan exclusivamente con CPU en el contexto latinoamericano. Explora cómo empresas de la región pueden implementar cargas de trabajo de IA de forma eficiente, segura y escalable, sin depender de aceleradores GPU costosos o de difícil acceso en el mercado local. Se examinan arquitecturas de inferencia optimizadas, herramientas de compresión y cuantización de modelos, así como los principales desafíos de latencia, consumo energético y gobernanza de datos en entornos productivos. El documento entrega una visión práctica para equipos técnicos y directivos que buscan acelerar la adopción de IA con los recursos de hardware disponibles en la región.",
     "equipo": [],
+    "stack": [],
+    "problemas": [],
+    "queHicimos": [],
+    "resultados": [],
+    "videoPromocional": null,
+    "videoTecnico": null,
+    "documentoDrive": "https://docs.google.com/document/d/1Bzh1GzB9w6nVUBjDEBsR5Bqn8YsunVuv9OK-S8dXM1A/edit?usp=sharing",
+    "documentacion": null,
+    "galeria": [],
+    "reservado": false,
+    "coleccion": "laboratorio",
+    "categoria": "Investigación",
     "autores": [
       {
         "nombre": "Manuel Aliaga",
         "rol": "Autor",
         "foto": "/media/equipo/manuel-aliaga.jpg"
       }
-    ],
-    "videoPromocional": null,
-    "videoTecnico": null,
-    "documentacion": null,
-    "galeria": [],
-    "stack": [],
-    "problemas": [],
-    "queHicimos": [],
-    "resultados": [],
-    "reservado": false
+    ]
   },
   {
-    "coleccion": "laboratorio",
     "slug": "lab-002-assistdev",
     "codigo": "LAB-002",
     "nombreComercial": "AssistDev — Framework de Desarrollo Asistido por IA",
     "nombreProyecto": "",
     "tipo": "Interno",
-    "categoria": "Producto",
     "estado": "En producción",
-    "documentoDrive": null,
     "cliente": null,
     "descripcion": "Framework agéntico que estandariza el diseño, construcción y operación de aplicaciones con inteligencia artificial.",
     "descripcionLarga": "AssistDev potencia a los equipos de desarrollo con un framework agéntico que estandariza cómo se diseñan, construyen y operan aplicaciones con inteligencia artificial. Integra 113 skills especializadas, 4 agentes (orchestrator, design, control, delivery) y 10 MCPs, permitiendo pasar de una necesidad de negocio a código productivo con gobernanza, seguridad y observabilidad.",
     "equipo": [],
-    "autores": [],
-    "videoPromocional": {
-      "tipo": "youtube",
-      "url": "https://www.youtube.com/watch?v=KeBuv45ZqC4"
-    },
-    "videoTecnico": null,
-    "documentacion": null,
-    "galeria": [],
     "stack": [],
     "problemas": [
       "Tiempo de arranque elevado en nuevos proyectos y módulos",
@@ -75,30 +64,30 @@
       "Trazabilidad y gobernanza integradas desde el diseño hasta la operación",
       "Código listo para producción con tests, CI/CD, seguridad y observabilidad"
     ],
-    "reservado": false
+    "videoPromocional": {
+      "tipo": "youtube",
+      "url": "https://www.youtube.com/watch?v=KeBuv45ZqC4"
+    },
+    "videoTecnico": null,
+    "documentoDrive": null,
+    "documentacion": null,
+    "galeria": [],
+    "reservado": false,
+    "coleccion": "laboratorio",
+    "categoria": "Producto",
+    "autores": []
   },
   {
-    "coleccion": "laboratorio",
     "slug": "lab-003-auditia",
     "codigo": "LAB-003",
     "nombreComercial": "AuditIA — Framework de Auditoría de Proyectos con IA",
     "nombreProyecto": "",
     "tipo": "Interno",
-    "categoria": "Producto",
     "estado": "En desarrollo",
-    "documentoDrive": null,
     "cliente": null,
     "descripcion": "Framework de evaluación de seguridad estática para repositorios de agentes de IA y proyectos de software, con gates deterministas para CI/CD.",
     "descripcionLarga": "AuditIA (Security Assessment Framework) es un control estático, local y guiado por políticas de TIVIT Foundry. Evalúa repositorios de frameworks de agentes/IA y proyectos de software generados o mantenidos con ellos, detecta patrones de riesgo de forma repetible y genera evidencia redactada con severidad, confianza, gates y código de salida deterministas para CI/CD.",
     "equipo": [],
-    "autores": [],
-    "videoPromocional": {
-      "tipo": "youtube",
-      "url": "https://youtube.com/watch?v=auditia-demo"
-    },
-    "videoTecnico": null,
-    "documentacion": null,
-    "galeria": [],
     "stack": [
       "Python 3.11+",
       "YAML (políticas)",
@@ -124,83 +113,28 @@
       "Informes claros con priorización y remediación base accionable",
       "Mayor alineación con políticas internas sin ejecutar el objetivo ni exponer secretos"
     ],
-    "reservado": false
-  },
-  {
-    "coleccion": "proyectos",
-    "slug": "prj-001-plataforma-gestion-comercial",
-    "codigo": "PRJ-001",
-    "nombreComercial": "Plataforma de Gestión Comercial",
-    "nombreProyecto": "Plataforma de Gestión del Área Comercial",
-    "tipo": "Interno",
-    "categoria": null,
-    "estado": "En desarrollo",
-    "documentoDrive": null,
-    "cliente": "Interno",
-    "descripcion": "Sistema de IA para optimizar la gestión de ventas, seguimiento de prospectos comerciales y análisis predictivo de cierres.",
-    "descripcionLarga": null,
-    "equipo": [
-      {
-        "nombre": "Matias Mendez",
-        "rol": "Ingeniero IA"
-      },
-      {
-        "nombre": "Manuel Aliaga",
-        "rol": "Lider Técnico"
-      },
-      {
-        "nombre": "Sergio Aguas",
-        "rol": "Arquitecto"
-      }
-    ],
-    "autores": [],
     "videoPromocional": {
       "tipo": "youtube",
-      "url": "https://youtube.com/watch?v=demo-prj001"
+      "url": "https://youtube.com/watch?v=auditia-demo"
     },
-    "videoTecnico": {
-      "tipo": "youtube",
-      "url": "https://youtube.com/watch?v=tech-prj001"
-    },
-    "documentacion": "https://docs.empresa.com/prj-001",
-    "galeria": [
-      "/media/proyectos/prj-001-plataforma-gestion-comercial/dashboard.jpg",
-      "/media/proyectos/prj-001-plataforma-gestion-comercial/metricas.jpg"
-    ],
-    "stack": [
-      "Python",
-      "React",
-      "Google Cloud",
-      "Modelos de Lenguaje (LLMs)",
-      "Bases de Datos Relacionales"
-    ],
-    "problemas": [
-      "Falsos positivos en clasificación de leads",
-      "Latencia en el procesamiento de lenguaje",
-      "Desactualización de datos de ventas",
-      "Baja adopción inicial por vendedores",
-      "Dificultad de escalar en picos de demanda"
-    ],
-    "queHicimos": [],
-    "resultados": [
-      "Precisión del 98% en clasificación de prospectos",
-      "Reducción de latencia a menos de 1 segundo",
-      "Sincronización de ventas en tiempo real",
-      "Adopción del 100% en el primer mes por facilidad de uso",
-      "Arquitectura elástica que soporta aumentos masivos de tráfico"
-    ],
-    "reservado": false
+    "videoTecnico": null,
+    "documentoDrive": null,
+    "documentacion": null,
+    "galeria": [],
+    "reservado": false,
+    "coleccion": "laboratorio",
+    "categoria": "Producto",
+    "autores": []
   },
   {
-    "coleccion": "proyectos",
     "slug": "prj-005-orquestador-soc",
     "codigo": "PRJ-005",
     "nombreComercial": "Orquestador SOC",
     "nombreProyecto": "Plataforma de Orquestación para la Gestión de Agentes SOC",
     "tipo": "Interno",
-    "categoria": null,
     "estado": "Desplegado",
-    "documentoDrive": null,
+    "version": null,
+    "tipoSolucion": null,
     "cliente": "Interno",
     "descripcion": "Orquestador inteligente de agentes de ciberseguridad para la respuesta automática, mitigación de incidentes y análisis de amenazas.",
     "descripcionLarga": null,
@@ -217,20 +151,6 @@
         "nombre": "Sergio Aguas",
         "rol": "Arquitecto"
       }
-    ],
-    "autores": [],
-    "videoPromocional": {
-      "tipo": "vimeo",
-      "url": "https://vimeo.com/demo-soc"
-    },
-    "videoTecnico": {
-      "tipo": "youtube",
-      "url": "https://youtube.com/watch?v=tech-soc"
-    },
-    "documentacion": "https://docs.empresa.com/prj-005",
-    "galeria": [
-      "/media/proyectos/prj-005-orquestador-soc/alertas.jpg",
-      "/media/proyectos/prj-005-orquestador-soc/agentes.jpg"
     ],
     "stack": [
       "Python",
@@ -254,21 +174,38 @@
       "Reducción del tiempo de respuesta (MTTR) de horas a minutos",
       "Dashboard unificado con visibilidad 360° en tiempo real"
     ],
-    "reservado": true
+    "highlights": [],
+    "videoPromocional": {
+      "tipo": "vimeo",
+      "url": "https://vimeo.com/demo-soc"
+    },
+    "videoTecnico": {
+      "tipo": "youtube",
+      "url": "https://youtube.com/watch?v=tech-soc"
+    },
+    "documentoDrive": null,
+    "documentacion": "https://docs.empresa.com/prj-005",
+    "urlProyecto": null,
+    "videoPlaceholder": false,
+    "galeria": [
+      {"url": "/media/proyectos/prj-005-orquestador-soc/alertas.jpg", "alt": "Alertas del Orquestador SOC"},
+      {"url": "/media/proyectos/prj-005-orquestador-soc/agentes.jpg", "alt": "Agentes de ciberseguridad"}
+    ],
+    "reservado": true,
+    "coleccion": "proyectos"
   },
   {
-    "coleccion": "proyectos",
     "slug": "prj-008-tivit-soc",
     "codigo": "PRJ-008",
     "nombreComercial": "TivitSOC — Centro de Operaciones de Seguridad Inteligente",
     "nombreProyecto": "Plataforma de monitoreo, análisis y gobernanza de incidentes de ciberseguridad",
     "tipo": "Interno",
-    "categoria": null,
     "estado": "Operativo / En evolución",
-    "documentoDrive": null,
+    "version": "1.0.0",
+    "tipoSolucion": "Plataforma web de gestión y monitoreo SOC con IA",
     "cliente": "Interno",
     "descripcion": "Plataforma que centraliza, enriquece y gestiona el flujo operativo de eventos de seguridad mediante inteligencia artificial y supervisión de analistas.",
-    "descripcionLarga": null,
+    "descripcionLarga": "TivitSOC centraliza la recepción, análisis y resolución de eventos de seguridad dentro de un flujo gobernado y trazable. Integra inteligencia artificial para acelerar la contextualización de incidentes mediante análisis automatizado y mentoría operativa (Copilot), permitiendo a los analistas evaluar observables (IoCs), gestionar clientes y auditar decisiones críticas en tiempo real.",
     "equipo": [
       {
         "nombre": "Nilton Condori",
@@ -283,14 +220,6 @@
         "rol": "Arquitecto"
       }
     ],
-    "autores": [],
-    "videoPromocional": {
-      "tipo": "youtube",
-      "url": "https://www.youtube.com/watch?v=oi5Jr7ExlMs"
-    },
-    "videoTecnico": null,
-    "documentacion": null,
-    "galeria": [],
     "stack": [
       "Python",
       "FastAPI",
@@ -311,7 +240,14 @@
       "Riesgo de duplicación de incidentes y falta de visibilidad en el ciclo de vida completo de la amenaza.",
       "Necesidad de segmentación estricta de accesos entre perfiles administrativos y analistas operativos."
     ],
-    "queHicimos": [],
+    "queHicimos": [
+      "Diseño de un pipeline de eventos estructurado en cinco fases: Ingesta, Threat Intel, Análisis, Reporte y Notificación",
+      "Integración de un motor de inteligencia artificial y mentoría tipo Copilot para análisis de payloads y recomendaciones de mitigación",
+      "Módulo interactivo de observables basado en grafos para correlacionar IPs, dominios y hashes con tickets",
+      "Panel de control centralizado con métricas clave (MTTD, tasa de falsos positivos, volumen y severidad)",
+      "Módulos de gestión multicliente y administración de analistas con control de monitoreo activo",
+      "Exportación de datos en formatos CSV, Excel para analistas y reportes ejecutivos en PDF"
+    ],
     "resultados": [
       "Plataforma de SOC centralizada con control de acceso basado en roles (RBAC).",
       "Reducción en los tiempos de respuesta mediante análisis acelerado por IA.",
@@ -320,21 +256,32 @@
       "Generación automatizada de reportes descargables en PDF y hojas de cálculo.",
       "Módulo de feedback activo para mejora continua del modelo de decisión."
     ],
-    "reservado": false
+    "highlights": [],
+    "videoPromocional": {
+      "tipo": "youtube",
+      "url": "https://www.youtube.com/watch?v=oi5Jr7ExlMs"
+    },
+    "videoTecnico": null,
+    "documentoDrive": null,
+    "documentacion": null,
+    "urlProyecto": null,
+    "videoPlaceholder": false,
+    "galeria": [],
+    "reservado": false,
+    "coleccion": "proyectos"
   },
   {
-    "coleccion": "proyectos",
     "slug": "prj-009-automatizacion-qa",
     "codigo": "PRJ-009",
-    "nombreComercial": "Automatización QA Paquetería",
-    "nombreProyecto": "Plataforma de Automatización de Paqueteria del Área de QA",
+    "nombreComercial": "TivitQA — Automatización de Documentación QA",
+    "nombreProyecto": "Plataforma de automatización y asistencia para documentación QA",
     "tipo": "Externo",
-    "categoria": null,
-    "estado": "En planificación",
-    "documentoDrive": null,
-    "cliente": "Externo",
-    "descripcion": "Sistema avanzado de visión computacional para automatizar el control y aseguramiento de calidad visual en el empaquetado.",
-    "descripcionLarga": null,
+    "estado": "Desplegado",
+    "version": "1.0.0",
+    "tipoSolucion": "Plataforma web de automatización y asistencia QA",
+    "cliente": null,
+    "descripcion": "Plataforma que automatiza la generación de documentación QA a partir de requerimientos y secuencias de capturas de pantalla.",
+    "descripcionLarga": "TivitQA utiliza inteligencia artificial con Gemini para transformar documentos de requerimientos y flujos visuales en entregables de calidad estructurados. Genera matrices de casos de prueba clásicas, matrices Gherkin y especificaciones completas de casos de uso, reduciendo el trabajo manual y estandarizando la documentación entre equipos QA.",
     "equipo": [
       {
         "nombre": "Matias Mendez",
@@ -349,57 +296,73 @@
         "rol": "Arquitecto"
       }
     ],
-    "autores": [],
+    "stack": [
+      "Python",
+      "Flask",
+      "FastAPI",
+      "React",
+      "TypeScript",
+      "Vite",
+      "PostgreSQL",
+      "SQLAlchemy",
+      "Gemini / Vertex AI",
+      "Google Cloud Storage",
+      "Microsoft SSO",
+      "Socket.IO",
+      "Google Cloud Run",
+      "Docker"
+    ],
+    "problemas": [
+      "Elaboración manual, lenta e inconsistente de matrices de prueba",
+      "Dificultad para transformar documentos PDF y DOCX en casos estructurados",
+      "Falta de estandarización entre entregables de distintos analistas QA",
+      "Complejidad para documentar flujos funcionales a partir de capturas de pantalla",
+      "Riesgo de omitir escenarios, secuencias alternativas y condiciones relevantes",
+      "Necesidad de mantener numeración y continuidad entre distintas generaciones"
+    ],
+    "queHicimos": [
+      "Implementamos generación automática de matrices a partir de documentos PDF, DOCX y TXT",
+      "Incorporamos tres tipos de salida: matriz clásica, matriz Gherkin y especificación de casos de uso",
+      "Integramos Gemini AI y Vertex AI para analizar requerimientos, capturas y flujos funcionales",
+      "Construimos exportaciones basadas en plantillas oficiales: Excel para matrices y Word para casos de uso",
+      "Desarrollamos generación incremental con numeración secuencial de casos de prueba y casos de uso",
+      "Implementamos Microsoft SSO, almacenamiento en Google Cloud, actualizaciones en tiempo real y controles de seguridad"
+    ],
+    "resultados": [
+      "Plataforma desplegada y operativa sobre Google Cloud",
+      "Generación automatizada de matrices clásicas y Gherkin",
+      "Especificaciones de casos de uso desde secuencias de capturas de pantalla",
+      "Exportación de matrices en Excel y documentos de casos de uso en Word",
+      "Diagramas UML generados automáticamente para bloques temáticos",
+      "Continuidad de numeración y actualización de estados en tiempo real",
+      "Auditoría de seguridad completada y vulnerabilidades críticas remediadas"
+    ],
+    "highlights": [],
     "videoPromocional": {
       "tipo": "youtube",
       "url": "https://www.youtube.com/watch?v=40dzhwuRF1g"
     },
-    "videoTecnico": {
-      "tipo": "vimeo",
-      "url": "https://vimeo.com/qa009-tecnico"
-    },
-    "documentacion": "https://qa.empresa.com/docs/prj-009",
-    "galeria": [
-      "/media/proyectos/prj-009-automatizacion-qa/camara-cinta.jpg",
-      "/media/proyectos/prj-009-automatizacion-qa/deteccion.jpg"
-    ],
-    "stack": [
-      "Python",
-      "React",
-      "Visión Computacional",
-      "Edge Computing",
-      "Google Cloud"
-    ],
-    "problemas": [
-      "Condiciones de iluminación inestables en la planta",
-      "Falsos defectos generados por reflejos en plásticos",
-      "Limitaciones de hardware en los dispositivos de borde",
-      "Retrasos en la comunicación con el servidor central",
-      "Dificultad operativa para calibrar nuevos productos"
-    ],
-    "queHicimos": [],
-    "resultados": [
-      "Algoritmos de corrección lumínica que estabilizan la imagen visual",
-      "Filtros por software que ignoran reflejos y destellos",
-      "Optimización extrema del modelo para correr fluidamente en Edge",
-      "Arquitectura híbrida que procesa y sincroniza sin retrasos",
-      "Interfaz de auto-calibración simple que no requiere código"
-    ],
-    "reservado": false
+    "videoTecnico": null,
+    "documentoDrive": null,
+    "documentacion": null,
+    "urlProyecto": "https://docs.empresa.com/prj-009",
+    "videoPlaceholder": false,
+    "galeria": [],
+    "reservado": false,
+    "coleccion": "proyectos"
   },
   {
-    "coleccion": "proyectos",
     "slug": "prj-010-analisis-mercado-publico",
     "codigo": "PRJ-010",
-    "nombreComercial": "Análisis de Mercado Público",
-    "nombreProyecto": "",
+    "nombreComercial": "Mercado Público Management",
+    "nombreProyecto": "Plataforma de inteligencia para licitaciones públicas chilenas",
     "tipo": "Interno",
-    "categoria": null,
-    "estado": "En desarrollo",
-    "documentoDrive": null,
+    "estado": "Desplegado",
+    "version": "1.0.0",
+    "tipoSolucion": "Plataforma web de inteligencia para licitaciones",
     "cliente": "Interno",
-    "descripcion": "Plataforma basada en NLP para analizar licitaciones, normativas, extraer entidades y predecir tendencias del mercado público.",
-    "descripcionLarga": null,
+    "descripcion": "Plataforma de inteligencia para gestionar, buscar y analizar licitaciones públicas chilenas de Mercado Público.",
+    "descripcionLarga": "Mercado Público Management centraliza el seguimiento de oportunidades de mercadopublico.cl y convierte grandes volúmenes de licitaciones, actas y documentos PDF en información accionable. La plataforma combina búsqueda tradicional y lenguaje natural, análisis documental con inteligencia artificial, alertas multicanal e inteligencia competitiva para ayudar a los equipos a decidir dónde participar y cómo mejorar sus propuestas.",
     "equipo": [
       {
         "nombre": "Matias Mendez",
@@ -414,53 +377,65 @@
         "rol": "Arquitecto"
       }
     ],
-    "autores": [],
+    "stack": [
+      ".NET 8",
+      "C#",
+      "ASP.NET Core",
+      "React",
+      "TypeScript",
+      "PostgreSQL",
+      "Dapper",
+      "SignalR",
+      "Redis",
+      "Gemini / Vertex AI",
+      "Google Cloud Run",
+      "Playwright"
+    ],
+    "problemas": [
+      "Seguimiento manual y diario de licitaciones y aclaraciones",
+      "Gran volumen de información difícil de filtrar con búsquedas literales",
+      "Análisis lento y propenso a errores de actas y documentos PDF",
+      "Poca visibilidad sobre competidores, ofertas y resultados históricos",
+      "Alertas imprecisas y criterios poco consistentes para decidir un go/no-go"
+    ],
+    "queHicimos": [
+      "Implementamos la sincronización automática de licitaciones mediante la API oficial y procesos programados",
+      "Incorporamos búsqueda semántica con Gemini y degradación controlada a búsqueda tradicional",
+      "Creamos un workspace por licitación para analizar actas y validar documentos enviados",
+      "Desarrollamos alertas configurables por palabra clave, monto, organismo y tipo de licitación",
+      "Construimos inteligencia competitiva sobre participación, montos ofertados y adjudicaciones",
+      "Separamos API, sincronización, scraping y análisis en servicios escalables sobre Google Cloud"
+    ],
+    "resultados": [
+      "Versión v1.0.0 desplegada en producción sobre Google Cloud",
+      "Sincronización automática, búsqueda semántica y análisis de actas con IA",
+      "Dashboard ejecutivo con indicadores de licitaciones ganadas y perdidas",
+      "Alertas por aplicación, correo electrónico y Telegram",
+      "Flujo colaborativo con responsables, comentarios y decisión go/no-go"
+    ],
+    "highlights": [],
     "videoPromocional": {
       "tipo": "youtube",
       "url": "https://www.youtube.com/watch?v=Sd_p2Be00B4"
     },
-    "videoTecnico": {
-      "tipo": "youtube",
-      "url": "https://youtube.com/watch?v=tech-prj010"
-    },
-    "documentacion": "https://docs.empresa.com/prj-010",
-    "galeria": [
-      "/media/proyectos/prj-010-analisis-mercado-publico/graficos.jpg"
-    ],
-    "stack": [
-      "Python",
-      "Procesamiento de Lenguaje Natural",
-      "Microsoft Azure",
-      "Motores NoSQL",
-      "Arquitectura Serverless"
-    ],
-    "problemas": [
-      "Extracción ruidosa en PDFs gubernamentales escaneados",
-      "Ambigüedad en nombres de entidades públicas",
-      "Lentitud al procesar grandes volúmenes diarios de licitaciones",
-      "Dificultad para predecir tendencias a largo plazo",
-      "Interfaz poco amigable para usuarios no técnicos"
-    ],
-    "queHicimos": [],
-    "resultados": [
-      "Extracción limpia con un 99% de precisión usando OCR avanzado",
-      "Algoritmo de normalización que elimina duplicados en un 100%",
-      "Pipeline optimizado capaz de procesar miles de documentos en minutos",
-      "Modelos predictivos con 92% de confianza en tendencias futuras",
-      "Experiencia de usuario rediseñada que aumentó la eficiencia al doble"
-    ],
-    "reservado": false
+    "videoTecnico": null,
+    "documentoDrive": null,
+    "documentacion": null,
+    "urlProyecto": "https://docs.empresa.com/prj-010",
+    "videoPlaceholder": true,
+    "galeria": [],
+    "reservado": false,
+    "coleccion": "proyectos"
   },
   {
-    "coleccion": "proyectos",
     "slug": "prj-017-analisis-planillas-acv",
     "codigo": "PRJ-017",
     "nombreComercial": "Análisis de Planillas ACV",
     "nombreProyecto": "",
     "tipo": "Interno",
-    "categoria": null,
-    "estado": "En planificación",
-    "documentoDrive": null,
+    "estado": "En preparación",
+    "version": null,
+    "tipoSolucion": null,
     "cliente": "Interno",
     "descripcion": "Herramienta analítica y predictiva orientada a la evaluación de fluctuaciones en planillas y optimización de costos asociados al ACV.",
     "descripcionLarga": null,
@@ -477,19 +452,6 @@
         "nombre": "Sergio Aguas",
         "rol": "Arquitecto"
       }
-    ],
-    "autores": [],
-    "videoPromocional": {
-      "tipo": "youtube",
-      "url": "https://youtube.com/watch?v=prj017-pitch"
-    },
-    "videoTecnico": {
-      "tipo": "archivo",
-      "url": "/media/proyectos/prj-017-analisis-planillas-acv/demo.mp4"
-    },
-    "documentacion": "https://docs.empresa.com/prj-017",
-    "galeria": [
-      "/media/proyectos/prj-017-analisis-planillas-acv/proyecciones.jpg"
     ],
     "stack": [
       "R",
@@ -513,18 +475,34 @@
       "Proyecciones a 5 años validadas con alto grado de exactitud",
       "Reportes gerenciales interactivos generados en tiempo real a un clic"
     ],
-    "reservado": true
+    "highlights": [],
+    "videoPromocional": {
+      "tipo": "youtube",
+      "url": "https://youtube.com/watch?v=prj017-pitch"
+    },
+    "videoTecnico": {
+      "tipo": "archivo",
+      "url": "/media/proyectos/prj-017-analisis-planillas-acv/demo.mp4"
+    },
+    "documentoDrive": null,
+    "documentacion": "https://docs.empresa.com/prj-017",
+    "urlProyecto": null,
+    "videoPlaceholder": false,
+    "galeria": [
+      {"url": "/media/proyectos/prj-017-analisis-planillas-acv/proyecciones.jpg", "alt": "Proyecciones de planillas ACV"}
+    ],
+    "reservado": true,
+    "coleccion": "proyectos"
   },
   {
-    "coleccion": "proyectos",
-    "slug": "prj-017-tivit-acv",
-    "codigo": "PRJ-017",
+    "slug": "prj-018-tivit-acv",
+    "codigo": "PRJ-018",
     "nombreComercial": "TivitACV — Asistente Comercial de Planillas ACV",
     "nombreProyecto": "Plataforma de analítica financiera y asistencia conversacional con IA",
     "tipo": "Interno",
-    "categoria": null,
     "estado": "Operativo",
-    "documentoDrive": null,
+    "version": null,
+    "tipoSolucion": null,
     "cliente": "Interno",
     "descripcion": "Plataforma que centraliza el seguimiento del Annual Contract Value (ACV), el control presupuestario y la consulta ágil de planillas comerciales.",
     "descripcionLarga": null,
@@ -542,14 +520,6 @@
         "rol": "Arquitecto"
       }
     ],
-    "autores": [],
-    "videoPromocional": {
-      "tipo": "youtube",
-      "url": "https://www.youtube.com/watch?v=H-brqU897YM"
-    },
-    "videoTecnico": null,
-    "documentacion": null,
-    "galeria": [],
     "stack": [
       "Python",
       "FastAPI",
@@ -580,18 +550,29 @@
       "Exportación ágil de tableros ejecutivos en PDF para comités y reportes directivos.",
       "Centralización de fuentes de datos vía Excel y Google Drive."
     ],
-    "reservado": false
+    "highlights": [],
+    "videoPromocional": {
+      "tipo": "youtube",
+      "url": "https://www.youtube.com/watch?v=H-brqU897YM"
+    },
+    "videoTecnico": null,
+    "documentoDrive": null,
+    "documentacion": null,
+    "urlProyecto": null,
+    "videoPlaceholder": false,
+    "galeria": [],
+    "reservado": false,
+    "coleccion": "proyectos"
   },
   {
-    "coleccion": "proyectos",
-    "slug": "prj-018-deskflow-ai-xcally",
-    "codigo": "PRJ-013",
+    "slug": "prj-019-deskflow-ai-xcally",
+    "codigo": "PRJ-019",
     "nombreComercial": "DeskFlow AI — Agente Virtual Inteligente para Mesa de Ayuda en XCALLY",
     "nombreProyecto": "",
     "tipo": "Interno",
-    "categoria": null,
     "estado": "En desarrollo",
-    "documentoDrive": null,
+    "version": null,
+    "tipoSolucion": null,
     "cliente": "Interno",
     "descripcion": "Agente virtual de voz para Mesa de Ayuda integrado con XCALLY Motion / Cally Square que transforma procedimientos de soporte en conversaciones guiadas y acciones automatizadas.",
     "descripcionLarga": null,
@@ -609,14 +590,6 @@
         "rol": "Ingeniero IA"
       }
     ],
-    "autores": [],
-    "videoPromocional": {
-      "tipo": "youtube",
-      "url": "https://www.youtube.com/watch?v=A7vS4M2inUw"
-    },
-    "videoTecnico": null,
-    "documentacion": null,
-    "galeria": [],
     "stack": [
       "XCALLY Motion / Cally Square",
       "Google Cloud Speech-to-Text (Google ASR)",
@@ -651,6 +624,18 @@
       "Mecanismo seguro de escalamiento a Mesa de Servicio para casos no resueltos o excepciones",
       "Arquitectura escalable y extensible a nuevos procedimientos (VPN, VDI, servicios corporativos)"
     ],
-    "reservado": false
+    "highlights": [],
+    "videoPromocional": {
+      "tipo": "youtube",
+      "url": "https://www.youtube.com/watch?v=A7vS4M2inUw"
+    },
+    "videoTecnico": null,
+    "documentoDrive": null,
+    "documentacion": null,
+    "urlProyecto": null,
+    "videoPlaceholder": false,
+    "galeria": [],
+    "reservado": false,
+    "coleccion": "proyectos"
   }
 ]

@@ -48,13 +48,15 @@ async fn main() -> Result<()> {
     let casos_exito = format!("{}/casosExito.js", data_dir);
     let almaviva = format!("{}/almaviva.js", data_dir);
     let xms = format!("{}/xms.js", data_dir);
+    let poc = format!("{}/poc.js", data_dir);
 
     let mut total = 0;
-    total += seed_json_file(&pool, &items_json, "proyectos", &now, force).await?;
+    // 'proyectos' migrado a la tabla projects (ver migration 020_unify_projects)
     total += seed_json_file(&pool, &items_json, "laboratorio", &now, force).await?;
     total += seed_js_module(&pool, &casos_exito, "casos-de-exito", &now, force).await?;
     total += seed_js_module(&pool, &almaviva, "almaviva", &now, force).await?;
     total += seed_js_module(&pool, &xms, "xms", &now, force).await?;
+    total += seed_js_module(&pool, &poc, "poc", &now, force).await?;
 
     println!("\n✓ Seed completo: {total} items insertados/actualizados");
     Ok(())
@@ -117,6 +119,7 @@ async fn seed_js_module(
         "casos-de-exito" => "casosExito",
         "almaviva" => "productosAlmaviva",
         "xms" => "agentesXms",
+        "poc" => "pocs",
         _ => return Ok(0),
     };
 

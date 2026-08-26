@@ -416,7 +416,7 @@ pub async fn get_sprint_board(
     let sql = format!(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE status IN ({placeholders}) AND sprint_id = ? AND parent_id IS NULL AND deleted_at IS NULL \
          ORDER BY status ASC, position ASC, created_at DESC"
     );

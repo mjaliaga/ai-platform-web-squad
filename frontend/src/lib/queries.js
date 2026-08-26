@@ -40,10 +40,11 @@ export function useProject(id) {
   });
 }
 
-export function useTasks(filters = {}) {
+export function useTasks(filters = {}, options = {}) {
   return useQuery({
     queryKey: queryKeys.tasks(filters),
     queryFn: () => api.listTasks(filters),
+    enabled: options.enabled ?? true,
   });
 }
 

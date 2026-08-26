@@ -1,6 +1,8 @@
 services:
   backend:
-    build: ./backend-rust
+    build:
+      context: .
+      dockerfile: backend-rust/Dockerfile
     restart: unless-stopped
     environment:
       DATABASE_URL: sqlite:///app/data/portal.db
@@ -15,6 +17,7 @@ services:
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Manuel Aliaga}
       MEDIA_DIR: /app/media
       UPLOAD_DIR: /app/data/uploads
+      SEED_DATA_DIR: /app/seed-data
     volumes:
       - tivit-db:/app/data
       - tivit-media:/app/media

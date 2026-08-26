@@ -102,7 +102,7 @@ pub async fn add_dependency(
     let dep: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE id = ?"
     )
     .bind(&payload.depends_on_id)

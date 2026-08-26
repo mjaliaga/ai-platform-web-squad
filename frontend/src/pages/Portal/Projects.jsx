@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { ArrowLeft, FolderKanban, ChevronRight, Edit3, Trash2, Archive, UserPlus, X } from "lucide-react";
+import { ArrowLeft, FolderKanban, ChevronRight, Edit3, Trash2, Archive, UserPlus, X, Globe, Clipboard, Check, AlertCircle, Eye, EyeOff, Lock, Unlock } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { TypeBadge, StatusBadge, PriorityBadge, UserAvatar, formatDate, formatRelative } from "./components/Badges";
 
 function parseGoals(goal) {
   if (!goal) return [];
+  if (Array.isArray(goal)) return goal.filter(Boolean);
   try {
     const parsed = JSON.parse(goal);
     if (Array.isArray(parsed)) return parsed.filter(Boolean);
@@ -50,6 +51,20 @@ const ROLE_BORDER_COLORS = {
 
 const ROLE_HIERARCHY = { lead: 0, arquitecto: 1, dev: 2, design: 3, qa: 4, viewer: 5 };
 
+function getCamposPendientes(item) {
+  const d = item.data || {};
+  const obligatorios = ["nombreComercial", "tipo", "estado", "descripcion"];
+  const opcionalesClave = ["descripcionLarga", "equipo", "stack", "queHicimos", "resultados"];
+  const faltantes = [];
+  for (const k of obligatorios) {
+    if (!d[k]) faltantes.push(k);
+  }
+  for (const k of opcionalesClave) {
+    if (!d[k] || (Array.isArray(d[k]) && d[k].length === 0)) faltantes.push(k);
+  }
+  return faltantes;
+}
+
 export function Projects() {
   const { id } = useParams();
   const location = useLocation();
@@ -75,12 +90,27 @@ export function Projects() {
   const [saving, setSaving] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMember, setNewMember] = useState({ user_id: "", role: "dev" });
+  const [cmsItems, setCmsItems] = useState([]);
+  const [cmsLoading, setCmsLoading] = useState(false);
+  const [copiedSlug, setCopiedSlug] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterSector, setFilterSector] = useState("all");
+  const [filterKind, setFilterKind] = useState("all");
 
   useEffect(() => {
     api.users().then((resp) => {
       setAllUsers(Array.isArray(resp) ? resp : (resp?.items || []));
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (cmsItems.length > 0) return;
+    setCmsLoading(true);
+    api.listPublicProjects({ limit: 200 })
+      .then((items) => setCmsItems(Array.isArray(items) ? items : []))
+      .catch(() => {})
+      .finally(() => setCmsLoading(false));
+  }, [cmsItems.length]);
 
   useEffect(() => {
     setLoading(true);
@@ -288,7 +318,52 @@ export function Projects() {
               {isAdmin && (
                 <div className="flex shrink-0 gap-1">
                   <button onClick={() => setEditing(true)} className="rounded-lg border border-tivit-red-light p-2 text-tivit-ink/60 transition hover:bg-tivit-red-light"><Edit3 className="h-4 w-4" /></button>
-                  <button onClick={archiveProject} title="Archivar" className="rounded-lg border border-tivit-red-light p-2 text-tivit-ink/60 transition hover:bg-tivit-red-light"><Archive className="h-4 w-4" /></button>
+                  {current.slug && (
+                    <>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const newPublished = current.published ? 0 : 1;
+                            await api.setProjectPublished(current.id, newPublished);
+                            setCurrent({ ...current, published: newPublished });
+                          } catch (e) { setError(e.message); }
+                        }}
+                        title={current.published ? "Despublicar" : "Publicar"}
+                        className={`rounded-lg border p-2 transition ${current.published ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100" : "border-tivit-red-light text-tivit-ink/60 hover:bg-tivit-red-light"}`}
+                      >
+                        {current.published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const newReservado = current.reservado ? 0 : 1;
+                            await api.setProjectReservado(current.id, newReservado);
+                            setCurrent({ ...current, reservado: newReservado });
+                          } catch (e) { setError(e.message); }
+                        }}
+                        title={current.reservado ? "Quitar NDA" : "Marcar NDA"}
+                        className={`rounded-lg border p-2 transition ${current.reservado ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100" : "border-tivit-red-light text-tivit-ink/60 hover:bg-tivit-red-light"}`}
+                      >
+                        {current.reservado ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                      </button>
+                    </>
+                  )}
+                  {current.status === "archived" ? (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await api.updateProject(current.id, { status: "active" });
+                          setCurrent({ ...current, status: "active" });
+                        } catch (e) { setError(e.message); }
+                      }}
+                      title="Restaurar"
+                      className="rounded-lg border border-green-300 bg-green-50 p-2 text-green-700 transition hover:bg-green-100"
+                    >
+                      <Archive className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button onClick={archiveProject} title="Archivar" className="rounded-lg border border-tivit-red-light p-2 text-tivit-ink/60 transition hover:bg-tivit-red-light"><Archive className="h-4 w-4" /></button>
+                  )}
                   <button onClick={deleteProject} title="Eliminar" className="rounded-lg border border-alert/30 p-2 text-alert/60 transition hover:bg-alert/10"><Trash2 className="h-4 w-4" /></button>
                 </div>
               )}
@@ -494,12 +569,27 @@ export function Projects() {
   }
 
   // List view
+  const allItems = [
+    ...projects.map((p) => ({ kind: "internal", id: p.id, name: p.name, code: p.code, sector: p.sector, color: p.color, task_count: p.task_count, done_count: p.done_count, members: p.members, po_user_id: p.po_user_id })),
+    ...cmsItems.map((p) => ({ kind: "public", id: p.id, slug: p.slug, name: p.nombre_comercial || p.name || p.slug, code: p.code, estado: p.status, tipo: p.tipo, published: p.published, reservado: p.reservado, raw: p })),
+  ].filter((item) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const name = (item.name || "").toLowerCase();
+      const code = (item.code || "").toLowerCase();
+      if (!name.includes(q) && !code.includes(q)) return false;
+    }
+    if (filterSector !== "all" && item.sector !== filterSector && item.tipo !== filterSector) return false;
+    if (filterKind !== "all" && item.kind !== filterKind) return false;
+    return true;
+  });
+
   return (
     <div className="mx-auto max-w-4xl">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-tivit-red-dark">Proyectos</h1>
-          <p className="mt-1 text-sm text-tivit-ink/60">Organiza las tareas por proyecto y equipo.</p>
+          <p className="mt-1 text-sm text-tivit-ink/60">Gestioná los proyectos del equipo y los publicados en el sitio.</p>
         </div>
         {isAdmin && (
           <button onClick={() => setShowForm((s) => !s)} className="shrink-0 rounded-full bg-tivit-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-tivit-red-dark">
@@ -510,9 +600,41 @@ export function Projects() {
 
       {error && <p className="mt-4 rounded-xl bg-alert/10 px-3.5 py-2.5 text-sm font-medium text-alert">{error}</p>}
 
+      {/* Search and filters */}
+      {!id && (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            placeholder="Buscar proyectos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full sm:w-64 rounded-xl border border-tivit-red-light bg-white px-3.5 py-2 text-sm outline-none transition focus:border-tivit-red focus:ring-2 focus:ring-tivit-red/20"
+          />
+          <select
+            value={filterSector}
+            onChange={(e) => setFilterSector(e.target.value)}
+            className="rounded-lg border border-tivit-red-light bg-white px-2 py-1.5 text-xs font-medium text-tivit-ink outline-none focus:border-tivit-red"
+          >
+            <option value="all">Todos los sectores</option>
+            <option value="Proyecto">Proyecto</option>
+            <option value="PoC">PoC</option>
+            <option value="Laboratorio">Laboratorio</option>
+          </select>
+          <select
+            value={filterKind}
+            onChange={(e) => setFilterKind(e.target.value)}
+            className="rounded-lg border border-tivit-red-light bg-white px-2 py-1.5 text-xs font-medium text-tivit-ink outline-none focus:border-tivit-red"
+          >
+            <option value="all">Todos los tipos</option>
+            <option value="internal">Interno</option>
+            <option value="public">Público</option>
+          </select>
+        </div>
+      )}
+
       {showForm && isAdmin && (
         <form onSubmit={createProject} className="mt-5 rounded-2xl border border-black/5 bg-white p-5">
-          <h2 className="text-sm font-semibold text-tivit-ink">Nuevo proyecto</h2>
+          <h2 className="text-sm font-semibold text-tivit-ink">Nuevo proyecto interno</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-xs font-medium text-tivit-ink">
               Sector *
@@ -550,8 +672,6 @@ export function Projects() {
               <button key={c} type="button" onClick={() => setForm({ ...form, color: c })} className={`h-7 w-7 rounded-full transition ${form.color === c ? "ring-2 ring-offset-2 ring-tivit-ink" : ""}`} style={{ background: c }} />
             ))}
           </div>
-
-          {/* Team selector */}
           <div className="mt-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-tivit-ink/60">Equipo</span>
@@ -584,72 +704,119 @@ export function Projects() {
               </div>
             )}
           </div>
-
           <button type="submit" disabled={saving} className="mt-4 rounded-full bg-tivit-red px-5 py-2 text-sm font-semibold text-white transition hover:bg-tivit-red-dark disabled:opacity-60">
             {saving ? "Creando…" : "Crear proyecto"}
           </button>
         </form>
       )}
 
-      {loading && <p className="py-8 text-center text-sm text-tivit-ink/50">Cargando…</p>}
-      {!loading && projects.length === 0 && (
-        <p className="py-8 text-center text-sm text-tivit-ink/50">No hay proyectos todavía.</p>
+      {(loading || cmsLoading) && <p className="py-8 text-center text-sm text-tivit-ink/50">Cargando…</p>}
+
+      {!loading && !cmsLoading && allItems.length === 0 && (
+        <div className="mt-6 rounded-2xl border border-tivit-red-light/40 bg-tivit-red-light/20 p-6 text-center">
+          <FolderKanban className="mx-auto h-8 w-8 text-tivit-ink/30" aria-hidden="true" />
+          <p className="mt-2 text-sm text-tivit-ink/50">No hay proyectos todavía.</p>
+          {isAdmin && (
+            <p className="mt-2 text-xs text-tivit-ink/55">
+              Creá uno con el botón "+ Nuevo proyecto" de arriba.
+            </p>
+          )}
+        </div>
       )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {projects.map((p) => {
-          const pct = p.task_count ? Math.round((p.done_count / p.task_count) * 100) : 0;
+        {allItems.map((item) => {
+          if (item.kind === "internal") {
+            const pct = item.task_count ? Math.round((item.done_count / item.task_count) * 100) : 0;
+            return (
+              <Link
+                key={`i-${item.id}`}
+                to={`/portal/projects/${item.id}`}
+                className="rounded-2xl border border-black/5 bg-white p-5 transition hover:border-tivit-red/20 hover:shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: item.color }}>
+                    <FolderKanban className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h2 className="truncate font-semibold text-tivit-ink">{item.name}</h2>
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">Interno</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {item.code && <span className="font-mono text-xs text-tivit-ink/50">{item.code}</span>}
+                      {item.sector && <span className="rounded-full bg-tivit-ink/10 px-2 py-0.5 text-xs font-semibold text-tivit-ink/60">{item.sector}</span>}
+                    </div>
+                    <p className="mt-0.5 text-xs text-tivit-ink/50">{item.task_count} tarea{item.task_count !== 1 ? "s" : ""}</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-tivit-ink/30" aria-hidden="true" />
+                </div>
+                {item.members && item.members.length > 0 && (
+                  <div className="mt-3 flex items-center gap-1">
+                    {item.members.slice(0, 4).map((m) => (
+                      <UserAvatar key={m.user_id} user={{ name: m.name, avatar_color: m.avatar_color }} size="sm" />
+                    ))}
+                    {item.members.length > 4 && (
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-tivit-ink/10 text-xs font-bold text-tivit-ink/60">
+                        +{item.members.length - 4}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {item.task_count > 0 && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-xs text-tivit-ink/60">
+                      <span>{item.done_count} completadas</span>
+                      <span>{pct}%</span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/5">
+                      <div className="h-full rounded-full bg-tivit-red" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )}
+              </Link>
+            );
+          }
+
+          // Public project
+          const d = item.raw || {};
+          const teamCount = parseGoals(d.equipo).length;
+          const stackCount = parseGoals(d.stack).length;
           return (
             <Link
-              key={p.id}
-              to={`/portal/projects/${p.id}`}
+              key={`p-${item.slug}`}
+              to={`/portal/projects/${item.id}`}
               className="rounded-2xl border border-black/5 bg-white p-5 transition hover:border-tivit-red/20 hover:shadow-sm"
             >
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: p.color }}>
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: item.color || "#6366f1" }}>
                   <FolderKanban className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate font-semibold text-tivit-ink">{p.name}</h2>
                   <div className="flex items-center gap-2">
-                    {p.code && <span className="font-mono text-xs text-tivit-ink/50">{p.code}</span>}
-                    <span className="rounded-full bg-tivit-ink/10 px-1.5 py-0.5 text-[10px] font-semibold text-tivit-ink/60">{p.sector}</span>
+                    <h2 className="truncate font-semibold text-tivit-ink">{item.name}</h2>
+                    <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">Público</span>
                   </div>
-                  <p className="mt-0.5 text-xs text-tivit-ink/50">{p.task_count} tarea{p.task_count !== 1 ? "s" : ""}</p>
+                  <div className="flex items-center gap-2">
+                    {item.code && <span className="font-mono text-xs text-tivit-ink/50">{item.code}</span>}
+                    {item.published ? (
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Publicado</span>
+                    ) : (
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">Borrador</span>
+                    )}
+                    {item.reservado ? (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">Reservado</span>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 text-xs text-tivit-ink/50">{teamCount} persona{teamCount !== 1 ? "s" : ""}</p>
                 </div>
                 <ChevronRight className="h-5 w-5 shrink-0 text-tivit-ink/30" aria-hidden="true" />
               </div>
 
-              {p.members && p.members.length > 0 && (
-                <div className="mt-3 flex items-center gap-1">
-                  {p.members.slice(0, 4).map((m) => (
-                    <UserAvatar key={m.user_id} user={{ name: m.name, avatar_color: m.avatar_color }} size="sm" />
-                  ))}
-                  {p.members.length > 4 && (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-tivit-ink/10 text-[10px] font-bold text-tivit-ink/60">
-                      +{p.members.length - 4}
-                    </span>
-                  )}
-                  {p.po_user_id && (() => {
-                    const po = allUsers.find((u) => u.id === p.po_user_id);
-                    return po ? (
-                      <span className="ml-2 text-xs text-tivit-ink/50">PO: {po.name}</span>
-                    ) : null;
-                  })()}
-                </div>
-              )}
-
-              {p.task_count > 0 && (
-                <div className="mt-3">
-                  <div className="flex items-center justify-between text-xs text-tivit-ink/60">
-                    <span>{p.done_count} completadas</span>
-                    <span>{pct}%</span>
-                  </div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/5">
-                    <div className="h-full rounded-full bg-tivit-red" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              )}
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-tivit-ink/55">
+                {stackCount > 0 && <span>{stackCount} tech</span>}
+                {d.video_promocional && <span>Video</span>}
+              </div>
             </Link>
           );
         })}

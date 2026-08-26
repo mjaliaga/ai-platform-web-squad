@@ -48,7 +48,7 @@ export function DemoVideo({ demo, titulo }) {
     );
   }
 
-  if (demo.tipo === "archivo") {
+  if (demo.tipo === "mp4" || demo.tipo === "archivo") {
     return (
       <video
         controls

@@ -53,7 +53,7 @@ export function CollectionDetail({ ruta }) {
   const esLabs = ruta === "laboratorio";
   const esProyectos = ruta === "proyectos";
   const esPoc = ruta === "poc";
-  const temaBloques = esLabs ? "labs" : esProyectos ? "proyectos" : "tivit";
+  const temaBloques = esLabs ? "labs" : esProyectos ? "proyectos" : esPoc ? "poc" : "tivit";
   const gradienteCarga = esXms
     ? "from-xms-blue-light"
     : esAlmaviva
@@ -255,13 +255,14 @@ export function CollectionDetail({ ruta }) {
               </div>
             ) : null}
           </BrandBanner>
-        ) : esExito ? (
+          ) : esExito ? (
           <BrandBanner
             tema="exito"
             title={nombre}
             intro={
               <>
                 {descripcion && <p className="mt-1">{descripcion}</p>}
+                <ClienteLinea cliente={item.cliente} />
               </>
             }
           >
@@ -588,9 +589,9 @@ export function CollectionDetail({ ruta }) {
                   tecnologías, los problemas y los resultados de este proyecto.
                 </p>
                 <p className="mt-4 text-sm text-tivit-ink/55">
-                  Estos datos se cargan desde{" "}
-                  <code className="rounded bg-white px-1 py-0.5 text-xs">data/proyectos.csv</code>{" "}
-                  con <code className="rounded bg-white px-1 py-0.5 text-xs">scripts/cargar_proyectos.py</code>.
+                  Estos datos se gestionan desde{" "}
+                  <code className="rounded bg-white px-1 py-0.5 text-xs">/portal/cms</code>
+                  {" "}según la colección correspondiente.
                 </p>
               </div>
             </Reveal>
@@ -613,7 +614,7 @@ export function CollectionDetail({ ruta }) {
                         <div>
                           <Eyebrow>Video promocional</Eyebrow>
                           <div className="mt-3">
-                            <VideoPlaceholder />
+                            <VideoPlaceholder nombre={nombre} />
                           </div>
                         </div>
                       ) : null}

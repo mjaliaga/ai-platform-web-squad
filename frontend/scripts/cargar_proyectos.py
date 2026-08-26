@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Carga incremental de items (proyectos, casos-de-exito, laboratorio, poc)
+Carga incremental de items (proyectos, casos-de-exito, laboratorio)
 desde un CSV hacia src/data/items.json.
 
 Uso:
@@ -23,7 +23,7 @@ import re
 import sys
 from pathlib import Path
 
-COLECCIONES = {"proyectos", "casos-de-exito", "laboratorio", "poc"}
+COLECCIONES = {"proyectos", "casos-de-exito", "laboratorio"}
 TIPOS_VIDEO = {"youtube", "vimeo", "archivo"}
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,7 +37,6 @@ def detectar_por_nombre(nombre: str) -> str | None:
         ("proyecto", "proyectos"),
         ("caso", "casos-de-exito"),
         ("laboratorio", "laboratorio"),
-        ("poc", "poc"),
     ]
     for clave, coleccion in claves:
         if clave in n:

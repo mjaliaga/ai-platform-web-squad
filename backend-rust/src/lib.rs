@@ -8,6 +8,7 @@ use tower_http::cors::{Any, CorsLayer};
 pub mod audit;
 pub mod content;
 pub mod db;
+pub mod jql;
 pub mod middleware;
 pub mod models;
 pub mod pagination;
@@ -29,7 +30,8 @@ pub struct AppState {
 
 pub async fn build_router(state: Arc<AppState>) -> Router {
     let public = routes::auth::public_router(state.clone())
-        .merge(content::public::public_router(state.clone()));
+        .merge(content::public::public_router(state.clone()))
+        .merge(routes::projects::public_router(state.clone()));
     let protected = routes::auth::protected_router(state.clone())
         .merge(routes::tasks::router(state.clone()))
         .merge(routes::sprints::router(state.clone()))
@@ -39,6 +41,13 @@ pub async fn build_router(state: Arc<AppState>) -> Router {
         .merge(routes::notifications::router(state.clone()))
         .merge(routes::team::router(state.clone()))
         .merge(routes::projects::router(state.clone()))
+        .merge(routes::epics::router(state.clone()))
+        .merge(routes::versions::router(state.clone()))
+        .merge(routes::workflows::router(state.clone()))
+        .merge(routes::saved_filters::router(state.clone()))
+        .merge(routes::reports::router(state.clone()))
+        .merge(routes::todos::router(state.clone()))
+        .merge(routes::certifications::router(state.clone()))
         .merge(content::routes::router(state.clone()))
         .merge(content::media::router(state.clone()))
         .layer(axum::middleware::from_fn_with_state(state.clone(), csrf_protect));

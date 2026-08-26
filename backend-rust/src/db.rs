@@ -53,6 +53,12 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
         ("017_soft_deletes", include_str!("../migrations/017_soft_deletes.sql")),
         ("018_performance_indexes", include_str!("../migrations/018_performance_indexes.sql")),
         ("019_content_cms", include_str!("../migrations/019_content_cms.sql")),
+        ("020_unify_projects", include_str!("../migrations/020_unify_projects.sql")),
+        ("021_migrate_project_data", include_str!("../migrations/021_migrate_project_data.sql")),
+        ("022_epics_versions_story_points", include_str!("../migrations/022_epics_versions_story_points.sql")),
+        ("024_workflows_saved_filters", include_str!("../migrations/024_workflows_saved_filters.sql")),
+        ("025_todos", include_str!("../migrations/025_todos.sql")),
+        ("026_certifications", include_str!("../migrations/026_certifications.sql")),
     ];
 
     for (name, sql) in migrations {
@@ -64,13 +70,47 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
         if applied.is_some() {
             continue;
         }
-        sqlx::query(sql).execute(pool).await.map_err(|e| {
-            anyhow::anyhow!("Migration {name} failed: {e}")
-        })?;
-        sqlx::query("INSERT INTO _migrations (name) VALUES (?)")
-            .bind(name)
-            .execute(pool)
-            .await?;
+
+        // Split SQL into statements and execute each one individually
+        // This allows partial migrations to succeed and be marked complete
+        let statements: Vec<&str> = sql.split(';')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        let mut all_ok = true;
+        for stmt in statements {
+            let result = sqlx::query(stmt).execute(pool).await;
+            match result {
+                Ok(_) => {}
+                Err(e) => {
+                    let err_msg = e.to_string();
+                    // Ignore "duplicate column" errors (code 1) for ALTER TABLE
+                    // This makes migrations idempotent
+                    if err_msg.contains("duplicate column name:") {
+                        tracing::warn!("Migration {} - column already exists, skipping: {}", name, err_msg);
+                        continue;
+                    }
+                    // Ignore "index already exists" errors
+                    if err_msg.contains("already exists") && (stmt.starts_with("CREATE INDEX") || stmt.starts_with("CREATE UNIQUE INDEX")) {
+                        tracing::warn!("Migration {} - index already exists, skipping: {}", name, err_msg);
+                        continue;
+                    }
+                    // Other errors are fatal
+                    tracing::error!("Migration {} failed on statement: {}", name, stmt);
+                    tracing::error!("Error: {}", e);
+                    all_ok = false;
+                    break;
+                }
+            }
+        }
+
+        if all_ok {
+            sqlx::query("INSERT INTO _migrations (name) VALUES (?)")
+                .bind(name)
+                .execute(pool)
+                .await?;
+        }
     }
 
     Ok(())

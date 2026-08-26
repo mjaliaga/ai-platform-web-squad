@@ -45,7 +45,7 @@ pub async fn list_tasks(
     let mut sql = String::from(
         "SELECT t.id, t.code, t.title, t.description, t.type as task_type, t.status, t.priority, \
          t.assignee_id, t.reporter_id, t.parent_id, t.epic_id, t.sprint_id, project_id, \
-         t.estimate_hours, t.time_spent_hours, t.due_date, t.deliverable, t.position, t.created_at, t.updated_at \
+         t.estimate_hours, t.time_spent_hours, t.due_date, t.deliverable, t.position, t.created_at, t.updated_at, t.story_points, t.resolution \
          FROM tasks t WHERE 1=1"
     );
     let mut params: Vec<String> = Vec::new();
@@ -117,7 +117,7 @@ pub async fn get_task(
     let task: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE id = ?"
     )
     .bind(&id)
@@ -150,6 +150,8 @@ pub struct CreateTaskRequest {
     #[serde(default)]
     pub deliverable: Option<String>,
     pub labels: Option<Vec<String>>,
+    pub story_points: Option<i64>,
+    pub resolution: Option<String>,
 }
 
 fn default_type() -> String { "tarea".to_string() }
@@ -179,7 +181,7 @@ pub async fn create_task(
             ));
         }
     }
-    for (field, tid) in [("parent", &payload.parent_id), ("epic", &payload.epic_id)] {
+    for (field, tid) in [("parent", &payload.parent_id)] {
         if let Some(tid) = tid {
             if !task_exists(&state.db, tid).await? {
                 return Err(error_response(
@@ -187,6 +189,14 @@ pub async fn create_task(
                     format!("El {field} indicado no existe"),
                 ));
             }
+        }
+    }
+    if let Some(eid) = &payload.epic_id {
+        if !epic_exists(&state.db, eid).await? {
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                "El epic indicado no existe".to_string(),
+            ));
         }
     }
     if let Some(sid) = &payload.sprint_id {
@@ -226,8 +236,8 @@ pub async fn create_task(
         sqlx::query(
             "INSERT INTO tasks (id, code, title, description, type, status, priority, \
              assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-             estimate_hours, due_date, deliverable, position) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             estimate_hours, due_date, deliverable, position, story_points, resolution) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(&id)
         .bind(&code.0)
@@ -246,6 +256,8 @@ pub async fn create_task(
         .bind(&payload.due_date)
         .bind(payload.deliverable.as_deref().unwrap_or(""))
         .bind(max_pos.0 + 1)
+        .bind(&payload.story_points)
+        .bind(&payload.resolution)
         .execute(&mut *conn)
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
@@ -280,7 +292,7 @@ pub async fn create_task(
     let task: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE id = ?"
     )
     .bind(&id)
@@ -307,6 +319,8 @@ pub struct UpdateTaskRequest {
     pub due_date: Option<Option<String>>,
     pub deliverable: Option<String>,
     pub labels: Option<Vec<String>>,
+    pub story_points: Option<Option<i64>>,
+    pub resolution: Option<Option<String>>,
 }
 
 pub async fn update_task(
@@ -333,7 +347,7 @@ pub async fn update_task(
     let existing: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE id = ?"
     )
     .bind(&id)
@@ -454,11 +468,21 @@ pub async fn update_task(
                 .map_err(|e| internal_error(&format!("db error: {e}")))?;
         }
     }
+    if let Some(v) = &payload.story_points {
+        sqlx::query("UPDATE tasks SET story_points = ?, updated_at = datetime('now') WHERE id = ?")
+            .bind(v).bind(&id).execute(&state.db).await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    }
+    if let Some(v) = &payload.resolution {
+        sqlx::query("UPDATE tasks SET resolution = ?, updated_at = datetime('now') WHERE id = ?")
+            .bind(v).bind(&id).execute(&state.db).await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    }
 
     let task: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE id = ?"
     )
     .bind(&id)
@@ -487,7 +511,7 @@ pub async fn update_task_status(
     let existing: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE id = ?"
     )
     .bind(&id)
@@ -520,7 +544,7 @@ pub async fn update_task_status(
     let task: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE id = ?"
     )
     .bind(&id)
@@ -661,7 +685,7 @@ pub async fn get_board(
     let sql = format!(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE {} ORDER BY status ASC, position ASC, created_at DESC",
         where_parts.join(" AND ")
     );
@@ -745,7 +769,7 @@ pub async fn list_comments(
     Path(task_id): Path<String>,
 ) -> Result<Json<Vec<CommentWithAuthor>>, Response> {
     let comments: Vec<Comment> = sqlx::query_as::<_, Comment>(
-        "SELECT id, task_id, author_id, body, created_at, updated_at \
+        "SELECT id, task_id, author_id, body, created_at, updated_at, story_points, resolution \
          FROM comments WHERE task_id = ? ORDER BY created_at ASC"
     )
     .bind(&task_id)
@@ -897,6 +921,102 @@ pub async fn create_comment(
         author: author.into(),
         mentions: vec![],
     })))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EditCommentRequest {
+    pub body: String,
+}
+
+pub async fn edit_comment(
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    Path((task_id, comment_id)): Path<(String, String)>,
+    Json(payload): Json<EditCommentRequest>,
+) -> Result<Json<CommentWithAuthor>, Response> {
+    validate_required("body", &payload.body, 5000)?;
+    let comment: Option<Comment> = sqlx::query_as::<_, Comment>(
+        "SELECT id, task_id, author_id, body, created_at, updated_at FROM comments WHERE id = ? AND task_id = ?"
+    )
+    .bind(&comment_id)
+    .bind(&task_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    let comment = match comment {
+        Some(c) => c,
+        None => return Err(error_response(StatusCode::NOT_FOUND, "Comentario no encontrado".to_string())),
+    };
+    if comment.author_id != claims.sub {
+        return Err(error_response(StatusCode::FORBIDDEN, "Solo puedes editar tus propios comentarios".to_string()));
+    }
+
+    sqlx::query("UPDATE comments SET body = ?, updated_at = datetime('now') WHERE id = ?")
+        .bind(&payload.body)
+        .bind(&comment_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    let updated: Comment = sqlx::query_as::<_, Comment>(
+        "SELECT id, task_id, author_id, body, created_at, updated_at FROM comments WHERE id = ?"
+    )
+    .bind(&comment_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    let author: User = sqlx::query_as::<_, User>(
+        "SELECT id, name, email, password_hash, role, avatar_color, created_at, active FROM users WHERE id = ?"
+    )
+    .bind(&updated.author_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    Ok(Json(CommentWithAuthor {
+        comment: updated,
+        author: author.into(),
+        mentions: vec![],
+    }))
+}
+
+pub async fn delete_comment(
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    Path((task_id, comment_id)): Path<(String, String)>,
+) -> Result<StatusCode, Response> {
+    let comment: Option<Comment> = sqlx::query_as::<_, Comment>(
+        "SELECT id, task_id, author_id, body, created_at, updated_at FROM comments WHERE id = ? AND task_id = ?"
+    )
+    .bind(&comment_id)
+    .bind(&task_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    let comment = match comment {
+        Some(c) => c,
+        None => return Err(error_response(StatusCode::NOT_FOUND, "Comentario no encontrado".to_string())),
+    };
+    if comment.author_id != claims.sub && claims.role != "admin" {
+        return Err(error_response(StatusCode::FORBIDDEN, "No tienes permiso para eliminar este comentario".to_string()));
+    }
+
+    sqlx::query("DELETE FROM comment_mentions WHERE comment_id = ?")
+        .bind(&comment_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    sqlx::query("DELETE FROM comments WHERE id = ?")
+        .bind(&comment_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn list_activity(
@@ -1051,7 +1171,7 @@ pub async fn list_subtasks(
     let tasks: Vec<Task> = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE parent_id = ? AND deleted_at IS NULL ORDER BY position ASC, created_at ASC"
     )
     .bind(&parent_id)
@@ -1086,7 +1206,7 @@ pub async fn toggle_subtask(
     let task: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks WHERE id = ?"
     )
     .bind(&id)
@@ -1129,7 +1249,7 @@ pub async fn get_dashboard(
     let upcoming_due: Vec<Task> = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks \
          WHERE due_date IS NOT NULL AND due_date >= date('now') AND status != 'done' \
          ORDER BY due_date ASC LIMIT 10"
@@ -1201,7 +1321,7 @@ pub async fn get_dashboard_me(
     let upcoming_due: Vec<Task> = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
          assignee_id, reporter_id, parent_id, epic_id, sprint_id, project_id, \
-         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at \
+         estimate_hours, time_spent_hours, due_date, deliverable, position, created_at, updated_at, story_points, resolution \
          FROM tasks \
          WHERE assignee_id = ? AND due_date IS NOT NULL AND due_date >= date('now') AND status != 'done' \
          ORDER BY due_date ASC LIMIT 10"
@@ -1445,6 +1565,15 @@ pub async fn task_exists(db: &SqlitePool, id: &str) -> Result<bool, Response> {
     Ok(row.is_some())
 }
 
+pub async fn epic_exists(db: &SqlitePool, id: &str) -> Result<bool, Response> {
+    let row: Option<(String,)> = sqlx::query_as("SELECT id FROM epics WHERE id = ? AND deleted_at IS NULL")
+        .bind(id)
+        .fetch_optional(db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    Ok(row.is_some())
+}
+
 pub async fn user_exists(db: &SqlitePool, id: &str) -> Result<bool, Response> {
     let row: Option<(String,)> = sqlx::query_as("SELECT id FROM users WHERE id = ?")
         .bind(id)
@@ -1615,6 +1744,7 @@ pub fn router(state: Arc<AppState>) -> axum::Router {
         .route("/api/tasks/:id", get(get_task).delete(delete_task).patch(update_task))
         .route("/api/tasks/:id/status", patch(update_task_status))
         .route("/api/tasks/:id/comments", get(list_comments).post(create_comment))
+        .route("/api/tasks/:id/comments/:comment_id", patch(edit_comment).delete(delete_comment))
         .route("/api/tasks/:id/activity", get(list_activity))
         .route("/api/tasks/:id/attachments", get(list_attachments).post(upload_attachment))
         .route("/api/tasks/:id/subtasks", get(list_subtasks))

@@ -22,6 +22,12 @@ const PortalLayout = lazy(() =>
 const Dashboard = lazy(() =>
   import("./pages/Portal/Dashboard").then((modulo) => ({ default: modulo.Dashboard }))
 );
+const TodoList = lazy(() =>
+  import("./pages/Portal/TodoList").then((modulo) => ({ default: modulo.TodoList }))
+);
+const Certificaciones = lazy(() =>
+  import("./pages/Portal/Certificaciones").then((modulo) => ({ default: modulo.Certificaciones }))
+);
 const Backlog = lazy(() =>
   import("./pages/Portal/Backlog").then((modulo) => ({ default: modulo.Backlog }))
 );
@@ -49,11 +55,30 @@ const Profile = lazy(() =>
 const Projects = lazy(() =>
   import("./pages/Portal/Projects").then((modulo) => ({ default: modulo.Projects }))
 );
+
 const MemberProfile = lazy(() =>
   import("./pages/Portal/MemberProfile").then((modulo) => ({ default: modulo.MemberProfile }))
 );
 const ProjectLayout = lazy(() =>
   import("./pages/Portal/ProjectLayout").then((modulo) => ({ default: modulo.ProjectLayout }))
+);
+const ProjectTasks = lazy(() =>
+  import("./pages/Portal/ProjectTasks").then((modulo) => ({ default: modulo.ProjectTasks }))
+);
+const ProjectCalendar = lazy(() =>
+  import("./pages/Portal/ProjectCalendar").then((modulo) => ({ default: modulo.ProjectCalendar }))
+);
+const ProjectActivity = lazy(() =>
+  import("./pages/Portal/ProjectActivity").then((modulo) => ({ default: modulo.ProjectActivity }))
+);
+const ProjectSettings = lazy(() =>
+  import("./pages/Portal/ProjectSettings").then((modulo) => ({ default: modulo.ProjectSettings }))
+);
+const ProjectBoard = lazy(() =>
+  import("./pages/Portal/ProjectBoard").then((modulo) => ({ default: modulo.ProjectBoard }))
+);
+const ProjectTimeTracking = lazy(() =>
+  import("./pages/Portal/ProjectTimeTracking").then((modulo) => ({ default: modulo.ProjectTimeTracking }))
 );
 
 // CMS de Contenido Público
@@ -141,6 +166,8 @@ function App() {
             }
           >
             <Route index element={<Dashboard />} />
+            <Route path="todos" element={<TodoList />} />
+            <Route path="certifications" element={<Certificaciones />} />
             <Route path="members" element={<Members />} />
             <Route path="members/:id" element={<MemberProfile />} />
             <Route path="profile" element={<Profile />} />
@@ -156,6 +183,11 @@ function App() {
             {/* Project-scoped routes */}
             <Route path="projects/:id" element={<ProjectLayout />}>
               <Route index element={<Projects />} />
+              <Route path="board" element={<ProjectBoard />} />
+              <Route path="time-tracking" element={<ProjectTimeTracking />} />
+              <Route path="calendar" element={<ProjectCalendar />} />
+              <Route path="activity" element={<ProjectActivity />} />
+              <Route path="settings" element={<ProjectSettings />} />
               <Route path="sprints" element={<Sprints />} />
               <Route path="feed" element={<Feed />} />
               <Route path="team" element={<Projects />} />

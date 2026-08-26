@@ -10,6 +10,17 @@ function normalizarItem(item) {
   return String(item);
 }
 
+/** Formatea precioValor + precioMoneda como string legible. */
+function formatPrecio(valor, moneda) {
+  if (valor == null) return "No publicado";
+  const localePorMoneda = { USD: "en-US", PEN: "es-PE", EUR: "es-ES", CLP: "es-CL" };
+  const formatted = new Intl.NumberFormat(localePorMoneda[moneda] ?? "es-CL", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(valor);
+  return moneda ? `${moneda} ${formatted}` : formatted;
+}
+
 export function SidebarMeta({ item, stack, ruta }) {
   const xms = ruta === "xms";
   const almaviva = ruta === "almaviva";
@@ -108,10 +119,18 @@ export function SidebarMeta({ item, stack, ruta }) {
             <dd className="mt-0.5 font-semibold text-tivit-ink">{item.plazo}</dd>
           </div>
         )}
-        {ruta === "casos-de-exito" && item.precio && (
+        {ruta === "casos-de-exito" && item.precioValor != null && (
           <div>
             <dt className="text-xs text-gray-600">Precio</dt>
-            <dd className="mt-0.5 font-semibold text-tivit-ink">{item.precio}</dd>
+            <dd className="mt-0.5 font-semibold text-tivit-ink">
+              {formatPrecio(item.precioValor, item.precioMoneda)}
+            </dd>
+          </div>
+        )}
+        {ruta === "casos-de-exito" && ("precioValor" in item) && item.precioValor == null && (
+          <div>
+            <dt className="text-xs text-gray-600">Precio</dt>
+            <dd className="mt-0.5 text-sm text-tivit-ink/50 italic">No publicado</dd>
           </div>
         )}
         {item.version && (
