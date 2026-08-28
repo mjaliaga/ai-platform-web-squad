@@ -66,7 +66,7 @@ export function Backlog({ projectId } = {}) {
             </button>
           </div>
           <Link
-            to={pid ? `/portal/projects/${pid}/tasks/new` : "/portal/tasks/new"}
+            to={pid ? `/portal/portfolio/${pid}/tasks/new` : "/portal/tasks/new"}
             className="rounded-lg bg-tivit-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-tivit-red-dark"
           >
             + Nueva tarea

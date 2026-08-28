@@ -87,7 +87,7 @@ export function Solicitudes() {
           </p>
         </div>
         <Link
-          to={`/portal/projects/${projectId}/tasks/new?type=solicitud`}
+          to={`/portal/portfolio/${projectId}/tasks/new?type=solicitud`}
           className="shrink-0 rounded-full bg-tivit-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-tivit-red-dark"
         >
           + Nueva solicitud

@@ -133,7 +133,7 @@ export function Dashboard() {
         <div className="space-y-5 lg:col-span-2">
           <SectionHeader title="Mis tareas" count={myTasks.length} />
           {myTasks.length === 0 ? (
-            <EmptyCard text="No tenés tareas asignadas todavía." cta="Ver proyectos" to="/portal/projects" />
+            <EmptyCard text="No tenés tareas asignadas todavía." cta="Ver portafolio" to="/portal/portfolio" />
           ) : (
             <div className="space-y-4">
               {myInProgress.length > 0 && (
@@ -196,14 +196,14 @@ export function Dashboard() {
 
       {isAdmin && projects.length > 0 && (
         <div>
-          <SectionHeader title="Proyectos del equipo" count={projects.length} link={{ to: "/portal/projects", label: "Ver todos" }} />
+          <SectionHeader title="Portafolio" count={projects.length} link={{ to: "/portal/portfolio", label: "Ver todos" }} />
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {projects.slice(0, 6).map((p) => {
               const pct = p.task_count ? Math.round((p.done_count / p.task_count) * 100) : 0;
               return (
                 <Link
                   key={p.id}
-                  to={`/portal/projects/${p.id}`}
+                  to={`/portal/portfolio/${p.id}`}
                   className="group rounded-2xl border border-black/5 bg-white p-4 transition hover:border-tivit-red/20 hover:shadow-sm"
                 >
                   <div className="flex items-center gap-2.5">

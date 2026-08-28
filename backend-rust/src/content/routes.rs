@@ -13,8 +13,20 @@ use uuid::Uuid;
 use crate::middleware::auth::require_auth;
 use crate::models::{Claims, CollectionInfo, ContentItem, ContentItemOut, FieldDef, PublicUser};
 use super::schemas;
-use crate::validation::{error_response, internal_error, require_admin_or_editor};
+use crate::validation::{error_response, internal_error, require_admin};
 use crate::AppState;
+
+const READ_ONLY_COLLECTIONS: &[&str] = &["proyectos", "casos-de-exito", "almaviva", "xms"];
+
+fn require_mutable(collection: &str) -> Result<(), Response> {
+    if READ_ONLY_COLLECTIONS.contains(&collection) {
+        return Err(error_response(
+            StatusCode::FORBIDDEN,
+            format!("La colección '{}' es de solo lectura y no puede ser editada", collection),
+        ));
+    }
+    Ok(())
+}
 
 #[derive(Debug, Deserialize)]
 pub struct ListQuery {
@@ -61,6 +73,27 @@ pub async fn list_collections(
 
         let info = collection_info(*ruta, &fields, counts.0, counts.1, counts.2);
         result.push(info);
+    }
+
+    // Incluir "proyectos" aunque esté migrado a la tabla `projects`.
+    // Esto evita que desaparezca del sidebar de Edición tras la migración 020.
+    // Usamos la tabla `projects` para los conteos (published/reservado).
+    {
+        let ruta = "proyectos";
+        let fields = schemas::schema_for(ruta).unwrap_or_default();
+        let counts: (i64, i64, i64) = sqlx::query_as(
+            "SELECT \
+                COUNT(*) as total, \
+                COALESCE(SUM(CASE WHEN published = 1 AND reservado = 0 THEN 1 ELSE 0 END), 0) as pub, \
+                COALESCE(SUM(CASE WHEN published = 0 OR reservado = 1 THEN 1 ELSE 0 END), 0) as draft \
+             FROM projects WHERE deleted_at IS NULL AND slug IS NOT NULL",
+        )
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+        let info = collection_info(ruta, &fields, counts.0, counts.1, counts.2);
+        // Insertar al principio para mantener orden esperado (Proyectos primero)
+        result.insert(0, info);
     }
 
     let _ = claims;
@@ -254,7 +287,8 @@ pub async fn create_item(
     Path(collection): Path<String>,
     Json(payload): Json<UpsertRequest>,
 ) -> Result<(StatusCode, Json<ContentItemOut>), Response> {
-    require_admin_or_editor(&claims)?;
+    require_admin(&claims)?;
+    require_mutable(&collection)?;
     require_collection(&collection)?;
     schemas::validate_data(&collection, &payload.data)
         .map_err(|e| error_response(StatusCode::BAD_REQUEST, e))?;
@@ -343,7 +377,8 @@ pub async fn update_item(
     Path((collection, slug)): Path<(String, String)>,
     Json(payload): Json<UpsertRequest>,
 ) -> Result<Json<ContentItemOut>, Response> {
-    require_admin_or_editor(&claims)?;
+    require_admin(&claims)?;
+    require_mutable(&collection)?;
     require_collection(&collection)?;
     schemas::validate_data(&collection, &payload.data)
         .map_err(|e| error_response(StatusCode::BAD_REQUEST, e))?;
@@ -440,7 +475,8 @@ pub async fn set_published(
     Path((collection, slug)): Path<(String, String)>,
     Json(payload): Json<PublishRequest>,
 ) -> Result<StatusCode, Response> {
-    require_admin_or_editor(&claims)?;
+    require_admin(&claims)?;
+    require_mutable(&collection)?;
     require_collection(&collection)?;
 
     let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
@@ -480,7 +516,8 @@ pub async fn delete_item(
     Extension(claims): Extension<Claims>,
     Path((collection, slug)): Path<(String, String)>,
 ) -> Result<StatusCode, Response> {
-    require_admin_or_editor(&claims)?;
+    require_admin(&claims)?;
+    require_mutable(&collection)?;
     require_collection(&collection)?;
 
     let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
@@ -508,7 +545,8 @@ pub async fn duplicate_item(
     Extension(claims): Extension<Claims>,
     Path((collection, slug)): Path<(String, String)>,
 ) -> Result<(StatusCode, Json<ContentItemOut>), Response> {
-    require_admin_or_editor(&claims)?;
+    require_admin(&claims)?;
+    require_mutable(&collection)?;
     require_collection(&collection)?;
 
     let row: Option<ContentItem> = sqlx::query_as::<_, ContentItem>(
@@ -586,7 +624,7 @@ pub async fn list_audit(
     Extension(claims): Extension<Claims>,
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, Response> {
-    require_admin_or_editor(&claims)?;
+    require_admin(&claims)?;
     let collection = params.get("collection").cloned().unwrap_or_default();
     let limit = params
         .get("limit")

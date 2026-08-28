@@ -28,23 +28,36 @@ export function ProjectLayout() {
       .catch((e) => setError(e.message));
   }, [id]);
 
-  if (error) return <div className="py-8 text-center text-sm text-alert">{error}</div>;
-  if (!project) return <div className="py-8 text-center text-sm text-tivit-ink/50">Cargando proyecto…</div>;
+  if (error) {
+    const isForbidden = error.includes("acceso") || error.includes("FORBIDDEN") || error.includes("403");
+    if (isForbidden) {
+      return (
+        <div className="mx-auto max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
+          <div className="text-sm text-alert">Acceso restringido</div>
+          <p className="mt-1 text-sm text-tivit-ink/60">{error}</p>
+          <Link to="/portal/portfolio" className="mt-4 inline-flex text-sm font-semibold text-tivit-red hover:underline">Volver al Portafolio</Link>
+        </div>
+      );
+    }
+    return <div className="py-8 text-center text-sm text-alert">{error}</div>;
+  }
+  if (!project) return <div className="py-8 text-center text-sm text-tivit-ink/50">Cargando elemento del portafolio…</div>;
 
   return (
     <div>
       <div className="mb-6">
-        <Link to="/portal/projects" className="inline-flex items-center gap-1.5 text-xs font-semibold text-tivit-red hover:underline">
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Proyectos
+        <Link to="/portal/portfolio" className="inline-flex items-center gap-1.5 text-xs font-semibold text-tivit-red hover:underline">
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Portafolio
         </Link>
         <div className="mt-2 flex items-center gap-3">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ background: project.color }}>
             <FolderKanban className="h-4 w-4" aria-hidden="true" />
           </span>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-bold text-tivit-ink">{project.name}</h1>
               {project.code && <span className="font-mono text-xs text-tivit-ink/50">{project.code}</span>}
+              {project.categoria && <span className="rounded-full border bg-white px-2 py-0.5 text-[10px] font-semibold text-tivit-ink/60">{project.categoria}</span>}
               <span className="rounded-full bg-tivit-ink/10 px-2 py-0.5 text-[10px] font-semibold text-tivit-ink/60">{project.sector}</span>
             </div>
           </div>
@@ -53,7 +66,7 @@ export function ProjectLayout() {
 
       <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-black/5 pb-px text-sm font-medium">
         {tabs.map((t) => {
-          const to = t.to === "" ? `/portal/projects/${id}` : `/portal/projects/${id}/${t.to}`;
+          const to = t.to === "" ? `/portal/portfolio/${id}` : `/portal/portfolio/${id}/${t.to}`;
           const Icon = t.icon;
           return (
             <NavLink

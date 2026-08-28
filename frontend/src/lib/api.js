@@ -94,27 +94,31 @@ export const api = {
     request(`/wiki/${slug}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteWiki: (slug) => request(`/wiki/${slug}`, { method: "DELETE" }),
 
-  listProjects: async () => unwrapPaginated(await request("/projects")),
-  listProjectsSimple: () => request("/projects/list"),
-  getProject: (id) => request(`/projects/${id}`),
+  // Portafolio — canónico profesional (mantiene compatibilidad con /projects legacy)
+  listProjects: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return unwrapPaginated(await request(`/portfolio${qs ? `?${qs}` : ""}`));
+  },
+  listProjectsSimple: () => request("/portfolio/list"),
+  getProject: (id) => request(`/portfolio/${id}`),
   createProject: (payload) =>
-    request("/projects", { method: "POST", body: JSON.stringify(payload) }),
+    request("/portfolio", { method: "POST", body: JSON.stringify(payload) }),
   updateProject: (id, payload) =>
-    request(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
-  deleteProject: (id) => request(`/projects/${id}`, { method: "DELETE" }),
+    request(`/portfolio/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteProject: (id) => request(`/portfolio/${id}`, { method: "DELETE" }),
   addProjectMember: (projectId, payload) =>
-    request(`/projects/${projectId}/members`, { method: "POST", body: JSON.stringify(payload) }),
+    request(`/portfolio/${projectId}/members`, { method: "POST", body: JSON.stringify(payload) }),
   updateProjectMemberRole: (projectId, userId, role) =>
-    request(`/projects/${projectId}/members/${userId}`, { method: "PATCH", body: JSON.stringify({ role }) }),
+    request(`/portfolio/${projectId}/members/${userId}`, { method: "PATCH", body: JSON.stringify({ role }) }),
   removeProjectMember: (projectId, userId) =>
-    request(`/projects/${projectId}/members/${userId}`, { method: "DELETE" }),
-  getProjectSolicitudes: (projectId) => request(`/projects/${projectId}/solicitudes`),
-  getProjectProgress: (projectId) => request(`/projects/${projectId}/progress`),
-  getProjectBySlug: (slug) => request(`/projects/by-slug/${slug}`),
+    request(`/portfolio/${projectId}/members/${userId}`, { method: "DELETE" }),
+  getProjectSolicitudes: (projectId) => request(`/portfolio/${projectId}/solicitudes`),
+  getProjectProgress: (projectId) => request(`/portfolio/${projectId}/progress`),
+  getProjectBySlug: (slug) => request(`/portfolio/by-slug/${slug}`),
   setProjectPublished: (id, published) =>
-    request(`/projects/${id}/publish`, { method: "POST", body: JSON.stringify({ published }) }),
+    request(`/portfolio/${id}/publish`, { method: "POST", body: JSON.stringify({ published }) }),
   setProjectReservado: (id, reservado) =>
-    request(`/projects/${id}/reservado`, { method: "POST", body: JSON.stringify({ reservado }) }),
+    request(`/portfolio/${id}/reservado`, { method: "POST", body: JSON.stringify({ reservado }) }),
   listPublicProjects: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return unwrapPaginated(await request(`/projects/list/public${qs ? `?${qs}` : ""}`));

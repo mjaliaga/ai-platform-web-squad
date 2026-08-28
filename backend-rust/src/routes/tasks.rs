@@ -39,9 +39,39 @@ pub struct ListTasksQuery {
 
 pub async fn list_tasks(
     State(state): State<Arc<AppState>>,
-    Extension(_claims): Extension<Claims>,
+    Extension(claims): Extension<Claims>,
     Query(query): Query<ListTasksQuery>,
 ) -> Result<Json<Vec<TaskWithDetails>>, Response> {
+    // Portafolio: solo miembros pueden listar tareas de un proyecto
+    if let Some(proj) = &query.project {
+        if claims.role != "admin" {
+            let member: Option<(String,)> = sqlx::query_as(
+                "SELECT user_id FROM project_members WHERE project_id = ? AND user_id = ?",
+            )
+            .bind(proj)
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
+            if member.is_none() {
+                // también permitir si tiene tareas asignadas en ese proyecto
+                let assigned: Option<(String,)> = sqlx::query_as(
+                    "SELECT id FROM tasks WHERE project_id = ? AND assignee_id = ? AND deleted_at IS NULL LIMIT 1",
+                )
+                .bind(proj)
+                .bind(&claims.sub)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| internal_error(&format!("db error: {e}")))?;
+                if assigned.is_none() {
+                    return Err(error_response(
+                        StatusCode::FORBIDDEN,
+                        "No tienes acceso a este proyecto".to_string(),
+                    ));
+                }
+            }
+        }
+    }
     let mut sql = String::from(
         "SELECT t.id, t.code, t.title, t.description, t.type as task_type, t.status, t.priority, \
          t.assignee_id, t.reporter_id, t.parent_id, t.epic_id, t.sprint_id, project_id, \
@@ -111,7 +141,7 @@ pub async fn list_tasks(
 
 pub async fn get_task(
     State(state): State<Arc<AppState>>,
-    Extension(_claims): Extension<Claims>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<Json<TaskWithDetails>, Response> {
     let task: Task = sqlx::query_as::<_, Task>(
@@ -125,6 +155,34 @@ pub async fn get_task(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?
     .ok_or_else(|| error_response(StatusCode::NOT_FOUND, "task not found".to_string()))?;
+    if let Some(pid) = &task.project_id {
+        if claims.role != "admin" {
+            let member: Option<(String,)> = sqlx::query_as(
+                "SELECT user_id FROM project_members WHERE project_id = ? AND user_id = ?",
+            )
+            .bind(pid)
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
+            if member.is_none() {
+                let assigned: Option<(String,)> = sqlx::query_as(
+                    "SELECT id FROM tasks WHERE project_id = ? AND assignee_id = ? AND deleted_at IS NULL LIMIT 1",
+                )
+                .bind(pid)
+                .bind(&claims.sub)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| internal_error(&format!("db error: {e}")))?;
+                if assigned.is_none() {
+                    return Err(error_response(
+                        StatusCode::FORBIDDEN,
+                        "No tienes acceso a este proyecto".to_string(),
+                    ));
+                }
+            }
+        }
+    }
 
     let details = load_task_details(&state.db, task).await?;
     Ok(Json(details))

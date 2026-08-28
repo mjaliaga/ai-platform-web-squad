@@ -16,7 +16,8 @@ pub async fn create_pool(database_url: &str) -> Result<SqlitePool> {
     let options = SqliteConnectOptions::from_str(database_url)?
         .create_if_missing(true)
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
-        .foreign_keys(true);
+        .foreign_keys(true)
+        .busy_timeout(std::time::Duration::from_millis(5000));
 
     let pool = SqlitePoolOptions::new()
         .max_connections(10)
@@ -59,6 +60,8 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
         ("024_workflows_saved_filters", include_str!("../migrations/024_workflows_saved_filters.sql")),
         ("025_todos", include_str!("../migrations/025_todos.sql")),
         ("026_certifications", include_str!("../migrations/026_certifications.sql")),
+        ("027_portfolio_categoria", include_str!("../migrations/027_portfolio_categoria.sql")),
+        ("028_portfolio_stages", include_str!("../migrations/028_portfolio_stages.sql")),
     ];
 
     for (name, sql) in migrations {

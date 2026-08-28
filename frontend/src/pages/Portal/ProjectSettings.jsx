@@ -5,6 +5,14 @@ import { useAuth } from "../../context/AuthContext";
 import { Save, Trash2, AlertCircle } from "lucide-react";
 
 const SECTORES = ["Tecnología", "Marketing", "Ventas", "Operaciones", "Recursos Humanos", "Finanzas", "Legal", "Otro"];
+const CATEGORIAS_PORTAFOLIO = [
+  "Backlog de Propuestas Internas",
+  "Backlog de Propuestas Comerciales",
+  "Evaluación técnica",
+  "PoC",
+  "Proyecto",
+  "Producción",
+];
 const COLORES = [
   "#dc2626", "#ea580c", "#d97706", "#65a30d", "#16a34a",
   "#0d9488", "#0891b2", "#2563eb", "#7c3aed", "#c026d3",
@@ -21,6 +29,7 @@ export function ProjectSettings() {
     code: "",
     description: "",
     sector: "",
+    categoria: "Proyecto",
     color: "",
   });
   const [saving, setSaving] = useState(false);
@@ -34,6 +43,7 @@ export function ProjectSettings() {
         code: project.code || "",
         description: project.description || "",
         sector: project.sector || "",
+        categoria: project.categoria || "Proyecto",
         color: project.color || "#dc2626",
       });
     }
@@ -144,6 +154,24 @@ export function ProjectSettings() {
                   rows={3}
                   className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                 />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-tivit-ink">
+                  Categoría Portafolio *
+                </label>
+                <select
+                  name="categoria"
+                  value={form.categoria}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  required
+                >
+                  {CATEGORIAS_PORTAFOLIO.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-tivit-ink/50">Define la fase en el pipeline: Backlog → Evaluación → PoC → Producción.</p>
               </div>
 
               <div>

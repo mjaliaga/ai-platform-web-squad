@@ -33,9 +33,22 @@ async fn main() -> Result<()> {
     let force = std::env::args().any(|a| a == "--force");
 
     println!("→ Conectando a {database_url}");
+    // Asegurar que el directorio de la BD existe (necesario tras `down -v`)
+    if let Some(path) = database_url.strip_prefix("sqlite://") {
+        if let Some(dir) = Path::new(path).parent() {
+            if !dir.as_os_str().is_empty() {
+                std::fs::create_dir_all(dir).ok();
+            }
+        }
+    }
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
-        .connect_with(SqliteConnectOptions::from_str(&database_url)?)
+        .connect_with(
+            SqliteConnectOptions::from_str(&database_url)?
+                .create_if_missing(true)
+                .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+                .foreign_keys(true),
+        )
         .await
         .context("create pool")?;
 
@@ -51,8 +64,8 @@ async fn main() -> Result<()> {
     let poc = format!("{}/poc.js", data_dir);
 
     let mut total = 0;
-    // 'proyectos' migrado a la tabla projects (ver migration 020_unify_projects)
     total += seed_json_file(&pool, &items_json, "laboratorio", &now, force).await?;
+    total += seed_json_file_projects(&pool, &items_json, &now, force).await?;
     total += seed_js_module(&pool, &casos_exito, "casos-de-exito", &now, force).await?;
     total += seed_js_module(&pool, &almaviva, "almaviva", &now, force).await?;
     total += seed_js_module(&pool, &xms, "xms", &now, force).await?;
@@ -96,6 +109,111 @@ async fn seed_json_file(
         }
     }
     println!("  → {collection}: {count} items");
+    Ok(count)
+}
+
+async fn seed_json_file_projects(
+    pool: &SqlitePool,
+    path: &str,
+    now: &str,
+    force: bool,
+) -> Result<usize> {
+    if std::env::var("SKIP_SEED_PROJECTS").is_ok() {
+        println!("  → proyectos skip (SKIP_SEED_PROJECTS set)");
+        return Ok(0);
+    }
+    let path = std::path::Path::new(path);
+    if !path.exists() {
+        println!("  ⚠ Archivo no encontrado: {}", path.display());
+        return Ok(0);
+    }
+    let content = std::fs::read_to_string(path)
+        .with_context(|| format!("leyendo {}", path.display()))?;
+    let items: Vec<serde_json::Value> = serde_json::from_str(&content)
+        .with_context(|| format!("parseando {}", path.display()))?;
+    let mut count = 0;
+    for item in items {
+        let slug = match item.get("slug").and_then(|v| v.as_str()) {
+            Some(s) => s.to_string(),
+            None => continue,
+        };
+        let coleccion = item.get("coleccion").and_then(|v| v.as_str()).unwrap_or("");
+        if coleccion != "proyectos" {
+            continue;
+        }
+        // Extraer campos para tabla `projects`
+        let codigo = item.get("codigo").and_then(|v| v.as_str()).unwrap_or("");
+        let nombre_comercial = item.get("nombreComercial").and_then(|v| v.as_str()).unwrap_or(&slug);
+        let descripcion = item.get("descripcion").and_then(|v| v.as_str()).unwrap_or("");
+        let descripcion_larga = item.get("descripcionLarga").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let tipo = item.get("tipo").and_then(|v| v.as_str()).unwrap_or("Interno");
+        let version = item.get("version").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let tipo_solucion = item.get("tipoSolucion").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let cliente = item.get("cliente").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let estado = item.get("estado").and_then(|v| v.as_str()).unwrap_or("Operativo");
+        let reservado = item.get("reservado").and_then(|v| v.as_bool()).unwrap_or(false) as i64;
+        let video_placeholder = item.get("videoPlaceholder").and_then(|v| v.as_bool()).unwrap_or(false) as i64;
+        let equipo = serde_json::to_string(item.get("equipo").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
+        let stack = serde_json::to_string(item.get("stack").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
+        let problemas = serde_json::to_string(item.get("problemas").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
+        let que_hicimos = serde_json::to_string(item.get("queHicimos").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
+        let resultados = serde_json::to_string(item.get("resultados").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
+        let highlights = serde_json::to_string(item.get("highlights").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
+        let galeria = serde_json::to_string(item.get("galeria").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
+        let video_promocional = item.get("videoPromocional").map(|v| serde_json::to_string(v).unwrap_or("null".into()));
+        let video_tecnico = item.get("videoTecnico").map(|v| serde_json::to_string(v).unwrap_or("null".into()));
+        let documento_drive = item.get("documentoDrive").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let documentacion = item.get("documentacion").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let url_proyecto = item.get("urlProyecto").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+        let existing: Option<(String, String, i64, String)> = sqlx::query_as("SELECT id, stage, published, status FROM projects WHERE slug = ? AND deleted_at IS NULL")
+            .bind(&slug)
+            .fetch_optional(pool)
+            .await?;
+        if let Some((existing_id, existing_stage, existing_published, existing_status)) = existing {
+            if force {
+                // Respetar vaciado manual: si el usuario dejó stage en blanco o archived/published=0, no sobreescribir (todo en 0)
+                if existing_stage.is_empty() || existing_published == 0 || existing_status == "archived" {
+                    // No actualizar, mantener en blanco para que siga en 0
+                    continue;
+                }
+                sqlx::query(
+                    "UPDATE projects SET code=?, name=?, description=?, sector=?, status=?, \
+                     color=?, slug=?, published=?, reservado=?, tipo=?, version=?, tipo_solucion=?, cliente=?, \
+                     nombre_comercial=?, descripcion_larga=?, equipo=?, stack=?, problemas=?, que_hicimos=?, resultados=?, \
+                     highlights=?, galeria=?, video_promocional=?, video_tecnico=?, documento_drive=?, documentacion=?, \
+                     url_proyecto=?, video_placeholder=?, updated_at=? WHERE id=?"
+                )
+                .bind(codigo).bind(nombre_comercial).bind(descripcion).bind("Proyecto").bind("active").bind("#9333ea").bind(&slug).bind(1).bind(reservado)
+                .bind(tipo).bind(&version).bind(&tipo_solucion).bind(&cliente)
+                .bind(nombre_comercial).bind(&descripcion_larga).bind(&equipo).bind(&stack).bind(&problemas).bind(&que_hicimos).bind(&resultados)
+                .bind(&highlights).bind(&galeria).bind(&video_promocional).bind(&video_tecnico).bind(&documento_drive).bind(&documentacion)
+                .bind(&url_proyecto).bind(video_placeholder).bind(now).bind(&existing_id)
+                .execute(pool).await?;
+                println!("    ↻ proyecto {} actualizado", slug);
+                count += 1;
+            }
+            continue;
+        }
+        let id = Uuid::new_v4().to_string();
+        sqlx::query(
+            "INSERT INTO projects (id, slug, code, name, description, sector, status, published, reservado, \
+             tipo, version, tipo_solucion, cliente, nombre_comercial, descripcion_larga, equipo, stack, problemas, \
+             que_hicimos, resultados, highlights, galeria, video_promocional, video_tecnico, documento_drive, \
+             documentacion, url_proyecto, video_placeholder, color, created_at, updated_at) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind(&id).bind(&slug).bind(codigo).bind(nombre_comercial).bind(descripcion).bind("Proyecto").bind("active").bind(1).bind(reservado)
+        .bind(tipo).bind(&version).bind(&tipo_solucion).bind(&cliente)
+        .bind(nombre_comercial).bind(&descripcion_larga).bind(&equipo).bind(&stack).bind(&problemas).bind(&que_hicimos).bind(&resultados)
+        .bind(&highlights).bind(&galeria).bind(&video_promocional).bind(&video_tecnico).bind(&documento_drive).bind(&documentacion)
+        .bind(&url_proyecto).bind(video_placeholder).bind("#9333ea").bind(now).bind(now)
+        .execute(pool).await?;
+        println!("    + proyecto {slug}");
+        count += 1;
+        let _ = estado; // reservado para futuro uso de status
+    }
+    println!("  → proyectos (projects table): {count} items");
     Ok(count)
 }
 

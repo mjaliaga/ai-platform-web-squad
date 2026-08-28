@@ -99,6 +99,7 @@ fn object_field(
 /// Devuelve el schema declarativo de una colección a partir de su `ruta`.
 pub fn schema_for(ruta: &str) -> Option<Vec<FieldDef>> {
     match ruta {
+        "proyectos" => Some(proyectos_schema()),
         "casos-de-exito" => Some(casos_exito_schema()),
         "laboratorio" => Some(laboratorio_schema()),
         "poc" => Some(poc_schema()),
@@ -108,7 +109,10 @@ pub fn schema_for(ruta: &str) -> Option<Vec<FieldDef>> {
     }
 }
 
-/// Lista todas las rutas de colecciones soportadas (proyectos migrado a projects table).
+/// Lista todas las rutas de colecciones soportadas.
+/// `proyectos` se mantiene aquí aunque sus datos vivan en la tabla `projects`
+/// (migración 020) para que siga visible en el CMS/Edición y no desaparezca
+/// del portal tras el rebuild. `list_collections` lo cuenta desde `projects`.
 pub fn all_collections() -> &'static [&'static str] {
     &[
         "casos-de-exito",

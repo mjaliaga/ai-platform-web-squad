@@ -162,6 +162,16 @@ pub struct Project {
     pub video_placeholder: Option<i64>,
     #[sqlx(default)]
     pub updated_at: Option<String>,
+    #[sqlx(default)]
+    pub categoria: Option<String>,
+    #[sqlx(default)]
+    pub stage: Option<String>,
+    #[sqlx(default)]
+    pub portfolio_data: Option<String>,
+    #[sqlx(default)]
+    pub sponsor_id: Option<String>,
+    #[sqlx(default)]
+    pub tipo_proyecto: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -132,7 +132,7 @@ export function MemberProfile() {
             {projects.map((p) => (
               <Link
                 key={p.project_id}
-                to={`/portal/projects/${p.project_id}`}
+                to={`/portal/portfolio/${p.project_id}`}
                 className="flex items-center gap-3 rounded-xl border border-black/5 p-3 transition hover:border-tivit-red/20"
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg text-white" style={{ background: p.project_color }}>

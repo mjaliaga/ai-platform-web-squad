@@ -1,21 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown, FileEdit, CheckSquare, Award } from "lucide-react";
+import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown, CheckSquare, Award } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { NotificationBell } from "./components/NotificationBell";
 
 const links = [
   { to: "/portal", label: "Inicio", icon: Home, end: true },
   { to: "/portal/todos", label: "Mis Tareas", icon: CheckSquare },
-  { to: "/portal/projects", label: "Proyecto", icon: FolderKanban },
+  { to: "/portal/portfolio", label: "Portafolio", icon: FolderKanban },
 ];
 
 const adminLinks = [
   { to: "/portal/certifications", label: "Certificaciones", icon: Award },
-];
-
-const editorLinks = [
-  { to: "/portal/cms", label: "Contenido", icon: FileEdit },
 ];
 
 export function PortalLayout() {
@@ -86,13 +82,6 @@ export function PortalLayout() {
               <Users className="h-4 w-4" aria-hidden="true" />
               Miembros
             </NavLink>
-            {(user?.role === "admin" || user?.role === "editor") &&
-              editorLinks.map((l) => (
-                <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
-                  <l.icon className="h-4 w-4" aria-hidden="true" />
-                  {l.label}
-                </NavLink>
-              ))}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -190,13 +179,6 @@ export function PortalLayout() {
                 <Users className="h-4 w-4" aria-hidden="true" />
                 Miembros
               </NavLink>
-              {(user?.role === "admin" || user?.role === "editor") &&
-                editorLinks.map((l) => (
-                  <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
-                    <l.icon className="h-4 w-4" aria-hidden="true" />
-                    {l.label}
-                  </NavLink>
-                ))}
             </div>
           </nav>
         )}

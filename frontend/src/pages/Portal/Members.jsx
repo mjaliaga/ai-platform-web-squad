@@ -276,7 +276,7 @@ function MemberCard({ m, wl, mProjects, user, isAdmin, inputClass, changeRole, c
             {projects.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {projects.map((p) => (
-                  <Link key={p.id} to={`/portal/projects/${p.id}`}
+                  <Link key={p.id} to={`/portal/portfolio/${p.id}`}
                     className="flex items-center gap-1 rounded-full border border-black/10 px-2 py-0.5 text-xs transition hover:border-tivit-red/30">
                     <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
                     <span className="font-medium text-tivit-ink">{p.name}</span>

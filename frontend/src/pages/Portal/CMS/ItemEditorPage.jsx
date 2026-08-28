@@ -10,10 +10,19 @@ import {
 } from "../../../lib/contentQueries";
 import { useCollections } from "../../../lib/contentQueries";
 import { DynamicFormField } from "../../../components/CMS/DynamicFormField";
+import { useAuth } from "../../../context/AuthContext";
+
+const READ_ONLY_COLLECTIONS = ["proyectos", "casos-de-exito", "almaviva", "xms"];
+const EDITABLE_COLLECTIONS = ["laboratorio", "poc"];
 
 export function ItemEditorPage() {
   const { collection, slug } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const isReadOnlyCollection = READ_ONLY_COLLECTIONS.includes(collection);
+  const isEditableCollection = EDITABLE_COLLECTIONS.includes(collection);
+  const canEdit = isAdmin && isEditableCollection && !isReadOnlyCollection;
   const isNew = !slug || slug === "new";
 
   const { data: collections } = useCollections();
@@ -84,6 +93,10 @@ export function ItemEditorPage() {
   }
 
   async function handleSave() {
+    if (!canEdit) {
+      alert("No tienes permisos para editar esta colección (solo admin en Tivit Labs y PoC).");
+      return;
+    }
     if (!validate()) return;
     try {
       if (isNew) {
@@ -112,6 +125,10 @@ export function ItemEditorPage() {
   }
 
   async function handleTogglePublish() {
+    if (!canEdit) {
+      alert("No tienes permisos para publicar en esta colección.");
+      return;
+    }
     if (isNew) {
       setPublished((p) => !p);
       return;
@@ -171,6 +188,20 @@ export function ItemEditorPage() {
     return { basics, narrative, structured, media };
   }, [schema]);
 
+  if (collection === "proyectos") {
+    return (
+      <div className="rounded-2xl border border-black/5 bg-white p-8 text-center shadow-sm">
+        <h2 className="text-lg font-bold text-tivit-ink">Portafolio gestionado en otra sección</h2>
+        <p className="mt-2 text-sm text-tivit-ink/60">
+          Los elementos del portafolio se administran en <code className="rounded bg-tivit-ink/5 px-1">/portal/portfolio</code> (tabla projects, 6 categorías) y no en el CMS genérico.
+        </p>
+        <Link to="/portal/portfolio" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-tivit-red px-4 py-2 text-sm font-semibold text-white hover:bg-tivit-red-dark">
+          Ir a Portafolio
+        </Link>
+      </div>
+    );
+  }
+
   if (!meta) {
     return (
       <div className="rounded-2xl border border-black/5 bg-white p-8 text-center shadow-sm">
@@ -210,40 +241,59 @@ export function ItemEditorPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleTogglePublish}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-              published
-                ? "border-green-300 bg-green-50 text-green-700"
-                : "border-black/10 text-tivit-ink/70 hover:bg-tivit-red-light"
-            }`}
-          >
-            {published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-            {published ? "Publicado" : "Borrador"}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={createMut.isPending || updateMut.isPending}
-            className="flex items-center gap-2 rounded-lg bg-tivit-red px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-tivit-red-dark disabled:opacity-50"
-          >
-            {createMut.isPending || updateMut.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            {isNew ? "Crear" : "Guardar"}
-          </button>
+          {canEdit ? (
+            <>
+              <button
+                onClick={handleTogglePublish}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                  published
+                    ? "border-green-300 bg-green-50 text-green-700"
+                    : "border-black/10 text-tivit-ink/70 hover:bg-tivit-red-light"
+                }`}
+              >
+                {published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {published ? "Publicado" : "Borrador"}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={createMut.isPending || updateMut.isPending}
+                className="flex items-center gap-2 rounded-lg bg-tivit-red px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-tivit-red-dark disabled:opacity-50"
+              >
+                {createMut.isPending || updateMut.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {isNew ? "Crear" : "Guardar"}
+              </button>
+            </>
+          ) : (
+            <span className="rounded-lg bg-tivit-ink/10 px-3 py-2 text-xs font-bold uppercase tracking-wider text-tivit-ink/50">
+              Solo lectura
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      {isReadOnlyCollection && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Esta colección (<strong>{collection}</strong>) es de <strong>solo lectura</strong>. No se permite crear ni editar (XMS / Almaviva / Casos de éxito). Solo <strong>Tivit Labs</strong> y <strong>PoC</strong> son editables.
+        </div>
+      )}
+      {!isAdmin && !isReadOnlyCollection && (
+        <div className="rounded-xl border border-alert/20 bg-alert/5 p-3 text-sm text-alert">
+          Solo los administradores pueden editar. Tu rol es <strong>{user?.role}</strong>. Cambia a admin para habilitar el guardado.
+        </div>
+      )}
+
+      <div className={`grid gap-5 lg:grid-cols-2 ${!canEdit ? "opacity-60 pointer-events-none" : ""}`}>
         <Section title="Datos básicos & Metadatos" description="Identificación y clasificación principal">
           {groupedFields.basics.map((f) => (
             <FieldRow
               key={f.key}
               field={f}
               value={data[f.key]}
-              onChange={(v) => setField(f.key, v)}
+              onChange={(v) => canEdit && setField(f.key, v)}
               error={errors[f.key]}
             />
           ))}
@@ -255,7 +305,7 @@ export function ItemEditorPage() {
               key={f.key}
               field={f}
               value={data[f.key]}
-              onChange={(v) => setField(f.key, v)}
+              onChange={(v) => canEdit && setField(f.key, v)}
               error={errors[f.key]}
             />
           ))}
@@ -269,7 +319,7 @@ export function ItemEditorPage() {
                   key={f.key}
                   field={f}
                   value={data[f.key]}
-                  onChange={(v) => setField(f.key, v)}
+                  onChange={(v) => canEdit && setField(f.key, v)}
                   error={errors[f.key]}
                 />
               ))}
@@ -285,7 +335,7 @@ export function ItemEditorPage() {
                   key={f.key}
                   field={f}
                   value={data[f.key]}
-                  onChange={(v) => setField(f.key, v)}
+                  onChange={(v) => canEdit && setField(f.key, v)}
                   error={errors[f.key]}
                 />
               ))}

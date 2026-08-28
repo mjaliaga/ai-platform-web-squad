@@ -62,9 +62,18 @@ pub struct SprintWithStats {
 
 pub async fn list_sprints(
     State(state): State<Arc<AppState>>,
-    Extension(_claims): Extension<Claims>,
+    Extension(claims): Extension<Claims>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<Vec<SprintWithStats>>, Response> {
+    if let Some(pid) = params.get("project") {
+        if claims.role != "admin" {
+            let member: Option<(String,)> = sqlx::query_as("SELECT user_id FROM project_members WHERE project_id = ? AND user_id = ?").bind(pid).bind(&claims.sub).fetch_optional(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+            if member.is_none() {
+                let assigned: Option<(String,)> = sqlx::query_as("SELECT id FROM tasks WHERE project_id = ? AND assignee_id = ? AND deleted_at IS NULL LIMIT 1").bind(pid).bind(&claims.sub).fetch_optional(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+                if assigned.is_none() { return Err(error_response(StatusCode::FORBIDDEN, "No tienes acceso a este proyecto".to_string())); }
+            }
+        }
+    }
     let (sql, binds): (String, Vec<String>) = if let Some(pid) = params.get("project") {
         (
             "SELECT id, name, goal, start_date, end_date, is_active, project_id, risks, team_dependencies, third_party_dependencies, created_at \

@@ -73,7 +73,7 @@ export function ProjectTasks() {
           </p>
         </div>
         <Link
-          to={`/portal/projects/${projectId}/tasks/new`}
+          to={`/portal/portfolio/${projectId}/tasks/new`}
           className="flex items-center gap-2 rounded-lg bg-tivit-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-tivit-red-dark"
         >
           <Plus className="h-4 w-4" /> Nueva tarea

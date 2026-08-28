@@ -33,6 +33,8 @@ COPY --from=builder /app/migrations /app/migrations
 COPY frontend/src/data/items.json /app/seed-data/items.json
 COPY frontend/src/data/casosExito.js /app/seed-data/casosExito.js
 COPY frontend/src/data/poc.js /app/seed-data/poc.js
+COPY frontend/src/data/almaviva.js /app/seed-data/almaviva.js
+COPY frontend/src/data/xms.js /app/seed-data/xms.js
 
 RUN mkdir -p /app/data/uploads /app/media
 

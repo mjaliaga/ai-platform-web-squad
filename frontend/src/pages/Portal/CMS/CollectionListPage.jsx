@@ -17,11 +17,38 @@ import {
   useDuplicateContentItem,
   usePublishContentItem,
 } from "../../../lib/contentQueries";
+import { useAuth } from "../../../context/AuthContext";
+
+const READ_ONLY_COLLECTIONS = ["proyectos", "casos-de-exito", "almaviva", "xms"];
+const EDITABLE_COLLECTIONS = ["laboratorio", "poc"];
 
 export function CollectionListPage() {
   const { collection } = useParams();
   const { data: collections } = useCollections();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const isReadOnly = READ_ONLY_COLLECTIONS.includes(collection);
+  const isEditable = EDITABLE_COLLECTIONS.includes(collection) && isAdmin;
   const meta = collections?.find((c) => c.ruta === collection);
+
+  // Proyectos migrado a tabla `projects` — mostrar aviso y redirigir a /portal/portfolio
+  if (collection === "proyectos") {
+    return (
+      <div className="rounded-2xl border border-black/5 bg-white p-8 text-center shadow-sm">
+        <h2 className="text-lg font-bold text-tivit-ink">Portafolio gestionado en otra sección</h2>
+        <p className="mt-2 text-sm text-tivit-ink/60">
+          Desde la migración 020 los elementos del portafolio se administran en la tabla <code className="rounded bg-tivit-ink/5 px-1">projects</code> y no en el CMS genérico.
+          Usá la sección <strong>Portafolio</strong> del portal para crear y editar (6 categorías: Backlog Internas/Comerciales, Evaluación técnica, PoC, Proyecto, Producción).
+        </p>
+        <Link
+          to="/portal/portfolio"
+          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-tivit-red px-4 py-2 text-sm font-semibold text-white hover:bg-tivit-red-dark"
+        >
+          Ir a Portafolio
+        </Link>
+      </div>
+    );
+  }
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -70,13 +97,33 @@ export function CollectionListPage() {
           <h1 className="text-2xl font-bold text-tivit-ink">{meta.nombre}</h1>
           <p className="mt-1 text-sm text-tivit-ink/55">{meta.titulo}</p>
         </div>
-        <Link
-          to={`/portal/cms/${collection}/new`}
-          className="flex items-center gap-2 rounded-lg bg-tivit-red px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-tivit-red-dark"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" /> Nuevo item
-        </Link>
+        {isEditable ? (
+          <Link
+            to={`/portal/cms/${collection}/new`}
+            className="flex items-center gap-2 rounded-lg bg-tivit-red px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-tivit-red-dark"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" /> Nuevo item
+          </Link>
+        ) : (
+          <span className="rounded-lg bg-tivit-ink/10 px-3 py-2 text-xs font-bold uppercase tracking-wider text-tivit-ink/50">
+            Solo lectura
+          </span>
+        )}
       </div>
+
+      {isReadOnly && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Esta colección es de <strong>solo lectura</strong> (XMS / Almaviva / Casos de éxito). La edición está deshabilitada incluso para admin. Use <strong>Tivit Labs</strong> o <strong>PoC</strong> para crear contenido editable.
+          {isReadOnly && collection !== "proyectos" && (
+            <span className="ml-1">No se permite crear, editar ni eliminar.</span>
+          )}
+        </div>
+      )}
+      {!isAdmin && !isReadOnly && (
+        <div className="rounded-xl border border-alert/20 bg-alert/5 p-3 text-sm text-alert">
+          Solo los administradores pueden editar esta colección. Tu rol actual es <strong>{user?.role}</strong>.
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-black/5 bg-white p-4 shadow-sm">
         <div className="relative flex-1 min-w-[200px]">
@@ -177,34 +224,36 @@ export function CollectionListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <Link
-                          to={`/portal/cms/${collection}/${item.slug}`}
-                          className="rounded p-1.5 text-tivit-ink/55 hover:bg-tivit-red-light hover:text-tivit-red"
-                          title="Editar"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Link>
-                        <button
-                          onClick={() =>
-                            publishMut.mutate({
-                              slug: item.slug,
-                              published: !item.published,
-                            })
-                          }
-                          className="rounded p-1.5 text-tivit-ink/55 hover:bg-tivit-red-light hover:text-tivit-red"
-                          title={item.published ? "Despublicar" : "Publicar"}
-                        >
-                          {item.published ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm(`¿Duplicar "${title}"?`)) {
-                              duplicateMut.mutate(item.slug);
-                            }
+                        {isEditable ? (
+                          <>
+                            <Link
+                              to={`/portal/cms/${collection}/${item.slug}`}
+                              className="rounded p-1.5 text-tivit-ink/55 hover:bg-tivit-red-light hover:text-tivit-red"
+                              title="Editar"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Link>
+                            <button
+                              onClick={() =>
+                                publishMut.mutate({
+                                  slug: item.slug,
+                                  published: !item.published,
+                                })
+                              }
+                              className="rounded p-1.5 text-tivit-ink/55 hover:bg-tivit-red-light hover:text-tivit-red"
+                              title={item.published ? "Despublicar" : "Publicar"}
+                            >
+                              {item.published ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`¿Duplicar "${title}"?`)) {
+                                  duplicateMut.mutate(item.slug);
+                                }
                           }}
                           className="rounded p-1.5 text-tivit-ink/55 hover:bg-tivit-red-light hover:text-tivit-red"
                           title="Duplicar"
@@ -226,6 +275,16 @@ export function CollectionListPage() {
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
+                          </>
+                        ) : (
+                          <Link
+                            to={`/portal/cms/${collection}/${item.slug}`}
+                            className="rounded p-1.5 text-tivit-ink/30 hover:bg-black/5 hover:text-tivit-ink/50"
+                            title="Ver (solo lectura)"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        )}
                       </div>
                     </td>
                   </tr>
