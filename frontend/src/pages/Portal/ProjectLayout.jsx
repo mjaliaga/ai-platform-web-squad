@@ -1,15 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useParams } from "react-router-dom";
-import { FolderKanban, ArrowLeft, LayoutGrid, Calendar, Activity, Settings, Clock } from "lucide-react";
+import { FolderKanban, ArrowLeft, Calendar, Settings, LayoutList, Globe } from "lucide-react";
 import { api } from "../../lib/api";
 
 const tabs = [
-  { to: "", label: "Resumen", end: true },
-  { to: "board", label: "Board", icon: LayoutGrid },
-  { to: "time-tracking", label: "Tiempo", icon: Clock },
+  { to: "", label: "Backlog", end: true },
   { to: "calendar", label: "Calendario", icon: Calendar },
-  { to: "activity", label: "Actividad", icon: Activity },
-  { to: "sprints", label: "Sprints" },
   { to: "feed", label: "Anuncios" },
   { to: "solicitudes", label: "Solicitudes" },
   { to: "team", label: "Equipo" },
@@ -43,6 +39,14 @@ export function ProjectLayout() {
   }
   if (!project) return <div className="py-8 text-center text-sm text-tivit-ink/50">Cargando elemento del portafolio…</div>;
 
+  let portfolioData = {};
+  try {
+    portfolioData = project.portfolio_data ? JSON.parse(project.portfolio_data) : {};
+  } catch (e) {
+    portfolioData = {};
+  }
+  const country = portfolioData.country;
+
   return (
     <div>
       <div className="mb-6">
@@ -59,6 +63,12 @@ export function ProjectLayout() {
               {project.code && <span className="font-mono text-xs text-tivit-ink/50">{project.code}</span>}
               {project.categoria && <span className="rounded-full border bg-white px-2 py-0.5 text-[10px] font-semibold text-tivit-ink/60">{project.categoria}</span>}
               <span className="rounded-full bg-tivit-ink/10 px-2 py-0.5 text-[10px] font-semibold text-tivit-ink/60">{project.sector}</span>
+              {country && (
+                <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  <Globe className="h-3 w-3" />
+                  {country}
+                </span>
+              )}
             </div>
           </div>
         </div>

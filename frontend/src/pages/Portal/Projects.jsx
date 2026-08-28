@@ -4,7 +4,7 @@ import { ArrowLeft, FolderKanban, ChevronRight, Edit3, Trash2, Archive, UserPlus
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { TypeBadge, StatusBadge, PriorityBadge, UserAvatar, formatDate, formatRelative } from "./components/Badges";
-import { STAGES, STAGE_COLORS, STAGE_DOT, FIELD_DEFS } from "../../lib/portfolioFields";
+import { STAGES, STAGE_COLORS, STAGE_DOT, FIELD_DEFS, PAISES } from "../../lib/portfolioFields";
 
 function parseGoals(goal) {
   if (!goal) return [];
@@ -113,35 +113,21 @@ export function Projects() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", color: "#dc2626", sector: "Proyecto", code: "", po_user_id: "", categoria: "Proyecto", stage: "Backlog", tipo_proyecto: "interno", sponsor_id: "", portfolio_data: {} });
+  const [form, setForm] = useState({ name: "", description: "", color: "#dc2626", sector: "Proyecto", code: "", po_user_id: "", categoria: "Backlog de Propuestas Internas", stage: "Backlog", tipo_proyecto: "interno", sponsor_id: "", portfolio_data: {} });
   const [teamSelection, setTeamSelection] = useState([]);
   const [saving, setSaving] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMember, setNewMember] = useState({ user_id: "", role: "dev" });
-  const [cmsItems, setCmsItems] = useState([]);
-  const [cmsLoading, setCmsLoading] = useState(false);
-  const [copiedSlug, setCopiedSlug] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSector, setFilterSector] = useState("all");
-  const [filterCategoria, setFilterCategoria] = useState("all");
   const [filterStage, setFilterStage] = useState("all");
   const [filterTipoProyecto, setFilterTipoProyecto] = useState("all");
-  const [filterKind, setFilterKind] = useState("all");
 
   useEffect(() => {
     api.users().then((resp) => {
       setAllUsers(Array.isArray(resp) ? resp : (resp?.items || []));
     }).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (cmsItems.length > 0) return;
-    setCmsLoading(true);
-    api.listPublicProjects({ limit: 200 })
-      .then((items) => setCmsItems(Array.isArray(items) ? items : []))
-      .catch(() => {})
-      .finally(() => setCmsLoading(false));
-  }, [cmsItems.length]);
 
   useEffect(() => {
     setLoading(true);
@@ -159,7 +145,7 @@ export function Projects() {
           let pData = {};
           try { pData = proj.portfolio_data ? JSON.parse(proj.portfolio_data) : (proj.portfolio_data || {}); if (typeof pData === 'string') pData = JSON.parse(pData); } catch { pData = {}; }
           if (typeof pData !== 'object' || Array.isArray(pData)) pData = {};
-          setForm({ name: proj.name, description: proj.description, color: proj.color, sector: proj.sector || "Proyecto", code: proj.code || "", po_user_id: proj.po_user_id || "", categoria: proj.categoria || "Proyecto", stage: proj.stage || "Backlog", tipo_proyecto: proj.tipo_proyecto || pData.tipo_proyecto || "interno", sponsor_id: proj.sponsor_id || pData.sponsor_id || "", portfolio_data: pData });
+          setForm({ name: proj.name, description: proj.description, color: proj.color, sector: proj.sector || "Proyecto", code: proj.code || "", po_user_id: proj.po_user_id || "", categoria: proj.categoria || "Backlog de Propuestas Internas", stage: proj.stage || "Backlog", tipo_proyecto: proj.tipo_proyecto || pData.tipo_proyecto || "interno", sponsor_id: proj.sponsor_id || pData.sponsor_id || "", portfolio_data: pData });
           setTasks(t);
           setProjectSprint(sprints.find((s) => s.is_active === 1) || null);
           setProjectAnnouncements(anns.slice(0, 3));
@@ -170,7 +156,6 @@ export function Projects() {
     } else {
       const params = {};
       if (filterStage !== "all") params.stage = filterStage;
-      else if (filterCategoria !== "all") params.categoria = filterCategoria;
       if (filterTipoProyecto && filterTipoProyecto !== "all") params.tipo_proyecto = filterTipoProyecto;
       api
         .listProjects(params)
@@ -178,7 +163,7 @@ export function Projects() {
         .catch((e) => setError(e.message || "No se pudieron cargar los elementos del portafolio"))
         .finally(() => setLoading(false));
     }
-  }, [id, filterCategoria, filterStage, filterTipoProyecto]);
+  }, [id, filterStage, filterTipoProyecto]);
 
   function updatePortfolioField(key, value) {
     setForm(prev => ({ ...prev, portfolio_data: { ...prev.portfolio_data, [key]: value } }));
@@ -213,7 +198,17 @@ export function Projects() {
     setSaving(true);
     try {
       const members = teamSelection.map((s) => ({ user_id: s.user_id, role: s.role }));
-      const payload = { ...cleanForm(form), members };
+      const finalCategoria = form.stage === "Backlog"
+        ? (form.tipo_proyecto === "comercial" ? "Backlog de Propuestas Comerciales" : "Backlog de Propuestas Internas")
+        : form.stage;
+      const payload = {
+        ...cleanForm({
+          ...form,
+          categoria: finalCategoria,
+          stage: form.stage || "Backlog",
+        }),
+        members,
+      };
       console.log("createProject payload:", payload);
       const created = await api.createProject(payload);
       navigate(`/portal/portfolio/${created.id}`);
@@ -255,6 +250,18 @@ export function Projects() {
     try {
       await api.deleteProject(current.id);
       navigate("/portal/portfolio");
+    } catch (err) {
+      setError(err.message || "No se pudo eliminar");
+    }
+  }
+
+  async function handleDeleteProject(e, projectId, projectName) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm(`¿Eliminar "${projectName || 'este elemento'}" del portafolio?`)) return;
+    try {
+      await api.deleteProject(projectId);
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
     } catch (err) {
       setError(err.message || "No se pudo eliminar");
     }
@@ -582,7 +589,10 @@ export function Projects() {
                   ) : (
                     <button onClick={archiveProject} title="Archivar" className="rounded-lg border border-tivit-red-light p-2 text-tivit-ink/60 transition hover:bg-tivit-red-light"><Archive className="h-4 w-4" /></button>
                   )}
-                  <button onClick={deleteProject} title="Eliminar" className="rounded-lg border border-alert/30 p-2 text-alert/60 transition hover:bg-alert/10"><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={deleteProject} className="flex items-center gap-2 rounded-lg border-2 border-alert bg-white px-4 py-2 text-sm font-semibold text-alert transition hover:bg-alert hover:text-white">
+                    <Trash2 className="h-4 w-4" />
+                    Eliminar
+                  </button>
                 </div>
               )}
             </div>
@@ -754,7 +764,10 @@ export function Projects() {
             {isAdmin && (
               <div className="flex shrink-0 gap-1">
                 <button onClick={archiveProject} title="Archivar" className="rounded-lg border border-tivit-red-light p-2 text-tivit-ink/60 transition hover:bg-tivit-red-light"><Archive className="h-4 w-4" /></button>
-                <button onClick={deleteProject} title="Eliminar" className="rounded-lg border border-alert/30 p-2 text-alert/60 transition hover:bg-alert/10"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={deleteProject} className="flex items-center gap-2 rounded-lg border-2 border-alert bg-white px-4 py-2 text-sm font-semibold text-alert transition hover:bg-alert hover:text-white">
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar
+                </button>
               </div>
             )}
           </div>
@@ -798,34 +811,43 @@ export function Projects() {
   }
 
   // List view - Portafolio canónico
-  const allItems = [
-    ...projects.map((p) => ({ kind: "internal", id: p.id, name: p.name, code: p.code, sector: p.sector, categoria: p.categoria || p.sector || "Proyecto", color: p.color, task_count: p.task_count, done_count: p.done_count, members: p.members, po_user_id: p.po_user_id })),
-    ...cmsItems.map((p) => ({ kind: "public", id: p.id, slug: p.slug, name: p.nombre_comercial || p.name || p.slug, code: p.code, estado: p.status, tipo: p.tipo, published: p.published, reservado: p.reservado, raw: p })),
-  ].filter((item) => {
+  const allItems = projects.map((p) => {
+    const stage = p.stage || (p.categoria?.startsWith("Backlog") ? "Backlog" : p.categoria) || "Backlog";
+    const tipo_proyecto = p.tipo_proyecto || (p.categoria === "Backlog de Propuestas Comerciales" ? "comercial" : "interno");
+    return {
+      kind: "internal",
+      id: p.id,
+      name: p.name,
+      code: p.code,
+      sector: p.sector,
+      categoria: p.categoria || p.sector || "Backlog de Propuestas Internas",
+      stage,
+      tipo_proyecto,
+      color: p.color,
+      task_count: p.task_count,
+      done_count: p.done_count,
+      members: p.members,
+      po_user_id: p.po_user_id,
+    };
+  }).filter((item) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const name = (item.name || "").toLowerCase();
       const code = (item.code || "").toLowerCase();
       const cat = (item.categoria || "").toLowerCase();
-      if (!name.includes(q) && !code.includes(q) && !cat.includes(q)) return false;
+      const stage = (item.stage || "").toLowerCase();
+      if (!name.includes(q) && !code.includes(q) && !cat.includes(q) && !stage.includes(q)) return false;
     }
-    if (filterCategoria !== "all" && item.categoria !== filterCategoria) return false;
-    if (filterSector !== "all" && item.sector !== filterSector && item.tipo !== filterSector) return false;
-    if (filterKind !== "all" && item.kind !== filterKind) return false;
+    if (filterStage !== "all" && item.stage !== filterStage) return false;
+    if (filterSector !== "all" && item.sector !== filterSector) return false;
     return true;
   });
 
-  // Agrupar por stage profesional (5 etapas) + legado categoria
+  // Agrupar por stage profesional (5 etapas)
   const groupedByStage = STAGES.map((st) => ({
-    cat: st,
-    items: allItems.filter((i) => i.kind === "internal" && (i.stage || "Backlog") === st),
+    stage: st,
+    items: allItems.filter((i) => i.stage === st),
   })).filter((g) => g.items.length > 0);
-  // Legado: mantener agrupación por categoria para compatibilidad pero no mostrar por defecto
-  const groupedByCategoria = PORTFOLIO_CATEGORIAS.map((cat) => ({
-    cat,
-    items: allItems.filter((i) => i.kind === "internal" && i.categoria === cat),
-  })).filter((g) => g.items.length > 0);
-  const publicFiltered = allItems.filter((i) => i.kind === "public");
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -834,14 +856,11 @@ export function Projects() {
           <h1 className="text-2xl font-bold text-tivit-red-dark">Portafolio</h1>
           <p className="mt-1 text-sm text-tivit-ink/60">Gestión integral del pipeline: desde backlog de propuestas hasta producción.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link to="/portal/portfolio/kanban" className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-tivit-red/20 bg-white px-4 py-2 text-sm font-semibold text-tivit-red hover:bg-tivit-red-light">Kanban</Link>
-          {isAdmin && (
-            <button onClick={() => setShowForm((s) => !s)} className="shrink-0 rounded-full bg-tivit-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-tivit-red-dark">
-              {showForm ? "Cancelar" : "+ Nuevo elemento"}
-            </button>
-          )}
-        </div>
+        {isAdmin && (
+          <button onClick={() => setShowForm((s) => !s)} className="shrink-0 rounded-full bg-tivit-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-tivit-red-dark">
+            {showForm ? "Cancelar" : "+ Nuevo elemento"}
+          </button>
+        )}
       </div>
 
       {error && <p className="mt-4 rounded-xl bg-alert/10 px-3.5 py-2.5 text-sm font-medium text-alert">{error}</p>}
@@ -858,14 +877,6 @@ export function Projects() {
               className="w-full sm:w-64 rounded-xl border border-tivit-red-light bg-white px-3.5 py-2 text-sm outline-none transition focus:border-tivit-red focus:ring-2 focus:ring-tivit-red/20"
             />
             <select
-              value={filterCategoria}
-              onChange={(e) => setFilterCategoria(e.target.value)}
-              className="rounded-lg border border-tivit-red-light bg-white px-3 py-1.5 text-xs font-medium text-tivit-ink outline-none focus:border-tivit-red"
-            >
-              <option value="all">Todas las categorías</option>
-              {PORTFOLIO_CATEGORIAS.map((c) => (<option key={c} value={c}>{c}</option>))}
-            </select>
-            <select
               value={filterSector}
               onChange={(e) => setFilterSector(e.target.value)}
               className="rounded-lg border border-tivit-red-light bg-white px-2 py-1.5 text-xs font-medium text-tivit-ink outline-none focus:border-tivit-red"
@@ -875,35 +886,24 @@ export function Projects() {
               <option value="PoC">PoC</option>
               <option value="Laboratorio">Laboratorio</option>
             </select>
-            <select
-              value={filterKind}
-              onChange={(e) => setFilterKind(e.target.value)}
-              className="rounded-lg border border-tivit-red-light bg-white px-2 py-1.5 text-xs font-medium text-tivit-ink outline-none focus:border-tivit-red"
+          </div>
+          {/* Chips de etapas — Stage profesional */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFilterStage("all")}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${filterStage === "all" ? "bg-tivit-ink text-white border-tivit-ink" : "bg-white text-tivit-ink/70 border-black/10 hover:border-tivit-red/30"}`}
             >
-              <option value="all">Todos los tipos</option>
-              <option value="internal">Portafolio</option>
-              <option value="public">Público</option>
-            </select>
-          </div>
-          {/* Chips de categorías — conteo rápido (legacy) + Stage profesional */}
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => { setFilterStage("all"); setFilterCategoria("all"); }} className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${filterStage==="all" && filterCategoria==="all" ?"bg-tivit-ink text-white border-tivit-ink":"bg-white text-tivit-ink/70 border-black/10 hover:border-tivit-red/30"}`}>Todas ({allItems.filter(i=>i.kind==="internal").length})</button>
+              Todas ({projects.length})
+            </button>
             {STAGES.map((st) => {
-              const count = allItems.filter((i) => (i.stage || "Backlog") === st).length;
+              const count = projects.filter((p) => (p.stage || (p.categoria?.startsWith("Backlog") ? "Backlog" : p.categoria) || "Backlog") === st).length;
               return (
-                <button key={st} onClick={() => { setFilterStage(st); setFilterCategoria("all"); }} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${filterStage===st?"bg-tivit-red text-white border-tivit-red":`${STAGE_COLORS[st]} border`}`}>
+                <button
+                  key={st}
+                  onClick={() => setFilterStage(st)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${filterStage === st ? "bg-tivit-red text-white border-tivit-red" : `${STAGE_COLORS[st]} border`}`}
+                >
                   <span className={`h-2 w-2 rounded-full ${STAGE_DOT[st]}`} /> {st} ({count})
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="text-xs font-medium text-tivit-ink/50">Legado:</span>
-            {PORTFOLIO_CATEGORIAS.map((cat) => {
-              const count = allItems.filter((i) => i.categoria === cat).length;
-              return (
-                <button key={`leg-${cat}`} onClick={() => { setFilterCategoria(cat); setFilterStage("all"); }} className={`inline-flex items-center gap-1 text-xs rounded-full border px-2 py-0.5 transition ${filterCategoria===cat?"bg-gray-800 text-white":"bg-white text-tivit-ink/50 border-black/10"}`}>
-                  {cat} ({count})
                 </button>
               );
             })}
@@ -925,7 +925,6 @@ export function Projects() {
                   <select value={form.stage} onChange={(e) => {
                     const newStage = e.target.value;
                     const newTipo = form.tipo_proyecto;
-                    // Auto categoria: Backlog interno/comercial
                     let autoCat = form.categoria;
                     if (newStage === "Backlog") autoCat = newTipo === "comercial" ? "Backlog de Propuestas Comerciales" : "Backlog de Propuestas Internas";
                     else autoCat = newStage;
@@ -991,13 +990,19 @@ export function Projects() {
                 <textarea className={`${inputClass} min-h-[60px] resize-y`} placeholder="¿Genera ingresos, ahorra horas, reduce costos, mitiga riesgos?" value={getPortfolioField("valor_esperado")} onChange={(e)=>updatePortfolioField("valor_esperado", e.target.value)} />
               </label>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <label className="flex flex-col gap-1 text-xs font-medium text-tivit-ink">Prioridad / Urgencia
                   <select className={inputClass} value={getPortfolioField("prioridad")} onChange={(e)=>updatePortfolioField("prioridad", e.target.value)}>
                     <option value="">Seleccionar…</option>
                     <option value="Alta">Alta</option>
                     <option value="Media">Media</option>
                     <option value="Baja">Baja</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs font-medium text-tivit-ink">País
+                  <select className={inputClass} value={getPortfolioField("country") || ""} onChange={(e)=>updatePortfolioField("country", e.target.value)}>
+                    <option value="">Seleccionar país…</option>
+                    {PAISES.map((p) => (<option key={p} value={p}>{p}</option>))}
                   </select>
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-medium text-tivit-ink">Documentación Drive
@@ -1134,9 +1139,9 @@ export function Projects() {
         </form>
       )}
 
-      {(loading || cmsLoading) && <p className="py-8 text-center text-sm text-tivit-ink/50">Cargando portafolio…</p>}
+      {loading && <p className="py-8 text-center text-sm text-tivit-ink/50">Cargando portafolio…</p>}
 
-      {!loading && !cmsLoading && allItems.length === 0 && (
+      {!loading && allItems.length === 0 && (
         <div className="mt-6 rounded-2xl border border-tivit-red-light/40 bg-tivit-red-light/20 p-6 text-center">
           <FolderKanban className="mx-auto h-8 w-8 text-tivit-ink/30" aria-hidden="true" />
           <p className="mt-2 text-sm text-tivit-ink/50">No hay elementos en el portafolio todavía.</p>
@@ -1148,115 +1153,87 @@ export function Projects() {
         </div>
       )}
 
-      {/* Vista agrupada por categoría cuando no hay filtro específico — muestra Portafolio agrupado + Públicos visibles */}
-      {!loading && !cmsLoading && filterCategoria === "all" && !searchQuery && filterSector === "all" && (filterKind === "all" || filterKind === "internal") && groupedByCategoria.length > 0 && (
+      {/* Vista agrupada por etapa cuando no hay filtro específico */}
+      {!loading && filterStage === "all" && !searchQuery && filterSector === "all" && groupedByStage.length > 0 && (
         <div className="mt-8 space-y-8">
-          {groupedByCategoria.map(({ cat, items }) => (
-            <section key={cat}>
+          {groupedByStage.map(({ stage, items }) => (
+            <section key={stage}>
               <div className="mb-3 flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 rounded-full ${CATEGORIA_DOT[cat]}`} />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-tivit-ink">{cat}</h2>
-                <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${CATEGORIA_COLORS[cat]}`}>{items.length}</span>
+                <span className={`h-2.5 w-2.5 rounded-full ${STAGE_DOT[stage]}`} />
+                <h2 className="text-sm font-bold uppercase tracking-wider text-tivit-ink">{stage}</h2>
+                <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${STAGE_COLORS[stage]}`}>{items.length}</span>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 {items.map((item) => {
-                  if (item.kind !== "internal") return null;
                   const pct = item.task_count ? Math.round((item.done_count / item.task_count) * 100) : 0;
                   return (
-                    <Link key={`g-${cat}-i-${item.id}`} to={`/portal/portfolio/${item.id}`} className="rounded-2xl border border-black/5 bg-white p-5 transition hover:border-tivit-red/20 hover:shadow-sm">
+                    <Link
+                      key={`g-${stage}-i-${item.id}`}
+                      to={`/portal/portfolio/${item.id}`}
+                      className="group relative rounded-2xl border border-black/5 bg-white p-5 transition hover:border-tivit-red/20 hover:shadow-sm"
+                    >
                       <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: item.color }}><FolderKanban className="h-5 w-5" /></span>
+                        <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: item.color }}>
+                          <FolderKanban className="h-5 w-5" />
+                        </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <h3 className="truncate text-sm font-semibold text-tivit-ink">{item.name}</h3>
-                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${CATEGORIA_COLORS[item.categoria]}`}>{item.categoria}</span>
+                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STAGE_COLORS[item.stage] || "bg-gray-100 text-gray-700 border-gray-200"}`}>
+                              {item.stage === "Backlog" ? (item.tipo_proyecto === "comercial" ? "Comercial" : "Interno") : item.stage}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs text-tivit-ink/50">{item.code && <span className="font-mono">{item.code}</span>}<span>·</span><span>{item.task_count} tareas</span></div>
-                        </div><ChevronRight className="h-4 w-4 text-tivit-ink/30" />
+                          <div className="flex items-center gap-1.5 text-xs text-tivit-ink/50">
+                            {item.code && <span className="font-mono">{item.code}</span>}
+                            <span>·</span>
+                            <span>{item.task_count} tareas</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteProject(e, item.id, item.name)}
+                              title="Eliminar elemento"
+                              className="rounded-lg p-1.5 text-tivit-ink/30 transition hover:bg-alert/10 hover:text-alert"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                          <ChevronRight className="h-4 w-4 text-tivit-ink/30" />
+                        </div>
                       </div>
-                      {item.members?.length>0 && (<div className="mt-3 flex gap-1">{item.members.slice(0,4).map((m)=>(<UserAvatar key={m.user_id} user={{name:m.name, avatar_color:m.avatar_color}} size="sm"/>))}</div>)}
-                      {item.task_count>0 && (<div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/5"><div className="h-full rounded-full bg-tivit-red" style={{width:`${pct}%`}}/></div>)}
+                      {item.members?.length > 0 && (
+                        <div className="mt-3 flex gap-1">
+                          {item.members.slice(0, 4).map((m) => (
+                            <UserAvatar key={m.user_id} user={{ name: m.name, avatar_color: m.avatar_color }} size="sm" />
+                          ))}
+                        </div>
+                      )}
+                      {item.task_count > 0 && (
+                        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/5">
+                          <div className="h-full rounded-full bg-tivit-red" style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
                     </Link>
                   );
                 })}
               </div>
             </section>
           ))}
-          {/* Públicos siempre visibles en vista canónica cuando no hay filtro de categoría */}
-          {(filterKind === "all" || filterKind === "public") && publicFiltered.length > 0 && (
-            <section>
-              <div className="mb-3 flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-tivit-ink">Publicados en sitio</h2>
-                <span className="rounded-full bg-purple-100 border border-purple-200 px-2 py-0.5 text-xs font-semibold text-purple-700">{publicFiltered.length}</span>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {publicFiltered.map((item) => {
-                  const d = item.raw || {};
-                  const teamCount = parseGoals(d.equipo).length;
-                  const stackCount = parseGoals(d.stack).length;
-                  return (
-                    <Link key={`gp-p-${item.slug}`} to={`/portal/portfolio/${item.id}`} className="rounded-2xl border border-black/5 bg-white p-5 transition hover:border-tivit-red/20 hover:shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: item.color || "#6366f1" }}><FolderKanban className="h-5 w-5" /></span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2"><h3 className="truncate font-semibold text-tivit-ink">{item.name}</h3><span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">Público</span></div>
-                          <div className="flex items-center gap-2">{item.code && <span className="font-mono text-xs text-tivit-ink/50">{item.code}</span>}{item.published ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Publicado</span> : <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">Borrador</span>}</div>
-                          <p className="mt-0.5 text-xs text-tivit-ink/50">{teamCount} persona{teamCount !== 1 ? "s" : ""}</p>
-                        </div><ChevronRight className="h-5 w-5 text-tivit-ink/30" />
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-tivit-ink/55">{stackCount > 0 && <span>{stackCount} tech</span>}{d.video_promocional && <span>Video</span>}</div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          )}
         </div>
       )}
 
-      {/* Públicos en vista canónica cuando no hay internos (fallback para los 5 publicados) */}
-      {!loading && !cmsLoading && filterCategoria === "all" && !searchQuery && filterSector === "all" && (filterKind === "all" || filterKind === "public") && publicFiltered.length > 0 && groupedByCategoria.length === 0 && (
-        <div className="mt-8 space-y-4">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-tivit-ink">Publicados en sitio</h2>
-            <span className="rounded-full bg-purple-100 border border-purple-200 px-2 py-0.5 text-xs font-semibold text-purple-700">{publicFiltered.length}</span>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {publicFiltered.map((item) => {
-              const d = item.raw || {};
-              const teamCount = parseGoals(d.equipo).length;
-              const stackCount = parseGoals(d.stack).length;
-              return (
-                <Link key={`pub2-${item.slug}`} to={`/portal/portfolio/${item.id}`} className="rounded-2xl border border-black/5 bg-white p-5 transition hover:border-tivit-red/20 hover:shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: item.color || "#6366f1" }}><FolderKanban className="h-5 w-5" /></span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2"><h3 className="truncate font-semibold text-tivit-ink">{item.name}</h3><span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">Público</span></div>
-                      <div className="flex items-center gap-2">{item.code && <span className="font-mono text-xs text-tivit-ink/50">{item.code}</span>}{item.published ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Publicado</span> : <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">Borrador</span>}</div>
-                      <p className="mt-0.5 text-xs text-tivit-ink/50">{teamCount} persona{teamCount !== 1 ? "s" : ""}</p>
-                    </div><ChevronRight className="h-5 w-5 text-tivit-ink/30" />
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-tivit-ink/55">{stackCount > 0 && <span>{stackCount} tech</span>}{d.video_promocional && <span>Video</span>}</div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Grid plano para vista filtrada/búsqueda */}
-      {(filterCategoria !== "all" || searchQuery || filterSector !== "all" || filterKind !== "all") && (
+      {/* Grid para vista filtrada / búsqueda */}
+      {(filterStage !== "all" || searchQuery || filterSector !== "all") && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           {allItems.map((item) => {
-          if (item.kind === "internal") {
             const pct = item.task_count ? Math.round((item.done_count / item.task_count) * 100) : 0;
             return (
               <Link
                 key={`i-${item.id}`}
                 to={`/portal/portfolio/${item.id}`}
-                className="rounded-2xl border border-black/5 bg-white p-5 transition hover:border-tivit-red/20 hover:shadow-sm"
+                className="group relative rounded-2xl border border-black/5 bg-white p-5 transition hover:border-tivit-red/20 hover:shadow-sm"
               >
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: item.color }}>
@@ -1265,7 +1242,9 @@ export function Projects() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <h2 className="truncate font-semibold text-tivit-ink">{item.name}</h2>
-                      <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${CATEGORIA_COLORS[item.categoria] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{item.categoria}</span>
+                      <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${STAGE_COLORS[item.stage] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                        {item.stage === "Backlog" ? (item.tipo_proyecto === "comercial" ? "Comercial" : "Interno") : item.stage}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       {item.code && <span className="font-mono text-xs text-tivit-ink/50">{item.code}</span>}
@@ -1273,7 +1252,19 @@ export function Projects() {
                     </div>
                     <p className="mt-0.5 text-xs text-tivit-ink/50">{item.task_count} tarea{item.task_count !== 1 ? "s" : ""}</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-tivit-ink/30" aria-hidden="true" />
+                  <div className="flex items-center gap-1">
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteProject(e, item.id, item.name)}
+                        title="Eliminar elemento"
+                        className="rounded-lg p-1.5 text-tivit-ink/30 transition hover:bg-alert/10 hover:text-alert"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                    <ChevronRight className="h-5 w-5 shrink-0 text-tivit-ink/30" aria-hidden="true" />
+                  </div>
                 </div>
                 {item.members && item.members.length > 0 && (
                   <div className="mt-3 flex items-center gap-1">
@@ -1300,51 +1291,8 @@ export function Projects() {
                 )}
               </Link>
             );
-          }
-
-          // Public project — mantiene ruta legacy pero sugiere portafolio
-          const d = item.raw || {};
-          const teamCount = parseGoals(d.equipo).length;
-          const stackCount = parseGoals(d.stack).length;
-          return (
-            <Link
-              key={`p-${item.slug}`}
-              to={`/portal/portfolio/${item.id}`}
-              className="rounded-2xl border border-black/5 bg-white p-5 transition hover:border-tivit-red/20 hover:shadow-sm"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: item.color || "#6366f1" }}>
-                  <FolderKanban className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="truncate font-semibold text-tivit-ink">{item.name}</h2>
-                    <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">Público</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {item.code && <span className="font-mono text-xs text-tivit-ink/50">{item.code}</span>}
-                    {item.published ? (
-                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Publicado</span>
-                    ) : (
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">Borrador</span>
-                    )}
-                    {item.reservado ? (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">Reservado</span>
-                    ) : null}
-                  </div>
-                  <p className="mt-0.5 text-xs text-tivit-ink/50">{teamCount} persona{teamCount !== 1 ? "s" : ""}</p>
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-tivit-ink/30" aria-hidden="true" />
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-tivit-ink/55">
-                {stackCount > 0 && <span>{stackCount} tech</span>}
-                {d.video_promocional && <span>Video</span>}
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+          })}
+        </div>
       )}
     </div>
   );

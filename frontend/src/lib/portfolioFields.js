@@ -3,6 +3,13 @@
 export const STAGES = ["Backlog", "Evaluación técnica", "PoC", "Proyecto", "Producción"];
 export const STAGE_CLOSED = "Cerrado";
 
+export const PAISES = [
+  "Argentina", "Brasil", "Chile", "Colombia", "México", "Perú", "Uruguay",
+  "Ecuador", "Venezuela", "Bolivia", "Paraguay", "Costa Rica", "Panamá",
+  "Guatemala", "El Salvador", "Honduras", "Nicaragua", "República Dominicana",
+  "España", "Estados Unidos", "Portugal"
+];
+
 export const STAGE_COLORS = {
   "Backlog": "bg-slate-100 text-slate-700 border-slate-200",
   "Evaluación técnica": "bg-amber-50 text-amber-700 border-amber-200",
@@ -33,6 +40,7 @@ export const FIELD_DEFS = {
     { key: "descripcion_problema", label: "Descripción del Problema/Necesidad", type: "textarea", required: true, placeholder: "¿Qué problema resuelve? Solo negocio, no tecnología aún" },
     { key: "valor_esperado", label: "Valor Esperado (ROI / Impacto)", type: "textarea", placeholder: "¿Genera ingresos, ahorra horas, reduce costos, mitiga riesgos?" },
     { key: "prioridad", label: "Prioridad / Urgencia", type: "select", options: ["Alta","Media","Baja"] },
+    { key: "country", label: "País", type: "select", options: PAISES, placeholder: "Seleccionar país" },
     { key: "documentacion_drive", label: "Documentación Drive", type: "text", placeholder: "Pegar link de Drive (https://drive.google.com/...)", help: "Drive de la documentación" },
   ],
   "Evaluación técnica": [

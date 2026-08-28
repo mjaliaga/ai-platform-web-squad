@@ -58,9 +58,6 @@ const Projects = lazy(() =>
 const Portfolio = lazy(() =>
   import("./pages/Portal/Projects").then((modulo) => ({ default: modulo.Projects }))
 );
-const PortfolioKanban = lazy(() =>
-  import("./pages/Portal/PortfolioKanban").then((modulo) => ({ default: modulo.PortfolioKanban }))
-);
 
 const MemberProfile = lazy(() =>
   import("./pages/Portal/MemberProfile").then((modulo) => ({ default: modulo.MemberProfile }))
@@ -79,6 +76,9 @@ const ProjectActivity = lazy(() =>
 );
 const ProjectSettings = lazy(() =>
   import("./pages/Portal/ProjectSettings").then((modulo) => ({ default: modulo.ProjectSettings }))
+);
+const ProjectBacklog = lazy(() =>
+  import("./pages/Portal/ProjectBacklog").then((modulo) => ({ default: modulo.ProjectBacklog }))
 );
 const ProjectBoard = lazy(() =>
   import("./pages/Portal/ProjectBoard").then((modulo) => ({ default: modulo.ProjectBoard }))
@@ -179,7 +179,6 @@ function App() {
             <Route path="profile" element={<Profile />} />
             {/* Portafolio — canónico profesional, projects como alias legacy */}
             <Route path="portfolio" element={<Portfolio />} />
-            <Route path="portfolio/kanban" element={<PortfolioKanban />} />
             <Route path="projects" element={<Navigate to="/portal/portfolio" replace />} />
             <Route path="tasks/new" element={<TaskForm />} />
             <Route path="tasks/:id" element={<TaskDetail />} />
@@ -191,29 +190,21 @@ function App() {
 
             {/* Portafolio-scoped routes — canónico */}
             <Route path="portfolio/:id" element={<ProjectLayout />}>
-              <Route index element={<Projects />} />
-              <Route path="board" element={<ProjectBoard />} />
-              <Route path="time-tracking" element={<ProjectTimeTracking />} />
+              <Route index element={<ProjectBacklog />} />
               <Route path="calendar" element={<ProjectCalendar />} />
-              <Route path="activity" element={<ProjectActivity />} />
               <Route path="settings" element={<ProjectSettings />} />
-              <Route path="sprints" element={<Sprints />} />
               <Route path="feed" element={<Feed />} />
-              <Route path="team" element={<Projects />} />
+              <Route path="team" element={<Members />} />
               <Route path="solicitudes" element={<Solicitudes />} />
               <Route path="tasks/new" element={<TaskForm />} />
             </Route>
             {/* Legacy alias portfolio → projects para compatibilidad */}
             <Route path="projects/:id" element={<ProjectLayout />}>
-              <Route index element={<Projects />} />
-              <Route path="board" element={<ProjectBoard />} />
-              <Route path="time-tracking" element={<ProjectTimeTracking />} />
+              <Route index element={<ProjectBacklog />} />
               <Route path="calendar" element={<ProjectCalendar />} />
-              <Route path="activity" element={<ProjectActivity />} />
               <Route path="settings" element={<ProjectSettings />} />
-              <Route path="sprints" element={<Sprints />} />
               <Route path="feed" element={<Feed />} />
-              <Route path="team" element={<Projects />} />
+              <Route path="team" element={<Members />} />
               <Route path="solicitudes" element={<Solicitudes />} />
               <Route path="tasks/new" element={<TaskForm />} />
             </Route>

@@ -477,6 +477,21 @@ pub async fn create_project(
         }
     }
 
+    let final_categoria = match final_stage.as_str() {
+        "Backlog" => {
+            if final_tipo.as_deref() == Some("comercial") {
+                "Backlog de Propuestas Comerciales".to_string()
+            } else {
+                "Backlog de Propuestas Internas".to_string()
+            }
+        }
+        "Evaluación técnica" => "Evaluación técnica".to_string(),
+        "PoC" => "PoC".to_string(),
+        "Proyecto" => "Proyecto".to_string(),
+        "Producción" => "Producción".to_string(),
+        _ => payload.categoria.clone(),
+    };
+
     let id = Uuid::new_v4().to_string();
     let description = payload.description.unwrap_or_default();
 
@@ -491,7 +506,7 @@ pub async fn create_project(
     .bind(&payload.sector)
     .bind(payload.code.as_deref().unwrap_or(""))
     .bind(&payload.po_user_id)
-    .bind(&payload.categoria)
+    .bind(&final_categoria)
     .bind(&final_stage)
     .bind(&portfolio_data_str)
     .bind(&sponsor_id_db)
@@ -614,7 +629,7 @@ pub async fn update_project(
             let effective_sponsor = payload.sponsor_id.as_ref().and_then(|opt| opt.as_ref()).and_then(|v| {
                 let s = v.trim();
                 if s.is_empty() { None } else { Some(s.to_string()) }
-            }).or_else(|| existing.sponsor_id.as_ref().map(|s| {
+            }).or_else(|| existing.sponsor_id.as_ref().and_then(|s| {
                 let s = s.trim();
                 if s.is_empty() { None } else { Some(s.to_string()) }
             }));
