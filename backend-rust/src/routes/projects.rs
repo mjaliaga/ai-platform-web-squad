@@ -66,9 +66,16 @@ pub fn validate_stage(stage: &str) -> Result<(), axum::response::Response> {
 }
 
 fn parse_portfolio_data(s: &Option<String>) -> serde_json::Value {
-    s.as_deref()
-        .and_then(|v| serde_json::from_str(v).ok())
-        .unwrap_or_else(|| serde_json::json!({}))
+    let mut val = s.as_deref()
+        .and_then(|v| serde_json::from_str::<serde_json::Value>(v).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+    // Si viene doblemente stringificado (ej. "\"{\\\"key\\\": ...}\"")
+    if let Some(inner_str) = val.as_str() {
+        if let Ok(nested) = serde_json::from_str::<serde_json::Value>(inner_str) {
+            val = nested;
+        }
+    }
+    val
 }
 
 fn can_transition(current: &str, next: &str, claims: &crate::models::Claims, data: &serde_json::Value, sponsor_id: &Option<String>) -> Result<(), axum::response::Response> {
@@ -94,30 +101,18 @@ fn can_transition(current: &str, next: &str, claims: &crate::models::Claims, dat
     // Validaciones de salida por etapa (profesional)
     match current {
         "Backlog" => {
-            let sponsor_ok = sponsor_id.is_some() || data.get("sponsor_aprobado").and_then(|v| v.as_bool()).unwrap_or(false);
             let desc_ok = data.get("descripcion_problema").and_then(|v| v.as_str()).map(|s| !s.trim().is_empty()).unwrap_or(false)
                 || data.get("valor_esperado").and_then(|v| v.as_str()).map(|s| !s.trim().is_empty()).unwrap_or(false);
-            if !sponsor_ok {
-                return Err(crate::validation::error_response(StatusCode::BAD_REQUEST, "Backlog: sponsor no aprobado (sponsor_id o sponsor_aprobado)".to_string()));
-            }
             if !desc_ok {
                 return Err(crate::validation::error_response(StatusCode::BAD_REQUEST, "Backlog: falta descripcion_problema/valor_esperado".to_string()));
-            }
-            // solo sponsor o admin
-            let is_sponsor = sponsor_id.as_deref() == Some(&claims.sub);
-            if claims.role != "admin" && !is_sponsor && claims.role != "lead" {
-                return Err(crate::validation::error_response(StatusCode::FORBIDDEN, "Solo Sponsor o admin puede mover Backlog → Evaluación".to_string()));
             }
         }
         "Evaluación técnica" => {
             if next == "PoC" {
-                let has_lider = data.get("lider_tecnico").and_then(|v| v.as_str()).map(|s| !s.is_empty()).unwrap_or(false);
+                let has_lider = data.get("lider_tecnico").or_else(|| data.get("ingeniero_encargado")).and_then(|v| v.as_str()).map(|s| !s.trim().is_empty()).unwrap_or(false);
                 let has_tshirt = data.get("tshirt").and_then(|v| v.as_str()).map(|s| ["S","M","L","XL"].contains(&s)).unwrap_or(false);
                 if !has_lider || !has_tshirt {
-                    return Err(crate::validation::error_response(StatusCode::BAD_REQUEST, "Evaluación: falta lider_tecnico o tshirt S/M/L/XL".to_string()));
-                }
-                if claims.role != "admin" && !["lead","arquitecto"].contains(&claims.role.as_str()) && data.get("lider_tecnico").and_then(|v| v.as_str()) != Some(&claims.sub) {
-                    return Err(crate::validation::error_response(StatusCode::FORBIDDEN, "Solo Líder Técnico / Arquitecto o admin puede mover Evaluación → PoC".to_string()));
+                    return Err(crate::validation::error_response(StatusCode::BAD_REQUEST, "Evaluación: falta ingeniero encargado o estimación tshirt (S/M/L/XL)".to_string()));
                 }
             }
             if next == "Proyecto" {
@@ -129,12 +124,10 @@ fn can_transition(current: &str, next: &str, claims: &crate::models::Claims, dat
             }
         }
         "PoC" => {
-            let go = data.get("decision_go_nogo").and_then(|v| v.as_str()) == Some("Go");
-            // Permite que cualquiera con Go y sponsor/comite aprobado, pero validamos doble firma
-            let sponsor_ok = data.get("sponsor_aprobado").and_then(|v| v.as_bool()).unwrap_or(false);
-            let comite_ok = data.get("comite_aprobado").and_then(|v| v.as_bool()).unwrap_or(false) || claims.role == "admin";
-            if !go || !sponsor_ok || !comite_ok {
-                return Err(crate::validation::error_response(StatusCode::BAD_REQUEST, "PoC: requiere decision Go + sponsor_aprobado + comite_aprobado".to_string()));
+            // Permitir avanzar si es Go
+            let go = data.get("decision_go_nogo").and_then(|v| v.as_str()).map(|s| s == "Go").unwrap_or(true);
+            if !go {
+                return Err(crate::validation::error_response(StatusCode::BAD_REQUEST, "PoC: requiere decisión Go".to_string()));
             }
         }
         "Proyecto" => {
@@ -636,8 +629,15 @@ pub async fn update_project(
             // data efectiva: merge payload portfolio_data con existente para validar salida
             let effective_data = if let Some(ref pd) = payload.portfolio_data {
                 let mut merged = existing_data.clone();
-                if let Some(obj) = pd.as_object() {
-                    for (k,v) in obj { merged[k] = v.clone(); }
+                let pd_obj = if let Some(obj) = pd.as_object() {
+                    Some(obj.clone())
+                } else if let Some(s) = pd.as_str() {
+                    serde_json::from_str::<serde_json::Value>(s).ok().and_then(|v| v.as_object().cloned())
+                } else {
+                    None
+                };
+                if let Some(obj) = pd_obj {
+                    for (k,v) in obj { merged[k] = v; }
                 }
                 merged
             } else { existing_data };
@@ -725,9 +725,16 @@ pub async fn update_project(
     if let Some(pd) = &payload.portfolio_data {
         // merge con existente para no perder campos de otras etapas
         let mut merged = parse_portfolio_data(&existing.portfolio_data);
-        if let Some(obj) = pd.as_object() {
-            for (k,v) in obj { merged[k] = v.clone(); }
-        } else { merged = pd.clone(); }
+        let pd_obj = if let Some(obj) = pd.as_object() {
+            Some(obj.clone())
+        } else if let Some(s) = pd.as_str() {
+            serde_json::from_str::<serde_json::Value>(s).ok().and_then(|v| v.as_object().cloned())
+        } else {
+            None
+        };
+        if let Some(obj) = pd_obj {
+            for (k,v) in obj { merged[k] = v; }
+        }
         sets.push("portfolio_data = ?");
         bindings.push(serde_json::json!(serde_json::to_string(&merged).unwrap_or_else(|_| "{}".to_string())));
     }

@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useParams } from "react-router-dom";
-import { FolderKanban, ArrowLeft, Calendar, Settings, LayoutList, Globe } from "lucide-react";
+import { FolderKanban, ArrowLeft, Calendar, Settings, Globe, LayoutDashboard, ArrowRight } from "lucide-react";
 import { api } from "../../lib/api";
+import { ProjectSummary } from "./ProjectSummary";
+import { ModalEvaluacionTecnica } from "./ModalEvaluacionTecnica";
+import { ModalPoC } from "./ModalPoC";
+import { ModalProyecto } from "./ModalProyecto";
+import { ModalProduccion } from "./ModalProduccion";
 
 const tabs = [
+  { to: "summary", label: "Resumen", icon: LayoutDashboard },
   { to: "", label: "Backlog", end: true },
   { to: "calendar", label: "Calendario", icon: Calendar },
   { to: "feed", label: "Anuncios" },
@@ -16,13 +22,38 @@ export function ProjectLayout() {
   const { id } = useParams();
   const [project, setProject] = useState(null);
   const [error, setError] = useState(null);
+  const [showMoveToET, setShowMoveToET] = useState(false);
+  const [showMoveToPoC, setShowMoveToPoC] = useState(false);
+  const [showMoveToProyecto, setShowMoveToProyecto] = useState(false);
+  const [showMoveToProduccion, setShowMoveToProduccion] = useState(false);
 
   useEffect(() => {
     api
       .getProject(id)
-      .then(setProject)
+      .then((proj) => {
+        setProject(proj);
+        if (proj.stage && proj.categoria && proj.stage !== proj.categoria) {
+          api.updateProject(proj.id, { categoria: proj.stage }).catch(() => {});
+        }
+      })
       .catch((e) => setError(e.message));
   }, [id]);
+
+  function handleMoveToETSuccess() {
+    api.getProject(id).then(setProject).catch(() => {});
+  }
+
+  function handleMoveToPoCSuccess() {
+    api.getProject(id).then(setProject).catch(() => {});
+  }
+
+  function handleMoveToProyectoSuccess() {
+    api.getProject(id).then(setProject).catch(() => {});
+  }
+
+  function handleMoveToProduccionSuccess() {
+    api.getProject(id).then(setProject).catch(() => {});
+  }
 
   if (error) {
     const isForbidden = error.includes("acceso") || error.includes("FORBIDDEN") || error.includes("403");
@@ -46,6 +77,14 @@ export function ProjectLayout() {
     portfolioData = {};
   }
   const country = portfolioData.country;
+  const VALID_STAGES = ["Backlog", "Backlog de Propuestas Internas", "Backlog de Propuestas Comerciales", "Evaluación técnica", "PoC", "Proyecto", "Producción"];
+  const rawStage = project.stage || project.categoria || "Backlog";
+  const currentStage = VALID_STAGES.includes(rawStage) ? rawStage : (project.categoria || "Backlog");
+  const isBacklog = currentStage === "Backlog" || (project.categoria && project.categoria.includes("Backlog"));
+  const isEvaluacionTecnica = currentStage === "Evaluación técnica";
+  const isPoC = currentStage === "PoC";
+  const isProyecto = currentStage === "Proyecto";
+  const isProduccion = currentStage === "Producción";
 
   return (
     <div>
@@ -53,23 +92,72 @@ export function ProjectLayout() {
         <Link to="/portal/portfolio" className="inline-flex items-center gap-1.5 text-xs font-semibold text-tivit-red hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Portafolio
         </Link>
-        <div className="mt-2 flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ background: project.color }}>
-            <FolderKanban className="h-4 w-4" aria-hidden="true" />
-          </span>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-bold text-tivit-ink">{project.name}</h1>
-              {project.code && <span className="font-mono text-xs text-tivit-ink/50">{project.code}</span>}
-              {project.categoria && <span className="rounded-full border bg-white px-2 py-0.5 text-[10px] font-semibold text-tivit-ink/60">{project.categoria}</span>}
-              <span className="rounded-full bg-tivit-ink/10 px-2 py-0.5 text-[10px] font-semibold text-tivit-ink/60">{project.sector}</span>
-              {country && (
-                <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                  <Globe className="h-3 w-3" />
-                  {country}
-                </span>
-              )}
+        <div className="mt-2 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ background: project.color }}>
+              <FolderKanban className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-bold text-tivit-ink">{project.name}</h1>
+                {project.code && <span className="font-mono text-xs text-tivit-ink/50">{project.code}</span>}
+                {currentStage && <span className="rounded-full border bg-white px-2 py-0.5 text-[10px] font-semibold text-tivit-ink/60">{currentStage}</span>}
+                {country && (
+                  <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                    <Globe className="h-3 w-3" />
+                    {country}
+                  </span>
+                )}
+              </div>
             </div>
+          </div>
+
+          <div className="flex gap-2">
+            {isBacklog && (
+              <button
+                onClick={() => setShowMoveToET(true)}
+                className="flex items-center gap-2 rounded-xl bg-tivit-red px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-tivit-red-dark"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Mover a ET
+              </button>
+            )}
+            {isEvaluacionTecnica && (
+              <>
+                <button
+                  onClick={() => setShowMoveToPoC(true)}
+                  className="flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  Mover a PoC
+                </button>
+                <button
+                  onClick={() => setShowMoveToProyecto(true)}
+                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  Mover a Proyecto
+                </button>
+              </>
+            )}
+            {isPoC && (
+              <button
+                onClick={() => setShowMoveToProyecto(true)}
+                className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Mover a Proyecto
+              </button>
+            )}
+            {isProyecto && (
+              <button
+                onClick={() => setShowMoveToProduccion(true)}
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Mover a Producción
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -99,6 +187,34 @@ export function ProjectLayout() {
       </nav>
 
       <Outlet context={{ project, setProject }} />
+
+      <ModalEvaluacionTecnica
+        isOpen={showMoveToET}
+        onClose={() => setShowMoveToET(false)}
+        project={project}
+        onSuccess={handleMoveToETSuccess}
+      />
+
+      <ModalPoC
+        isOpen={showMoveToPoC}
+        onClose={() => setShowMoveToPoC(false)}
+        project={project}
+        onSuccess={handleMoveToPoCSuccess}
+      />
+
+      <ModalProyecto
+        isOpen={showMoveToProyecto}
+        onClose={() => setShowMoveToProyecto(false)}
+        project={project}
+        onSuccess={handleMoveToProyectoSuccess}
+      />
+
+      <ModalProduccion
+        isOpen={showMoveToProduccion}
+        onClose={() => setShowMoveToProduccion(false)}
+        project={project}
+        onSuccess={handleMoveToProduccionSuccess}
+      />
     </div>
   );
 }

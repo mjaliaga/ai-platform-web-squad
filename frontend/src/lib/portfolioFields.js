@@ -44,35 +44,27 @@ export const FIELD_DEFS = {
     { key: "documentacion_drive", label: "Documentación Drive", type: "text", placeholder: "Pegar link de Drive (https://drive.google.com/...)", help: "Drive de la documentación" },
   ],
   "Evaluación técnica": [
-    { key: "lider_tecnico", label: "Líder Técnico Asignado", type: "user", required: true },
-    { key: "arquitectura_propuesta", label: "Arquitectura / Tecnología Propuesta", type: "textarea", placeholder: "App móvil, API, RPA..." },
+    { key: "ingeniero_encargado", label: "Ingeniero Encargado", type: "text", required: true, placeholder: "Nombre del ingeniero encargado" },
     { key: "tshirt", label: "Estimación T-Shirt Size", type: "select", required: true, options: ["S","M","L","XL"], help: "S <2sem, M 2-4sem, L 1-2mes, XL >2mes" },
-    { key: "riesgos_dependencias", label: "Riesgos y Dependencias", type: "textarea", placeholder: "¿Dependemos de terceros? ¿Seguridad?" },
-    { key: "complejidad", label: "Complejidad Técnica", type: "select", options: ["Alta","Media","Baja"] },
-    { key: "decision_tecnica", label: "Decisión Técnica", type: "select", options: ["Aprobado para PoC","Rechazado","Requiere cambios"] },
-    { key: "skip_poc_justificacion", label: "Justificación skip PoC (si Baja)", type: "textarea", showIf: (d) => d.complejidad === "Baja" },
+    { key: "documentacion_drive", label: "Documentación Drive", type: "text", placeholder: "https://drive.google.com/..." },
+    { key: "riesgos_dependencias", label: "Riesgos y Dependencias", type: "textarea", placeholder: "¿Dependemos de terceros? ¿Consideraciones de seguridad? ¿Integraciones críticas?" },
   ],
   "PoC": [
     { key: "hipotesis", label: "Hipótesis a Validar", type: "textarea", required: true, placeholder: "Ej: API responde <2s" },
     { key: "criterios_exito", label: "Criterios de Éxito", type: "textarea", required: true },
     { key: "fecha_inicio", label: "Fecha de Inicio", type: "date" },
-    { key: "fecha_fin", label: "Fecha de Fin", type: "date", help: "Timebox máx 2-3 semanas" },
+    { key: "fecha_fin", label: "Fecha de Fin", type: "date" },
     { key: "recursos", label: "Recursos Involucrados", type: "users" },
     { key: "resultados", label: "Resultados / Hallazgos", type: "textarea" },
-    { key: "decision_go_nogo", label: "Decisión Ejecutiva (Go/No-Go)", type: "select", options: ["Go","No-Go"] },
-    { key: "sponsor_aprobado", label: "Sponsor aprueba Go", type: "boolean" },
-    { key: "comite_aprobado", label: "Comité aprueba Go", type: "boolean" },
+    { key: "sponsor_aprueba", label: "Sponsor Aprueba", type: "text", placeholder: "Nombre de quien aprueba" },
+    { key: "documentacion_drive", label: "Documentación Drive", type: "text", placeholder: "https://drive.google.com/..." },
   ],
   "Proyecto": [
     { key: "pm_scrum_master", label: "Project Manager / Scrum Master", type: "user" },
     { key: "presupuesto", label: "Presupuesto", type: "number" },
-    { key: "cronograma_hitos", label: "Cronograma Hitos (JSON)", type: "textarea", placeholder: '[{"hito":"M1","fecha":"2026-09-01"}]' },
+    { key: "cronograma", label: "Cronograma", type: "textarea", placeholder: "Sprints, objetivo, objetivos secundarios, tareas..." },
     { key: "estado_dev", label: "Estado de Desarrollo", type: "select", options: ["To Do","In Progress","Code Review","Testing"] },
-    { key: "metricas_qa", label: "Métricas de Calidad (QA)", type: "textarea" },
-    { key: "uat_aprobado", label: "UAT Aprobado", type: "boolean" },
-    { key: "uat_tester", label: "Tester UAT", type: "user" },
-    { key: "qa_aprobado", label: "QA Aprobado", type: "boolean" },
-    { key: "documentacion", label: "Documentación (URL)", type: "text" },
+    { key: "documentacion", label: "Documentación (URL)", type: "text", placeholder: "https://..." },
   ],
   "Producción": [
     { key: "fecha_go_live", label: "Fecha de Despliegue (Go-Live)", type: "date", required: true },
@@ -107,20 +99,16 @@ export function validateExitCriteria(stage, data, sponsorId) {
   const errors = [];
   if (stage === "Backlog") {
     if (!data.descripcion_problema && !data.valor_esperado) errors.push("Falta descripcion_problema o valor_esperado");
-    if (!sponsorId && !data.sponsor_aprobado) errors.push("Sponsor no aprobado");
   }
   if (stage === "Evaluación técnica") {
-    if (!data.lider_tecnico) errors.push("Falta líder técnico");
+    if (!data.ingeniero_encargado) errors.push("Falta ingeniero encargado");
     if (!["S","M","L","XL"].includes(data.tshirt)) errors.push("Falta tshirt S/M/L/XL");
   }
   if (stage === "PoC") {
-    if (data.decision_go_nogo !== "Go") errors.push("PoC requiere Go");
-    if (!data.sponsor_aprobado) errors.push("Falta sponsor_aprobado");
-    if (!data.comite_aprobado) errors.push("Falta comite_aprobado");
+    // Sin requerimiento de sponsor
   }
   if (stage === "Proyecto") {
-    if (!data.qa_aprobado) errors.push("Falta qa_aprobado");
-    if (!data.uat_aprobado) errors.push("Falta uat_aprobado");
+    // No validaciones específicas según lo solicitado
   }
   return errors;
 }

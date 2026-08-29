@@ -86,6 +86,9 @@ const ProjectBoard = lazy(() =>
 const ProjectTimeTracking = lazy(() =>
   import("./pages/Portal/ProjectTimeTracking").then((modulo) => ({ default: modulo.ProjectTimeTracking }))
 );
+const ProjectSummary = lazy(() =>
+  import("./pages/Portal/ProjectSummary").then((modulo) => ({ default: modulo.ProjectSummary }))
+);
 
 // CMS de Contenido Público
 const ContentManager = lazy(() =>
@@ -191,6 +194,7 @@ function App() {
             {/* Portafolio-scoped routes — canónico */}
             <Route path="portfolio/:id" element={<ProjectLayout />}>
               <Route index element={<ProjectBacklog />} />
+              <Route path="summary" element={<ProjectSummary />} />
               <Route path="calendar" element={<ProjectCalendar />} />
               <Route path="settings" element={<ProjectSettings />} />
               <Route path="feed" element={<Feed />} />
@@ -201,6 +205,7 @@ function App() {
             {/* Legacy alias portfolio → projects para compatibilidad */}
             <Route path="projects/:id" element={<ProjectLayout />}>
               <Route index element={<ProjectBacklog />} />
+              <Route path="summary" element={<ProjectSummary />} />
               <Route path="calendar" element={<ProjectCalendar />} />
               <Route path="settings" element={<ProjectSettings />} />
               <Route path="feed" element={<Feed />} />

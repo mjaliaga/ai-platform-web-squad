@@ -353,3 +353,73 @@ export function useDeleteAnnouncement() {
     },
   });
 }
+
+export function useTodos(options = {}) {
+  return useQuery({
+    queryKey: queryKeys.todos,
+    queryFn: () => api.listTodos(),
+    ...options,
+  });
+}
+
+export function useTodosStats(options = {}) {
+  return useQuery({
+    queryKey: queryKeys.todosStats,
+    queryFn: () => api.getTodosStats(),
+    ...options,
+  });
+}
+
+export function useCreateTodo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => api.createTodo(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.todos });
+      qc.invalidateQueries({ queryKey: queryKeys.todosStats });
+    },
+  });
+}
+
+export function useUpdateTodo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }) => api.updateTodo(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.todos });
+      qc.invalidateQueries({ queryKey: queryKeys.todosStats });
+    },
+  });
+}
+
+export function useDeleteTodo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.deleteTodo(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.todos });
+      qc.invalidateQueries({ queryKey: queryKeys.todosStats });
+    },
+  });
+}
+
+export function useClearCompletedTodos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.clearCompletedTodos(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.todos });
+      qc.invalidateQueries({ queryKey: queryKeys.todosStats });
+    },
+  });
+}
+
+export function useReorderTodos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (todoIds) => api.reorderTodos(todoIds),
+    onSuccess: (data) => {
+      qc.setQueryData(queryKeys.todos, data);
+    },
+  });
+}
