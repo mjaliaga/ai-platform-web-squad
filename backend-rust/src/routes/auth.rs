@@ -17,7 +17,7 @@ use crate::middleware::csrf::{generate_csrf_token, set_csrf_cookie};
 use crate::models::{Claims, PublicUser, User};
 use crate::pagination::PaginatedResponse;
 use crate::utils;
-use crate::validation::{error_response, internal_error, parse_duration_hours, require_admin, validate_required};
+use crate::validation::{error_response, internal_error, parse_duration_hours, require_admin, validate_email, validate_required};
 use crate::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -154,9 +154,20 @@ pub async fn login(
     )
     .map_err(|e| internal_error(&format!("jwt error: {e}")))?;
 
-    let cookie_secure = std::env::var("COOKIE_SECURE")
-        .map(|v| v == "true" || v == "1")
-        .unwrap_or(false);
+    // SEC-003: Default to secure cookies in production. The cookie is only
+    // sent over HTTPS unless explicitly opted out via COOKIE_SECURE=false.
+    let cookie_secure = match std::env::var("COOKIE_SECURE") {
+        Ok(v) => matches!(v.to_lowercase().as_str(), "true" | "1" | "yes"),
+        // Default to true when no override is provided — safer for production.
+        Err(_) => true,
+    };
+    // Loud warning if the operator is using an insecure configuration.
+    if !cookie_secure {
+        tracing::warn!(
+            "COOKIE_SECURE is disabled — auth cookies may be transmitted over HTTP. \
+             This should only happen in local development."
+        );
+    }
 
     let max_age_secs = expires_in_hours * 3600;
 
@@ -226,9 +237,10 @@ pub async fn me(
     match user {
         Some(u) => {
             let csrf_token = generate_csrf_token();
-            let cookie_secure = std::env::var("COOKIE_SECURE")
-                .map(|v| v == "true" || v == "1")
-                .unwrap_or(false);
+            let cookie_secure = match std::env::var("COOKIE_SECURE") {
+                Ok(v) => matches!(v.to_lowercase().as_str(), "true" | "1" | "yes"),
+                Err(_) => true,
+            };
             let mut response = (StatusCode::OK, Json(PublicUser::from(u))).into_response();
             set_csrf_cookie(response.headers_mut(), &csrf_token, cookie_secure);
             Ok(response)
@@ -314,12 +326,7 @@ pub async fn create_user(
     validate_required("name", &payload.name, 100)?;
     validate_required("email", &payload.email, 200)?;
     validate_required("password", &payload.password, 200)?;
-    if !payload.email.contains('@') {
-        return Err(error_response(
-            StatusCode::BAD_REQUEST,
-            "Email inválido".to_string(),
-        ));
-    }
+    validate_email(&payload.email)?;
 
     let role = payload.role.as_deref().unwrap_or("member");
     if !matches!(role, "admin" | "member" | "editor") {
@@ -547,12 +554,7 @@ pub async fn update_user(
     }
     if let Some(email) = &payload.email {
         validate_required("email", email, 200)?;
-        if !email.contains('@') {
-            return Err(error_response(
-                StatusCode::BAD_REQUEST,
-                "Email inválido".to_string(),
-            ));
-        }
+        validate_email(email)?;
     }
     if let Some(role) = &payload.role {
         if !matches!(role.as_str(), "admin" | "member" | "editor") {

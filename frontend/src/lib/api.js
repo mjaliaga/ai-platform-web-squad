@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 function getCsrfToken() {
   const cookies = document.cookie.split(";");
@@ -9,6 +9,19 @@ function getCsrfToken() {
     }
   }
   return null;
+}
+
+/**
+ * Custom error class that carries the HTTP status code so callers
+ * (react-query retries, global handlers, etc.) can act on it.
+ */
+export class ApiError extends Error {
+  constructor(message, status, body) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
 }
 
 async function request(path, options = {}) {
@@ -27,15 +40,30 @@ async function request(path, options = {}) {
     }
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
-    credentials: "include",
-    headers,
-    ...options,
-  });
+  let res;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      credentials: "include",
+      headers,
+      ...options,
+    });
+  } catch (networkError) {
+    throw new ApiError(
+      "Error de red. Verifica tu conexión.",
+      0,
+      null
+    );
+  }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Error ${res.status}`);
+    let body = null;
+    try {
+      body = await res.json();
+    } catch {
+      body = { error: res.statusText || `Error ${res.status}` };
+    }
+    const message = body?.error || `Error ${res.status}`;
+    throw new ApiError(message, res.status, body);
   }
 
   if (res.status === 204) return null;
@@ -349,12 +377,17 @@ export const api = {
   },
 
   listTodos: () => request("/todos"),
+  getTodosStats: () => request("/todos/stats"),
   createTodo: (payload) =>
     request("/todos", { method: "POST", body: JSON.stringify(payload) }),
   updateTodo: (id, payload) =>
     request(`/todos/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteTodo: (id) =>
     request(`/todos/${id}`, { method: "DELETE" }),
+  clearCompletedTodos: () =>
+    request("/todos/clear-completed", { method: "DELETE" }),
+  reorderTodos: (todoIds) =>
+    request("/todos/reorder", { method: "POST", body: JSON.stringify(todoIds) }),
 
   listCertifications: () => request("/certifications"),
   createCertification: (payload) =>

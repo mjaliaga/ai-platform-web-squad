@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Search, Bookmark, Trash2, Edit3, X, Play, Save } from "lucide-react";
 import { api } from "../../lib/api";
+import { useToast } from "../../context/ToastContext.jsx";
 
 const FIELD_HINTS = [
   "status = \"done\"",
@@ -18,6 +19,7 @@ export function SavedFilters() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
   const [searching, setSearching] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     loadFilters();
@@ -29,7 +31,7 @@ export function SavedFilters() {
       const data = await api.listSavedFilters();
       setFilters(data);
     } catch (err) {
-      console.error("Error loading filters:", err);
+      toast.error("Error cargando filtros: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -39,14 +41,16 @@ export function SavedFilters() {
     try {
       if (editingFilter) {
         await api.updateSavedFilter(editingFilter.id, payload);
+        toast.success("Filtro actualizado");
       } else {
         await api.createSavedFilter(payload);
+        toast.success("Filtro guardado");
       }
       setShowForm(false);
       setEditingFilter(null);
       await loadFilters();
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error("Error: " + err.message);
     }
   }
 
@@ -54,9 +58,10 @@ export function SavedFilters() {
     if (!confirm(`¿Eliminar el filtro "${filter.name}"?`)) return;
     try {
       await api.deleteSavedFilter(filter.id);
+      toast.success("Filtro eliminado");
       await loadFilters();
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error("Error: " + err.message);
     }
   }
 
@@ -68,7 +73,7 @@ export function SavedFilters() {
       const results = await api.searchTasks(searchQuery, 50, 0);
       setSearchResults(results);
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error("Error: " + err.message);
       setSearchResults(null);
     } finally {
       setSearching(false);
@@ -82,7 +87,7 @@ export function SavedFilters() {
       setSearchResults(results);
       setSearchQuery(filter.query);
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error("Error: " + err.message);
     } finally {
       setSearching(false);
     }
@@ -260,11 +265,12 @@ function FilterForm({ filter, initialQuery, onSave, onClose }) {
     query: filter?.query || initialQuery || "",
     is_shared: filter?.is_shared === 1,
   });
+  const toast = useToast();
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!formData.name.trim() || !formData.query.trim()) {
-      alert("Nombre y query son requeridos");
+      toast.warning("Nombre y query son requeridos");
       return;
     }
     onSave(formData);

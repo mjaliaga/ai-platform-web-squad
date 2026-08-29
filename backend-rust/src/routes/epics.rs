@@ -80,36 +80,86 @@ pub async fn list_epics(
     }
     let epics = q.fetch_all(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let mut result = Vec::with_capacity(epics.len());
-    for epic in epics {
-        let owner = if let Some(ref oid) = epic.owner_id {
-            sqlx::query_as::<_, User>(
-                "SELECT id, name, email, password_hash, role, avatar_color, created_at, active, deleted_at FROM users WHERE id = ?"
-            )
-            .bind(oid)
-            .fetch_optional(&state.db)
-            .await
-            .map_err(|e| internal_error(&format!("db error: {e}")))?
-            .map(PublicUser::from)
-        } else {
-            None
-        };
+    if epics.is_empty() {
+        return Ok(Json(vec![]));
+    }
 
-        let stats: (i64, i64) = sqlx::query_as(
-            "SELECT COUNT(*), COALESCE(SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END), 0) FROM tasks WHERE epic_id = ? AND deleted_at IS NULL"
-        )
-        .bind(&epic.id)
-        .fetch_one(&state.db)
+    // PERF-001: Batch-load owners and stats in two queries instead of N+1.
+    let epic_ids: Vec<String> = epics.iter().map(|e| e.id.clone()).collect();
+    let owner_ids: Vec<String> = epics
+        .iter()
+        .filter_map(|e| e.owner_id.clone())
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    let placeholders = vec!["?"; epic_ids.len()].join(",");
+    let stats_sql = format!(
+        "SELECT epic_id, COUNT(*) AS total, \
+         COALESCE(SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END), 0) AS done \
+         FROM tasks WHERE deleted_at IS NULL AND epic_id IN ({}) \
+         GROUP BY epic_id",
+        placeholders
+    );
+    let mut stats_q = sqlx::query_as::<_, (String, i64, i64)>(&stats_sql);
+    for id in &epic_ids {
+        stats_q = stats_q.bind(id);
+    }
+    let stats_rows = stats_q
+        .fetch_all(&state.db)
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
-
-        result.push(EpicWithOwner {
-            epic,
-            owner,
-            task_count: stats.0,
-            done_count: stats.1,
-        });
+    let mut stats_map: std::collections::HashMap<String, (i64, i64)> =
+        std::collections::HashMap::with_capacity(stats_rows.len());
+    for (id, total, done) in stats_rows {
+        stats_map.insert(id, (total, done));
     }
+
+    let owners_map: std::collections::HashMap<String, PublicUser> = if owner_ids.is_empty() {
+        std::collections::HashMap::new()
+    } else {
+        let owner_placeholders = vec!["?"; owner_ids.len()].join(",");
+        let owner_sql = format!(
+            "SELECT id, name, email, password_hash, role, avatar_color, created_at, active, deleted_at \
+             FROM users WHERE id IN ({})",
+            owner_placeholders
+        );
+        let mut owner_q = sqlx::query_as::<_, User>(&owner_sql);
+        for id in &owner_ids {
+            owner_q = owner_q.bind(id);
+        }
+        let users = owner_q
+            .fetch_all(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
+        users
+            .into_iter()
+            .map(|u| {
+                let pub_user = PublicUser::from(u);
+                (pub_user.id.clone(), pub_user)
+            })
+            .collect()
+    };
+
+    let result: Vec<EpicWithOwner> = epics
+        .into_iter()
+        .map(|epic| {
+            let owner = epic
+                .owner_id
+                .as_ref()
+                .and_then(|oid| owners_map.get(oid).cloned());
+            let (task_count, done_count) = stats_map
+                .get(&epic.id)
+                .copied()
+                .unwrap_or((0, 0));
+            EpicWithOwner {
+                epic,
+                owner,
+                task_count,
+                done_count,
+            }
+        })
+        .collect();
 
     Ok(Json(result))
 }

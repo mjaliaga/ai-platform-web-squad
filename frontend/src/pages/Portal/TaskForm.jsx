@@ -2,73 +2,59 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
-import { AREA_COLORS, AREA_LABELS } from "./components/Badges";
-
-const AREAS = Object.keys(AREA_LABELS);
+import { useToast } from "../../context/ToastContext.jsx";
 
 export function TaskForm() {
   const navigate = useNavigate();
   const { id: projectId } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const initialType = searchParams.get("type") || "tarea";
-  const isSolicitud = initialType === "solicitud";
+  const toast = useToast();
+  const isSolicitud = searchParams.get("type") === "solicitud";
   const [users, setUsers] = useState([]);
-  const [sprints, setSprints] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [selectedAreas, setSelectedAreas] = useState([]);
   const [task, setTask] = useState({
     title: "",
     description: "",
-    type: initialType,
+    type: "tarea",
     priority: "medium",
-    status: initialType === "solicitud" ? "pendiente" : "backlog",
-    assignee_id: isSolicitud ? (user?.id || "") : "",
+    status: isSolicitud ? "pendiente" : "backlog",
+    assignee_name: "",
     estimate_hours: "",
     due_date: "",
     deliverable: "",
-    sprint_id: "",
     project_id: projectId || "",
   });
 
   useEffect(() => {
-    const sprintParams = projectId ? { project: projectId } : {};
-    Promise.all([api.users(), api.listSprints(sprintParams), api.listProjectsSimple()])
-      .then(([uResp, sResp, pResp]) => {
+    Promise.all([api.users(), api.listProjectsSimple()])
+      .then(([uResp, pResp]) => {
         setUsers(Array.isArray(uResp) ? uResp : (uResp?.items || []));
-        setSprints(Array.isArray(sResp) ? sResp : (sResp?.items || []));
         setProjects(Array.isArray(pResp) ? pResp : (pResp?.items || []));
       })
-      .catch(console.error);
+      .catch((err) => toast.error("Error cargando datos: " + err.message));
   }, []);
 
   function update(field, value) {
     setTask((t) => ({ ...t, [field]: value }));
   }
 
-  function toggleArea(area) {
-    setSelectedAreas((prev) =>
-      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
-    );
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     const payload = {
       ...task,
-      assignee_id: task.assignee_id || null,
-      sprint_id: task.sprint_id || null,
+      assignee_id: null,
       project_id: task.project_id || null,
       estimate_hours: task.estimate_hours ? Number(task.estimate_hours) : null,
       due_date: task.due_date || null,
       deliverable: task.deliverable || null,
-      labels: selectedAreas,
     };
     try {
       const created = await api.createTask(payload);
+      toast.success(isSolicitud ? "Solicitud creada" : "Tarea creada");
       navigate(`/portal/tasks/${created.id}`);
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error("Error: " + err.message);
     }
   }
 
@@ -99,24 +85,6 @@ export function TaskForm() {
         </Field>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {!isSolicitud && (
-            <Field label="Tipo">
-              <select
-                value={task.type}
-                onChange={(e) => {
-                  const newType = e.target.value;
-                  const newStatus = newType === "solicitud" ? "pendiente" : "backlog";
-                  setTask((t) => ({ ...t, type: newType, status: newStatus }));
-                }}
-                className="input"
-              >
-                <option value="tarea">Tarea</option>
-                <option value="bug">Bug</option>
-                <option value="solicitud">Solicitud</option>
-              </select>
-            </Field>
-          )}
-
           <Field label="Prioridad">
             <select value={task.priority} onChange={(e) => update("priority", e.target.value)} className="input">
               <option value="low">Baja</option>
@@ -126,31 +94,21 @@ export function TaskForm() {
             </select>
           </Field>
 
-          {!isSolicitud && (
-            <Field label="Estado inicial">
-              <select value={task.status} onChange={(e) => update("status", e.target.value)} className="input">
-                <option value="backlog">Backlog</option>
-                <option value="todo">Por hacer</option>
-              </select>
-            </Field>
-          )}
+          <Field label="Asignado a">
+            <input
+              type="text"
+              value={task.assignee_name || ""}
+              onChange={(e) => update("assignee_name", e.target.value)}
+              className="input"
+              placeholder="Nombre del asignado"
+            />
+          </Field>
 
           {isSolicitud && (
             <Field label="Solicitado por">
               <input type="text" className="input bg-gray-50" value={user?.name || ""} readOnly disabled />
             </Field>
           )}
-
-          <Field label="Sprint">
-            <select value={task.sprint_id} onChange={(e) => update("sprint_id", e.target.value)} className="input">
-              <option value="">Sin sprint</option>
-              {sprints.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} {s.is_active === 1 ? "(activo)" : ""}
-                </option>
-              ))}
-            </select>
-          </Field>
 
           {!projectId && !isSolicitud && (
             <Field label="Proyecto">
@@ -199,28 +157,6 @@ export function TaskForm() {
             />
           </Field>
         )}
-
-        <div>
-          <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-tivit-ink/60">
-            Área de trabajo
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {AREAS.map((area) => (
-              <button
-                key={area}
-                type="button"
-                onClick={() => toggleArea(area)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedAreas.includes(area)
-                    ? `${AREA_COLORS[area]} ring-2 ring-offset-1 ring-current`
-                    : "bg-tivit-ink/5 text-tivit-ink/50 hover:bg-tivit-ink/10"
-                }`}
-              >
-                {AREA_LABELS[area]}
-              </button>
-            ))}
-          </div>
-        </div>
 
         <div className="flex items-center justify-end gap-3">
           <button

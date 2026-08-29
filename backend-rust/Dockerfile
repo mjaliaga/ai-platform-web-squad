@@ -23,7 +23,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libsqlite3-0 \
     curl \
+    tini \
     && rm -rf /var/lib/apt/lists/*
+
+# SEC-005: Run as a non-root user.
+RUN groupadd -r -g 10001 appuser \
+    && useradd -r -u 10001 -g appuser -d /app -s /usr/sbin/nologin appuser \
+    && mkdir -p /app/data/uploads /app/media \
+    && chown -R appuser:appuser /app
 
 COPY --from=builder /app/target/release/tivit-portal-backend /usr/local/bin/tivit-portal-backend
 COPY --from=builder /app/target/release/seed_content /usr/local/bin/seed_content
@@ -36,7 +43,7 @@ COPY frontend/src/data/poc.js /app/seed-data/poc.js
 COPY frontend/src/data/almaviva.js /app/seed-data/almaviva.js
 COPY frontend/src/data/xms.js /app/seed-data/xms.js
 
-RUN mkdir -p /app/data/uploads /app/media
+RUN chown -R appuser:appuser /app/seed-data /usr/local/bin/tivit-portal-backend /usr/local/bin/seed_content
 
 ENV PORT=3000
 ENV DATABASE_URL=sqlite:///app/data/portal.db
@@ -48,4 +55,8 @@ EXPOSE 3000
 
 COPY backend-rust/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-ENTRYPOINT ["docker-entrypoint.sh"]
+
+USER appuser
+
+# Use tini for proper signal forwarding (graceful shutdown on SIGTERM).
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]

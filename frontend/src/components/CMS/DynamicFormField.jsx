@@ -31,15 +31,23 @@ export function DynamicFormField({ field, value, onChange, error }) {
       );
 
     case "richtext":
+      // SEC-003: Rich text is edited as plain text/markdown and stored as-is.
+      // Rendering sanitization happens at the consumer site (see lib/sanitize.js)
+      // — never use dangerouslySetInnerHTML on this value without sanitization.
       return (
-        <textarea
-          rows={6}
-          value={value || ""}
-          onChange={(e) => handleChange(e.target.value)}
-          placeholder={field.placeholder || "Markdown / HTML soportado"}
-          required={field.requerido}
-          className={`${inputClasses(error)} font-mono text-xs`}
-        />
+        <div>
+          <textarea
+            rows={6}
+            value={value || ""}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder={field.placeholder || "Markdown soportado"}
+            required={field.requerido}
+            className={`${inputClasses(error)} font-mono text-xs`}
+          />
+          <p className="mt-1 text-xs text-tivit-ink/45">
+            El contenido se sanitiza antes de mostrarse. HTML se filtra a etiquetas seguras.
+          </p>
+        </div>
       );
 
     case "slug":

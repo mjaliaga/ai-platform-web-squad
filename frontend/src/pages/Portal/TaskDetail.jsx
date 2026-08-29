@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, downloadAttachment } from "../../lib/api";
+import { useToast } from "../../context/ToastContext.jsx";
 import {
   useTask,
   useComments,
@@ -66,6 +67,7 @@ export function TaskDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const toast = useToast();
 
   const taskQuery = useTask(id);
   const commentsQuery = useComments(id);
@@ -81,9 +83,14 @@ export function TaskDetail() {
   const meQuery = useMe();
   const [epics, setEpics] = useState([]);
 
+  // FIX-011: include `id` in the dependency array so the effect re-fires
+  // when the user navigates between different tasks without unmounting.
   useEffect(() => {
-    api.listEpics().then((d) => setEpics(Array.isArray(d) ? d : [])).catch(() => setEpics([]));
-  }, []);
+    api
+      .listEpics()
+      .then((d) => setEpics(Array.isArray(d) ? d : []))
+      .catch(() => setEpics([]));
+  }, [id]);
 
   const task = taskQuery.data;
   const comments = commentsQuery.data || [];
@@ -136,7 +143,7 @@ export function TaskDetail() {
       await createCommentMut.mutateAsync(newComment);
       setNewComment("");
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -145,14 +152,14 @@ export function TaskDetail() {
     try {
       await handleFieldChange("title", editTitle.trim());
       setEditingTitle(false);
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   }
 
   async function saveDescription() {
     try {
       await handleFieldChange("description", editDesc.trim() || null);
       setEditingDesc(false);
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   }
 
   async function addLabel() {
@@ -163,31 +170,31 @@ export function TaskDetail() {
     try {
       await handleFieldChange("labels", [...current, label]);
       setNewLabel("");
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   }
 
   async function removeLabel(labelToRemove) {
     const current = (task.labels || []).filter((l) => normalizarItem(l) !== labelToRemove);
     try {
       await handleFieldChange("labels", current);
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   }
 
   async function handleEditTimeEntry(entryId) {
     const hours = parseFloat(editTimeForm.hours);
-    if (isNaN(hours) || hours <= 0) { alert("Horas inválidas"); return; }
+    if (isNaN(hours) || hours <= 0) { toast.warning("Horas inválidas"); return; }
     try {
       await api.editTimeEntry(id, entryId, hours, editTimeForm.description.trim() || null);
       timeQuery.refetch();
       setEditingTimeEntry(null);
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   }
 
   async function handleFieldChange(field, value) {
     try {
       await updateTaskMut.mutateAsync({ id, payload: { [field]: value } });
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -195,7 +202,7 @@ export function TaskDetail() {
     try {
       await updateStatusMut.mutateAsync({ id, status: newStatus });
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -203,7 +210,7 @@ export function TaskDetail() {
     try {
       await updateTaskMut.mutateAsync({ id, payload: { sprint_id: sprintId || null } });
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -213,7 +220,7 @@ export function TaskDetail() {
     try {
       await uploadMut.mutateAsync(file);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
     e.target.value = "";
   }
@@ -222,16 +229,17 @@ export function TaskDetail() {
     try {
       await toggleSubtaskMut.mutateAsync({ id: subId, completed });
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
-  async function createSubtask() {
-    const title = prompt("Título de la subtarea:");
-    if (!title) return;
+  // FIX-UX-010: replace native prompt() with a small inline form to capture
+  // the subtask title — see the rendered UI for the modal trigger.
+  async function createSubtask(title) {
+    if (!title || !title.trim()) return;
     try {
       await createSubtaskMut.mutateAsync({
-        title,
+        title: title.trim(),
         parent_id: id,
         status: "todo",
         priority: "medium",
@@ -239,7 +247,7 @@ export function TaskDetail() {
       });
       qc.invalidateQueries({ queryKey: ["subtasks"] });
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -253,8 +261,9 @@ export function TaskDetail() {
       });
       setTimeForm({ hours: "", description: "" });
       setShowLogTime(false);
+      toast.success("Tiempo registrado");
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -263,7 +272,7 @@ export function TaskDetail() {
     try {
       await deleteTimeMut.mutateAsync(entryId);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -271,7 +280,7 @@ export function TaskDetail() {
     try {
       await toggleWatchMut.mutateAsync(isWatching);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -296,7 +305,7 @@ export function TaskDetail() {
       setDepSearch("");
       setDepResults([]);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -304,7 +313,7 @@ export function TaskDetail() {
     try {
       await removeDepMut.mutateAsync(depId);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -312,13 +321,14 @@ export function TaskDetail() {
     if (!confirm("¿Eliminar esta tarea? Esta acción no se puede deshacer.")) return;
     try {
       await api.deleteTask(id);
+      toast.success("Tarea eliminada");
       navigate("/portal");
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
-  if (taskQuery.error) return <div className="text-alert">Error: {taskQuery.error.message}</div>;
+  if (taskQuery.error) return <div className="text-alert">Error al cargar la tarea</div>;
   if (!task) return <div className="text-tivit-ink/60">Cargando tarea…</div>;
 
   return (
@@ -483,14 +493,14 @@ export function TaskDetail() {
                     try {
                       await api.editComment(id, c.id, newBody);
                       commentsQuery.refetch();
-                    } catch (e) { alert(e.message); }
+                    } catch (e) { toast.error(e.message); }
                   }}
                   onDelete={async () => {
                     if (!window.confirm("¿Eliminar este comentario?")) return;
                     try {
                       await api.deleteComment(id, c.id);
                       commentsQuery.refetch();
-                    } catch (e) { alert(e.message); }
+                    } catch (e) { toast.error(e.message); }
                   }}
                 />
               ))}
@@ -1020,6 +1030,9 @@ function CommentItem({ comment: c, currentUser, taskId, users, onEdit, onDelete 
 }
 
 function CommentBody({ body, users }) {
+  // SEC-003: Render comment text as plain text and only highlight @mentions.
+  // React already escapes children when they are strings, so as long as we
+  // don't use dangerouslySetInnerHTML the comment body is XSS-safe.
   const parts = [];
   let buffer = "";
   let i = 0;

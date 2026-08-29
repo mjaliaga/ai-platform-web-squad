@@ -743,14 +743,35 @@ export function CollectionDetail({ ruta }) {
   );
 }
 
-/** Convierte un enlace de Google Drive/Docs en su URL de preview para iframe. */
+/**
+ * Convierte un enlace de Google Drive/Docs en su URL de preview para iframe.
+ * SEC-003: Restringimos estrictamente a hosts legítimos de Google para evitar
+ * que un atacante inyecte un javascript: o un dominio arbitrario vía CMS.
+ */
 function documentoPreviewUrl(url) {
-  if (!url) return "";
-  const doc = url.match(/docs\.google\.com\/document\/d\/([\w-]+)/);
+  if (!url || typeof url !== "string") return "";
+  // Whitelist: solo http(s) hacia dominios conocidos de Google.
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "";
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return "";
+  const allowedHosts = new Set([
+    "docs.google.com",
+    "drive.google.com",
+    "www.googleapis.com",
+  ]);
+  if (!allowedHosts.has(parsed.hostname)) return "";
+
+  const doc = url.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
   if (doc) return `https://docs.google.com/document/d/${doc[1]}/preview`;
-  const file = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  const file = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (file) return `https://drive.google.com/file/d/${file[1]}/preview`;
-  return url;
+  // Si no encaja con los formatos conocidos pero el host es válido, no
+  // devolvemos la URL original (sería un riesgo) — preferimos no renderizar.
+  return "";
 }
 
 function AutorAvatar({ nombre, foto }) {

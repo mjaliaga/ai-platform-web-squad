@@ -4,7 +4,6 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::AppState;
@@ -12,23 +11,16 @@ use crate::AppState;
 const CSRF_HEADER: &str = "x-csrf-token";
 const CSRF_COOKIE: &str = "csrf_token";
 
-static CSRF_DISABLED: AtomicBool = AtomicBool::new(false);
-
-/// Permite desactivar la verificación CSRF (sólo para tests).
-/// Nunca usar en producción.
-pub fn disable_csrf_for_testing() {
-    CSRF_DISABLED.store(true, Ordering::SeqCst);
-}
-
+/// SEC-004: CSRF protection is ALWAYS enforced for mutating methods.
+/// Tests should use a real CSRF token from the login flow, not disable CSRF.
+/// `cfg(test)` allows unit tests to bypass the middleware by structuring
+/// tests differently (or by adding a dedicated test-only handler).
 pub async fn csrf_protect(
     State(_state): State<Arc<AppState>>,
-    mut req: Request,
+    req: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    if CSRF_DISABLED.load(Ordering::SeqCst) {
-        return Ok(next.run(req).await);
-    }
-
+    // Read-only methods don't need CSRF.
     if matches!(req.method(), &Method::GET | &Method::HEAD | &Method::OPTIONS) {
         return Ok(next.run(req).await);
     }
@@ -45,7 +37,7 @@ pub async fn csrf_protect(
         .and_then(|c| extract_cookie(c, CSRF_COOKIE));
 
     match (header_token, cookie_token) {
-        (Some(h), Some(c)) if h == c => Ok(next.run(req).await),
+        (Some(h), Some(c)) if h == c && !h.is_empty() => Ok(next.run(req).await),
         _ => Err(StatusCode::FORBIDDEN),
     }
 }

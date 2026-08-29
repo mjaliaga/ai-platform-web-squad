@@ -122,12 +122,36 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
 pub async fn seed_admin(pool: &SqlitePool) -> Result<()> {
     use bcrypt::hash;
 
-    let email = std::env::var("SEED_ADMIN_EMAIL")
-        .unwrap_or_else(|_| "admin@tivit.com".to_string());
-    let password = std::env::var("SEED_ADMIN_PASSWORD")
-        .unwrap_or_else(|_| "tivit2026".to_string());
-    let name = std::env::var("SEED_ADMIN_NAME")
-        .unwrap_or_else(|_| "Admin".to_string());
+    // SEC-001: Require explicit env var, fail loudly if missing.
+    // No insecure defaults — admin seeding must be opt-in via environment.
+    let email = match std::env::var("SEED_ADMIN_EMAIL") {
+        Ok(v) => v,
+        Err(_) => {
+            tracing::info!("SEED_ADMIN_EMAIL not set — skipping admin seed (set it to enable seeding).");
+            return Ok(());
+        }
+    };
+    let password = match std::env::var("SEED_ADMIN_PASSWORD") {
+        Ok(v) => {
+            if v.len() < 12 {
+                tracing::error!("SEED_ADMIN_PASSWORD too short (min 12 chars). Aborting.");
+                std::process::exit(1);
+            }
+            v
+        }
+        Err(_) => {
+            tracing::info!("SEED_ADMIN_PASSWORD not set — skipping admin seed.");
+            return Ok(());
+        }
+    };
+    let name = std::env::var("SEED_ADMIN_NAME").unwrap_or_else(|_| "Admin".to_string());
+
+    // Reject weak/common passwords explicitly.
+    let weak = ["tivit2026", "admin123", "password", "changeme", "12345678"];
+    if weak.iter().any(|w| password.eq_ignore_ascii_case(w)) {
+        tracing::error!("SEED_ADMIN_PASSWORD is in the weak-password blocklist. Choose a stronger one.");
+        std::process::exit(1);
+    }
 
     let existing: Option<(String,)> =
         sqlx::query_as("SELECT id FROM users WHERE email = ?")

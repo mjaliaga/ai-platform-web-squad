@@ -3,81 +3,11 @@ import { Link, useLocation, useNavigate, useOutletContext, useParams } from "rea
 import { ArrowLeft, FolderKanban, ChevronRight, Edit3, Trash2, Archive, UserPlus, X, Globe, Clipboard, Check, AlertCircle, Eye, EyeOff, Lock, Unlock } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext.jsx";
 import { TypeBadge, StatusBadge, PriorityBadge, UserAvatar, formatDate, formatRelative } from "./components/Badges";
 import { STAGES, STAGE_COLORS, STAGE_DOT, FIELD_DEFS, PAISES } from "../../lib/portfolioFields";
-
-function parseGoals(goal) {
-  if (!goal) return [];
-  if (Array.isArray(goal)) return goal.filter(Boolean);
-  try {
-    const parsed = JSON.parse(goal);
-    if (Array.isArray(parsed)) return parsed.filter(Boolean);
-    return [String(parsed)];
-  } catch {
-    return [goal];
-  }
-}
-
-const PROJECT_COLORS = [
-  "#dc2626", "#2563eb", "#16a34a", "#9333ea",
-  "#ea580c", "#0891b2", "#db2777", "#65a30d",
-];
-
-// Portafolio — pipeline profesional (single source of truth, sync con backend PORTFOLIO_CATEGORIAS)
-export const PORTFOLIO_CATEGORIAS = [
-  "Backlog de Propuestas Internas",
-  "Backlog de Propuestas Comerciales",
-  "Evaluación técnica",
-  "PoC",
-  "Proyecto",
-  "Producción",
-];
-
-export const CATEGORIA_COLORS = {
-  "Backlog de Propuestas Internas": "bg-slate-100 text-slate-700 border-slate-200",
-  "Backlog de Propuestas Comerciales": "bg-blue-50 text-blue-700 border-blue-200",
-  "Evaluación técnica": "bg-amber-50 text-amber-700 border-amber-200",
-  "PoC": "bg-purple-50 text-purple-700 border-purple-200",
-  "Proyecto": "bg-tivit-red/10 text-tivit-red border-tivit-red/20",
-  "Producción": "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
-export const CATEGORIA_DOT = {
-  "Backlog de Propuestas Internas": "bg-slate-400",
-  "Backlog de Propuestas Comerciales": "bg-blue-500",
-  "Evaluación técnica": "bg-amber-500",
-  "PoC": "bg-purple-500",
-  "Proyecto": "bg-tivit-red",
-  "Producción": "bg-emerald-500",
-};
-
-const ROLE_LABELS = {
-  lead: "Líder",
-  arquitecto: "Arquitecto",
-  dev: "Desarrollador",
-  design: "Diseño",
-  qa: "QA",
-  viewer: "Observador",
-};
-
-const ROLE_COLORS = {
-  lead: "bg-tivit-red/10 text-tivit-red",
-  arquitecto: "bg-indigo-100 text-indigo-700",
-  dev: "bg-blue-100 text-blue-700",
-  design: "bg-purple-100 text-purple-700",
-  qa: "bg-amber-100 text-amber-700",
-  viewer: "bg-gray-100 text-gray-600",
-};
-
-const ROLE_BORDER_COLORS = {
-  lead: "border-l-tivit-red",
-  arquitecto: "border-l-indigo-500",
-  dev: "border-l-blue-500",
-  design: "border-l-purple-500",
-  qa: "border-l-amber-500",
-  viewer: "border-l-gray-400",
-};
-
-const ROLE_HIERARCHY = { lead: 0, arquitecto: 1, dev: 2, design: 3, qa: 4, viewer: 5 };
+import { TeamSection } from "./TeamSection.jsx";
+import { parseGoals, PROJECT_COLORS, PORTFOLIO_CATEGORIAS, CATEGORIA_COLORS, CATEGORIA_DOT } from "../../lib/portfolioUtils.js";
 
 function getCamposPendientes(item) {
   const d = item.data || {};
@@ -101,6 +31,7 @@ export function Projects() {
   const isTeamTab = location.pathname.endsWith("/team");
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useToast();
   const isAdmin = user?.role === "admin";
   const [projects, setProjects] = useState([]);
   const [current, setCurrent] = useState(null);
@@ -209,7 +140,6 @@ export function Projects() {
         }),
         members,
       };
-      console.log("createProject payload:", payload);
       const created = await api.createProject(payload);
       navigate(`/portal/portfolio/${created.id}`);
     } catch (err) {
@@ -335,7 +265,7 @@ export function Projects() {
 
     // Team tab: only show team management
     if (isTeamTab) {
-      return <TeamSection {...{ current, isAdmin, showAddMember, setShowAddMember, newMember, setNewMember, availableUsers, addMember, changeMemberRole, removeMember, selectClass, ROLE_LABELS, ROLE_COLORS, UserAvatar, X, UserPlus }} />;
+      return <TeamSection current={current} isAdmin={isAdmin} showAddMember={showAddMember} setShowAddMember={setShowAddMember} newMember={newMember} setNewMember={setNewMember} availableUsers={availableUsers} addMember={addMember} changeMemberRole={changeMemberRole} removeMember={removeMember} />;
     }
 
     // Inside ProjectLayout (Resumen tab): skip header
@@ -783,7 +713,7 @@ export function Projects() {
           </div>
         </div>
 
-        <TeamSection {...{ current, isAdmin, showAddMember, setShowAddMember, newMember, setNewMember, availableUsers, addMember, changeMemberRole, removeMember, selectClass, ROLE_LABELS, ROLE_COLORS, UserAvatar, X, UserPlus }} />
+        <TeamSection current={current} isAdmin={isAdmin} showAddMember={showAddMember} setShowAddMember={setShowAddMember} newMember={newMember} setNewMember={setNewMember} availableUsers={availableUsers} addMember={addMember} changeMemberRole={changeMemberRole} removeMember={removeMember} />
 
         <div className="mt-6 space-y-2">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-tivit-ink/60">Tareas del proyecto</h2>
@@ -858,7 +788,7 @@ export function Projects() {
         </div>
         {isAdmin && (
           <button onClick={() => setShowForm((s) => !s)} className="shrink-0 rounded-full bg-tivit-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-tivit-red-dark">
-            {showForm ? "Cancelar" : "+ Nuevo elemento"}
+            {showForm ? "Cancelar" : "+ Crear Portafolio"}
           </button>
         )}
       </div>
@@ -914,7 +844,7 @@ export function Projects() {
       {showForm && isAdmin && (
         <form onSubmit={createProject} className="mt-5 rounded-2xl border border-black/5 bg-white p-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-tivit-ink">Nuevo elemento de Portafolio — {form.stage}</h2>
+            <h2 className="text-sm font-semibold text-tivit-ink">Crear Portafolio — {form.stage}</h2>
             <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${STAGE_COLORS[form.stage]}`}>{form.stage}</span>
           </div>
           {form.stage === "Backlog" ? (
@@ -1147,7 +1077,7 @@ export function Projects() {
           <p className="mt-2 text-sm text-tivit-ink/50">No hay elementos en el portafolio todavía.</p>
           {isAdmin && (
             <p className="mt-2 text-xs text-tivit-ink/55">
-              Creá uno con el botón "+ Nuevo elemento" de arriba.
+              Creá uno con el botón "+ Crear Portafolio" de arriba.
             </p>
           )}
         </div>
@@ -1294,86 +1224,6 @@ export function Projects() {
           })}
         </div>
       )}
-    </div>
-  );
-}
-
-function TeamSection({ current, isAdmin, showAddMember, setShowAddMember, newMember, setNewMember, availableUsers, addMember, changeMemberRole, removeMember, selectClass, ROLE_LABELS, ROLE_COLORS, UserAvatar, X, UserPlus }) {
-  const sortedMembers = [...(current.members || [])].sort(
-    (a, b) => (ROLE_HIERARCHY[a.role] ?? 99) - (ROLE_HIERARCHY[b.role] ?? 99)
-  );
-  return (
-    <div className="mt-6 rounded-2xl border border-black/5 bg-white p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-tivit-ink/60">
-          Equipo del proyecto ({current.members?.length || 0})
-        </h2>
-        {isAdmin && (
-          <button onClick={() => setShowAddMember((s) => !s)} className="flex items-center gap-1.5 text-xs font-semibold text-tivit-red hover:underline">
-            <UserPlus className="h-3.5 w-3.5" aria-hidden="true" /> Añadir
-          </button>
-        )}
-      </div>
-
-      {showAddMember && isAdmin && (
-        <form onSubmit={addMember} className="mt-3 flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-tivit-red/30 bg-tivit-red/5 p-3">
-          <label className="flex flex-col gap-1 text-xs font-medium text-tivit-ink">
-            Usuario
-            <select value={newMember.user_id} onChange={(e) => setNewMember({ ...newMember, user_id: e.target.value })} className={selectClass} required>
-              <option value="">Seleccionar…</option>
-              {availableUsers.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-tivit-ink">
-            Rol
-            <select value={newMember.role} onChange={(e) => setNewMember({ ...newMember, role: e.target.value })} className={selectClass}>
-              {Object.entries(ROLE_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="rounded-lg bg-tivit-red px-3 py-2 text-xs font-semibold text-white transition hover:bg-tivit-red-dark">Añadir</button>
-          <button type="button" onClick={() => setShowAddMember(false)} className="rounded-lg border border-tivit-red-light px-3 py-2 text-xs font-semibold text-tivit-ink transition hover:bg-tivit-red-light">Cancelar</button>
-        </form>
-      )}
-
-      <div className="mt-4 space-y-2">
-        {sortedMembers.length === 0 && (
-          <p className="py-4 text-center text-sm text-tivit-ink/50">Sin miembros asignados.</p>
-        )}
-        {sortedMembers.map((m) => (
-          <div key={m.user_id} className={`flex items-center justify-between rounded-xl border border-black/5 border-l-4 ${ROLE_BORDER_COLORS[m.role] || "border-l-gray-400"} p-3`}>
-            <div className="flex items-center gap-3">
-              <UserAvatar user={{ name: m.name, avatar_color: m.avatar_color }} />
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-tivit-ink">{m.name}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${ROLE_COLORS[m.role] || ROLE_COLORS.viewer}`}>
-                    {ROLE_LABELS[m.role] || m.role}
-                  </span>
-                </div>
-                <div className="text-xs text-tivit-ink/50">{m.email}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {isAdmin ? (
-                <select value={m.role} onChange={(e) => changeMemberRole(m.user_id, e.target.value)} className={selectClass}>
-                  {Object.entries(ROLE_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
-              ) : null}
-              {isAdmin && (
-                <button onClick={() => removeMember(m.user_id)} className="rounded-lg p-1.5 text-tivit-ink/40 transition hover:bg-alert/10 hover:text-alert">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

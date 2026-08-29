@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext.jsx";
 import { UserAvatar } from "./components/Badges";
 import { STAGES, STAGE_COLORS, STAGE_DOT, getNextStages } from "../../lib/portfolioFields";
 import { FolderKanban, GripVertical } from "lucide-react";
@@ -9,6 +10,7 @@ import { FolderKanban, GripVertical } from "lucide-react";
 export function PortfolioKanban() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const toast = useToast();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,7 +38,7 @@ export function PortfolioKanban() {
       await api.updateProject(project.id, { stage: nextStage, portfolio_data: currentData });
       await refresh();
     } catch (e) {
-      alert(e.message || "No se pudo mover. Verifica permisos y criterios de salida.");
+      toast.error(e.message || "No se pudo mover. Verifica permisos y criterios de salida.");
     }
   }
 
@@ -50,7 +52,7 @@ export function PortfolioKanban() {
         // Para Evaluación→Proyecto skip, el backend valida complejidad Baja
         moveStage(dragged, stage);
       } else {
-        alert(`Transición no permitida de ${dragged.stage} a ${stage}. Permitidas: ${allowed.join(", ")}`);
+        toast.warning(`Transición no permitida de ${dragged.stage} a ${stage}. Permitidas: ${allowed.join(", ")}`);
       }
     }
     setDragged(null);

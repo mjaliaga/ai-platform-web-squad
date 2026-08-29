@@ -3,6 +3,17 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
+/**
+ * SEC-009: Only redirect to internal paths to prevent open-redirect / phishing.
+ * Anything starting with http(s) or `//` is treated as external and discarded.
+ */
+function safeRedirect(value, fallback) {
+  if (typeof value !== "string") return fallback;
+  if (value.startsWith("//") || /^[a-z]+:/i.test(value)) return fallback;
+  if (!value.startsWith("/")) return fallback;
+  return value;
+}
+
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -18,7 +29,8 @@ export function Login() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate(location.state?.from || "/portal", { replace: true });
+      const target = safeRedirect(location.state?.from, "/portal");
+      navigate(target, { replace: true });
     } catch (err) {
       setError(err.message || "No se pudo iniciar sesión");
     } finally {

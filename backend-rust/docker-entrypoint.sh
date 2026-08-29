@@ -8,4 +8,6 @@ else
   echo "Seed data dir not found, skipping seed."
 fi
 
+# Ejecutar el backend en foreground. tini (definido en el Dockerfile) se
+# encarga de propagar SIGTERM al proceso, permitiendo un apagado limpio.
 exec tivit-portal-backend

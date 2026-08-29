@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { X, Plus } from "lucide-react";
 import { api } from "../../lib/api";
+import { useToast } from "../../context/ToastContext.jsx";
 import { formatDate, formatRelative } from "./components/Badges";
 
 function parseGoals(goal) {
@@ -18,6 +19,7 @@ function parseGoals(goal) {
 export function Sprints({ projectId } = {}) {
   const { id: routeId } = useParams();
   const pid = projectId || routeId;
+  const toast = useToast();
   const [sprints, setSprints] = useState([]);
   const [activeSprint, setActiveSprint] = useState(null);
   const [error, setError] = useState(null);
@@ -54,18 +56,20 @@ export function Sprints({ projectId } = {}) {
       });
       setNewSprint({ name: "", goals: [""], start_date: "", end_date: "", risks: "", team_dependencies: "", third_party_dependencies: "" });
       setShowCreate(false);
+      toast.success("Sprint creado");
       refresh();
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message);
     }
   }
 
   async function handleActivate(id) {
     try {
       await api.activateSprint(id);
+      toast.success("Sprint activado");
       refresh();
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message);
     }
   }
 
@@ -73,13 +77,14 @@ export function Sprints({ projectId } = {}) {
     if (!confirm("¿Eliminar este sprint? Las tareas quedarán sin sprint asignado.")) return;
     try {
       await api.deleteSprint(id);
+      toast.success("Sprint eliminado");
       refresh();
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message);
     }
   }
 
-  if (error) return <div className="text-alert">Error: {error}</div>;
+  if (error) return <div className="text-alert">No se pudieron cargar los sprints.</div>;
 
   return (
     <div>

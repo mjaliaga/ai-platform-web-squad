@@ -1,12 +1,23 @@
-import { createContext, useContext } from "react";
+import { createContext, useCallback, useContext, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
-import { queryKeys } from "../lib/queryClient";
+import { queryKeys, setUnauthorizedHandler } from "../lib/queryClient";
+import { useToast } from "./ToastContext.jsx";
 
 const AuthContext = createContext(null);
 
+const AUTH_QUERY_KEYS = [
+  queryKeys.me,
+  queryKeys.unreadCount,
+  queryKeys.dashboardMe,
+  queryKeys.dashboard,
+];
+
 export function AuthProvider({ children }) {
   const qc = useQueryClient();
+  const toast = useToast();
+  const navigate = useNavigate();
 
   const meQuery = useQuery({
     queryKey: queryKeys.me,
@@ -14,6 +25,25 @@ export function AuthProvider({ children }) {
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Wire the global 401 handler — clear auth-related data and bounce to /login.
+  const handleUnauthorized = useCallback(() => {
+    qc.setQueryData(queryKeys.me, null);
+    qc.removeQueries({ queryKey: AUTH_QUERY_KEYS, exact: false });
+    // Only navigate if we are not already on a public route.
+    const publicPaths = ["/", "/login", "/proyectos", "/laboratorio", "/casos-de-exito", "/poc"];
+    const isPublic = publicPaths.some(
+      (p) => window.location.pathname === p || window.location.pathname.startsWith(`${p}/`)
+    );
+    if (!isPublic) {
+      toast.warning("Tu sesión expiró. Vuelve a iniciar sesión.");
+      navigate("/login", { replace: true });
+    }
+  }, [qc, navigate, toast]);
+
+  useEffect(() => {
+    setUnauthorizedHandler(handleUnauthorized);
+  }, [handleUnauthorized]);
 
   const loginMutation = useMutation({
     mutationFn: ({ email, password }) => api.login(email, password),
@@ -26,8 +56,9 @@ export function AuthProvider({ children }) {
   const logoutMutation = useMutation({
     mutationFn: () => api.logout(),
     onSuccess: () => {
+      // Selective cleanup — preserve static CMS data and any unrelated query cache.
       qc.setQueryData(queryKeys.me, null);
-      qc.clear();
+      qc.removeQueries({ queryKey: AUTH_QUERY_KEYS, exact: false });
     },
   });
 

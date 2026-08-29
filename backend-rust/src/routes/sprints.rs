@@ -33,6 +33,8 @@ fn goals_to_json(goals: &Option<Vec<String>>) -> Option<String> {
     goals.as_ref().map(|g| serde_json::to_string(g).unwrap_or_else(|_| "[]".to_string()))
 }
 
+/// Fetch stats for a single sprint. Used by single-sprint endpoints;
+/// batch listings use an inline GROUP BY for performance.
 async fn sprint_stats(
     db: &sqlx::SqlitePool,
     sprint_id: &str,
@@ -74,18 +76,27 @@ pub async fn list_sprints(
             }
         }
     }
+    // FIX-024: SQLite does NOT support NULLS LAST. Use a CASE-based sort
+    // to keep NULL start_dates at the end of the DESC ordering.
+    let order_clause =
+        "ORDER BY (start_date IS NULL) ASC, start_date DESC, created_at DESC";
+
     let (sql, binds): (String, Vec<String>) = if let Some(pid) = params.get("project") {
         (
-            "SELECT id, name, goal, start_date, end_date, is_active, project_id, risks, team_dependencies, third_party_dependencies, created_at \
-             FROM sprints WHERE project_id = ? ORDER BY start_date DESC NULLS LAST, created_at DESC"
-                .to_string(),
+            format!(
+                "SELECT id, name, goal, start_date, end_date, is_active, project_id, risks, team_dependencies, third_party_dependencies, created_at \
+                 FROM sprints WHERE project_id = ? {}",
+                order_clause
+            ),
             vec![pid.clone()],
         )
     } else {
         (
-            "SELECT id, name, goal, start_date, end_date, is_active, project_id, risks, team_dependencies, third_party_dependencies, created_at \
-             FROM sprints ORDER BY start_date DESC NULLS LAST, created_at DESC"
-                .to_string(),
+            format!(
+                "SELECT id, name, goal, start_date, end_date, is_active, project_id, risks, team_dependencies, third_party_dependencies, created_at \
+                 FROM sprints {}",
+                order_clause
+            ),
             vec![],
         )
     };
@@ -99,17 +110,53 @@ pub async fn list_sprints(
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let mut result = Vec::with_capacity(sprints.len());
-    for s in sprints {
-        let (total_tasks, done_tasks, total_estimate, total_spent) = sprint_stats(&state.db, &s.id).await?;
-        result.push(SprintWithStats {
-            sprint: s,
-            total_tasks,
-            done_tasks,
-            total_estimate,
-            total_spent,
-        });
+    if sprints.is_empty() {
+        return Ok(Json(vec![]));
     }
+
+    // PERF-001: Batch-load all sprint stats in a single GROUP BY query
+    // instead of N+1 per-sprint queries.
+    let sprint_ids: Vec<String> = sprints.iter().map(|s| s.id.clone()).collect();
+    let placeholders = vec!["?"; sprint_ids.len()].join(",");
+    let stats_sql = format!(
+        "SELECT sprint_id, COUNT(*) AS total, \
+         COALESCE(SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END), 0) AS done, \
+         COALESCE(SUM(estimate_hours), 0.0) AS estimate, \
+         COALESCE(SUM(time_spent_hours), 0.0) AS spent \
+         FROM tasks WHERE sprint_id IN ({}) \
+         GROUP BY sprint_id",
+        placeholders
+    );
+    let mut stats_q = sqlx::query_as::<_, (String, i64, i64, f64, f64)>(&stats_sql);
+    for id in &sprint_ids {
+        stats_q = stats_q.bind(id);
+    }
+    let stats_rows = stats_q
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let mut stats_map: std::collections::HashMap<String, (i64, i64, f64, f64)> =
+        std::collections::HashMap::with_capacity(stats_rows.len());
+    for (id, total, done, estimate, spent) in stats_rows {
+        stats_map.insert(id, (total, done, estimate, spent));
+    }
+
+    let result: Vec<SprintWithStats> = sprints
+        .into_iter()
+        .map(|s| {
+            let (total_tasks, done_tasks, total_estimate, total_spent) = stats_map
+                .get(&s.id)
+                .copied()
+                .unwrap_or((0, 0, 0.0, 0.0));
+            SprintWithStats {
+                sprint: s,
+                total_tasks,
+                done_tasks,
+                total_estimate,
+                total_spent,
+            }
+        })
+        .collect();
 
     Ok(Json(result))
 }

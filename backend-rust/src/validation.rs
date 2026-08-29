@@ -71,6 +71,30 @@ pub fn validate_required(field: &str, value: &str, max_len: usize) -> Result<(),
     Ok(())
 }
 
+/// FIX-007: Real email validation — requires local part, "@", domain with at
+/// least one dot, and rejects obvious garbage like "a@b" or whitespace.
+pub fn validate_email(email: &str) -> Result<(), Response> {
+    let trimmed = email.trim();
+    if trimmed.is_empty() {
+        return Err(err(StatusCode::BAD_REQUEST, "Email no puede estar vacío".to_string()));
+    }
+    if trimmed.len() > 254 {
+        return Err(err(StatusCode::BAD_REQUEST, "Email demasiado largo".to_string()));
+    }
+    let parts: Vec<&str> = trimmed.split('@').collect();
+    if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
+        return Err(err(StatusCode::BAD_REQUEST, "Email inválido".to_string()));
+    }
+    let domain = parts[1];
+    if !domain.contains('.') || domain.starts_with('.') || domain.ends_with('.') {
+        return Err(err(StatusCode::BAD_REQUEST, "Email inválido".to_string()));
+    }
+    if trimmed.chars().any(|c| c.is_whitespace()) {
+        return Err(err(StatusCode::BAD_REQUEST, "Email inválido".to_string()));
+    }
+    Ok(())
+}
+
 pub fn validate_hours(hours: f64) -> Result<(), Response> {
     if !hours.is_finite() || hours <= 0.0 || hours > 168.0 {
         return Err(err(

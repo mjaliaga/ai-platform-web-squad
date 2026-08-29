@@ -5,16 +5,19 @@ services:
       dockerfile: backend-rust/Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: sqlite:///app/data/portal.db
-      JWT_SECRET: ${JWT_SECRET:-0e46c3b7bd505b9ac8a5c64d63458543615ad2fd30943d851b22a1a627b08f90}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///app/data/portal.db}
+      # SEC-001: JWT_SECRET has NO default. docker compose will fail loudly
+      # if not set, which is the intended behavior.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required. Generate with: openssl rand -hex 64}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       PORT: 3000
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required in production}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-manuel.aliaga@tivit.com}
-      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-tivit2026}
-      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Manuel Aliaga}
+      # SEC-001: SEED_ADMIN_* are optional. If unset, no admin is seeded.
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Admin}
       MEDIA_DIR: /app/media
       UPLOAD_DIR: /app/data/uploads
       SEED_DATA_DIR: /app/seed-data
@@ -38,14 +41,33 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    # SEC-003: Redis protected by a password (set REDIS_PASSWORD in .env).
+    command: >
+      sh -c "
+        if [ -n \"$$REDIS_PASSWORD\" ]; then
+          redis-server --requirepass \"$$REDIS_PASSWORD\";
+        else
+          redis-server --bind 127.0.0.1;
+        fi
+      "
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     networks:
       - tivit
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli ping"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -54,6 +76,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
 
   frontend:
     build:
@@ -71,8 +101,10 @@ services:
       - tivit-media:/usr/share/nginx/html/media-cms:ro
     networks:
       - tivit
+    # FIX-006: Healthcheck now hits the nginx root, not a backend endpoint
+    # (which doesn't exist on the frontend container).
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/health"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -82,6 +114,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
 
 volumes:
   tivit-db:

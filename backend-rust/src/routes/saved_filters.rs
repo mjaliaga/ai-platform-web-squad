@@ -235,9 +235,36 @@ pub async fn search_tasks(
     execute_jql_query(&state, &claims, &payload.query, limit, offset).await
 }
 
+/// SEC-002: Whitelist mapping of JQL field names to safe SQL column identifiers.
+/// Using a map (not direct string concatenation) prevents SQL injection even if
+/// the JQL parser is bypassed.
+fn resolve_sql_column(field: &str) -> Option<&'static str> {
+    match field.to_lowercase().as_str() {
+        "status" => Some("status"),
+        "assignee" | "assignee_id" => Some("assignee_id"),
+        "reporter" | "reporter_id" => Some("reporter_id"),
+        "priority" => Some("priority"),
+        "type" => Some("type"),
+        "project" | "project_id" => Some("project_id"),
+        "epic" | "epic_id" => Some("epic_id"),
+        "sprint" | "sprint_id" => Some("sprint_id"),
+        "story_points" => Some("story_points"),
+        "resolution" => Some("resolution"),
+        _ => None,
+    }
+}
+
+/// Whitelist of orderable columns. Anything not here is rejected.
+fn is_orderable_column(field: &str) -> bool {
+    matches!(
+        field.to_lowercase().as_str(),
+        "created_at" | "updated_at" | "title" | "code" | "status" | "priority" | "story_points"
+    )
+}
+
 async fn execute_jql_query(
     state: &Arc<AppState>,
-    _claims: &Claims,
+    claims: &Claims,
     query: &str,
     limit: i64,
     offset: i64,
@@ -247,23 +274,18 @@ async fn execute_jql_query(
         format!("Query inválida: {}", e.message),
     ))?;
 
+    // Clamp limit/offset to safe bounds.
+    let limit = limit.clamp(1, 500);
+    let offset = offset.max(0);
+
     let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
         "SELECT id, code, title, status, priority, assignee_id, project_id FROM tasks WHERE deleted_at IS NULL"
     );
 
     for cond in &parsed.conditions {
-        let col = match cond.field.as_str() {
-            "status" => "status",
-            "assignee" | "assignee_id" => "assignee_id",
-            "reporter" | "reporter_id" => "reporter_id",
-            "priority" => "priority",
-            "type" => "type",
-            "project" | "project_id" => "project_id",
-            "epic" | "epic_id" => "epic_id",
-            "sprint" | "sprint_id" => "sprint_id",
-            "story_points" => "story_points",
-            "resolution" => "resolution",
-            _ => continue,
+        // SEC-002: Use the resolver map to get a vetted column constant.
+        let Some(col) = resolve_sql_column(&cond.field) else {
+            continue;
         };
 
         match &cond.operator {
@@ -284,7 +306,7 @@ async fn execute_jql_query(
                     jql::JqlValue::String(s) => qb.push_bind(s),
                     jql::JqlValue::Number(n) => qb.push_bind(*n),
                     jql::JqlValue::Boolean(b) => qb.push_bind(*b),
-                    jql::JqlValue::CurrentUser => qb.push("(SELECT id FROM users WHERE id = 'unknown')"),
+                    jql::JqlValue::CurrentUser => qb.push_bind(&claims.sub),
                     jql::JqlValue::Null => qb.push("NULL"),
                     jql::JqlValue::List(_) => qb.push("NULL"),
                 };
@@ -295,7 +317,7 @@ async fn execute_jql_query(
                     jql::JqlValue::String(s) => qb.push_bind(s),
                     jql::JqlValue::Number(n) => qb.push_bind(*n),
                     jql::JqlValue::Boolean(b) => qb.push_bind(*b),
-                    jql::JqlValue::CurrentUser => qb.push("(SELECT id FROM users WHERE id = 'unknown')"),
+                    jql::JqlValue::CurrentUser => qb.push_bind(&claims.sub),
                     jql::JqlValue::Null => qb.push("NULL"),
                     jql::JqlValue::List(_) => qb.push("NULL"),
                 };
@@ -333,23 +355,33 @@ async fn execute_jql_query(
                 });
             }
             jql::Operator::Contains => {
-                qb.push(format!(" AND {} LIKE ", col));
+                // SEC-002: Escape LIKE wildcards coming from user input.
                 if let jql::JqlValue::String(s) = &cond.value {
-                    qb.push_bind(format!("%{}%", s));
+                    let escaped = s
+                        .replace('\\', "\\\\")
+                        .replace('%', "\\%")
+                        .replace('_', "\\_");
+                    qb.push(format!(" AND {} LIKE ", col));
+                    qb.push_bind(format!("%{}%", escaped));
+                    // Tell SQLite to treat \ as escape.
+                    qb.push(" ESCAPE '\\'");
                 }
             }
         }
     }
 
-    // ORDER BY
-    if let Some(order) = &parsed.order_by {
-        let dir = parsed.order_dir.as_deref().unwrap_or("ASC");
-        qb.push(format!(" ORDER BY {} {}", order, dir));
-    } else {
-        qb.push(" ORDER BY created_at DESC");
-    }
-
-    qb.push(format!(" LIMIT {} OFFSET {}", limit, offset));
+    // ORDER BY: must use a whitelist of orderable columns.
+    let order_col = parsed.order_by
+        .as_deref()
+        .filter(|c| is_orderable_column(c))
+        .unwrap_or("created_at");
+    let dir = match parsed.order_dir.as_deref() {
+        Some("DESC") => "DESC",
+        _ => "ASC",
+    };
+    qb.push(format!(" ORDER BY {} {} LIMIT ? OFFSET ?", order_col, dir));
+    qb.push_bind(limit);
+    qb.push_bind(offset);
 
     let rows = qb.build().fetch_all(&state.db).await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;

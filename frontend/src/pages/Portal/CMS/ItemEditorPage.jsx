@@ -11,6 +11,7 @@ import {
 import { useCollections } from "../../../lib/contentQueries";
 import { DynamicFormField } from "../../../components/CMS/DynamicFormField";
 import { useAuth } from "../../../context/AuthContext";
+import { useToast } from "../../../context/ToastContext.jsx";
 
 const READ_ONLY_COLLECTIONS = ["proyectos", "casos-de-exito", "almaviva", "xms"];
 const EDITABLE_COLLECTIONS = ["laboratorio", "poc"];
@@ -19,6 +20,7 @@ export function ItemEditorPage() {
   const { collection, slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useToast();
   const isAdmin = user?.role === "admin";
   const isReadOnlyCollection = READ_ONLY_COLLECTIONS.includes(collection);
   const isEditableCollection = EDITABLE_COLLECTIONS.includes(collection);
@@ -94,7 +96,7 @@ export function ItemEditorPage() {
 
   async function handleSave() {
     if (!canEdit) {
-      alert("No tienes permisos para editar esta colección (solo admin en Tivit Labs y PoC).");
+      toast.warning("No tienes permisos para editar esta colección (solo admin en Tivit Labs y PoC).");
       return;
     }
     if (!validate()) return;
@@ -105,15 +107,17 @@ export function ItemEditorPage() {
           data,
           published,
         });
+        toast.success("Item creado");
         navigate(`/portal/cms/${collection}/${result.slug}`, { replace: true });
       } else {
         await updateMut.mutateAsync({
           slug,
           payload: { slug: data.slug, data, published },
         });
+        toast.success("Cambios guardados");
       }
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -126,7 +130,7 @@ export function ItemEditorPage() {
 
   async function handleTogglePublish() {
     if (!canEdit) {
-      alert("No tienes permisos para publicar en esta colección.");
+      toast.warning("No tienes permisos para publicar en esta colección.");
       return;
     }
     if (isNew) {
@@ -136,8 +140,9 @@ export function ItemEditorPage() {
     try {
       await publishMut.mutateAsync({ slug, published: !published });
       setPublished(!published);
+      toast.success(!published ? "Publicado" : "Pasado a borrador");
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 

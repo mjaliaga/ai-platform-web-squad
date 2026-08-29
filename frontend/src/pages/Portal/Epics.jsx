@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Target, Calendar, User, Edit3, Trash2, X, ChevronRight } from "lucide-react";
 import { api } from "../../lib/api";
 import { UserAvatar, formatDate, StatusBadge } from "./components/Badges";
+import { useToast } from "../../context/ToastContext.jsx";
 
 const EPIC_STATUSES = {
   open: { label: "Abierto", color: "bg-gray-100 text-gray-700" },
@@ -21,6 +22,7 @@ export default function Epics() {
   const [showForm, setShowForm] = useState(false);
   const [editingEpic, setEditingEpic] = useState(null);
   const [filter, setFilter] = useState("all");
+  const toast = useToast();
 
   useEffect(() => {
     loadData();
@@ -36,7 +38,7 @@ export default function Epics() {
       setEpics(epicsData);
       setProjects(projectsData);
     } catch (err) {
-      console.error("Error loading epics:", err);
+      toast.error("Error cargando epics: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -46,14 +48,16 @@ export default function Epics() {
     try {
       if (editingEpic) {
         await api.updateEpic(editingEpic.id, formData);
+        toast.success("Epic actualizado");
       } else {
         await api.createEpic(formData);
+        toast.success("Epic creado");
       }
       setShowForm(false);
       setEditingEpic(null);
       await loadData();
     } catch (err) {
-      alert("Error al guardar: " + err.message);
+      toast.error("Error al guardar: " + err.message);
     }
   }
 
@@ -61,9 +65,10 @@ export default function Epics() {
     if (!confirm(`¿Eliminar el epic "${epic.name}"? Las tareas asociadas se desacoplarán.`)) return;
     try {
       await api.deleteEpic(epic.id);
+      toast.success("Epic eliminado");
       await loadData();
     } catch (err) {
-      alert("Error al eliminar: " + err.message);
+      toast.error("Error al eliminar: " + err.message);
     }
   }
 
@@ -236,6 +241,7 @@ function EpicForm({ epic, projects, onSave, onClose }) {
     status: epic?.status || "open",
   });
   const [users, setUsers] = useState([]);
+  const toast = useToast();
 
   useEffect(() => {
     api.listUsers({ limit: 100 }).then((d) => setUsers(d.users || d || [])).catch(() => {});
@@ -244,7 +250,7 @@ function EpicForm({ epic, projects, onSave, onClose }) {
   function handleSubmit(e) {
     e.preventDefault();
     if (!formData.name.trim()) {
-      alert("El nombre es requerido");
+      toast.warning("El nombre es requerido");
       return;
     }
     onSave({
