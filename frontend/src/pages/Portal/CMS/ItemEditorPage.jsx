@@ -12,9 +12,11 @@ import { useCollections } from "../../../lib/contentQueries";
 import { DynamicFormField } from "../../../components/CMS/DynamicFormField";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext.jsx";
+import { RfChart } from "../../../components/RfChart";
 
-const READ_ONLY_COLLECTIONS = ["proyectos", "casos-de-exito", "almaviva", "xms"];
-const EDITABLE_COLLECTIONS = ["laboratorio", "poc"];
+// Todas las colecciones son editables para usuarios autenticados (RBAC en backend)
+// "proyectos" se redirige a /portal/portfolio por vivir en tabla projects
+const EDITABLE_COLLECTIONS = ["laboratorio", "poc", "casos-de-exito", "almaviva", "xms"];
 
 export function ItemEditorPage() {
   const { collection, slug } = useParams();
@@ -22,9 +24,10 @@ export function ItemEditorPage() {
   const { user } = useAuth();
   const toast = useToast();
   const isAdmin = user?.role === "admin";
-  const isReadOnlyCollection = READ_ONLY_COLLECTIONS.includes(collection);
+  const isEditor = user?.role === "editor" || user?.role === "admin" || user?.role === "member";
   const isEditableCollection = EDITABLE_COLLECTIONS.includes(collection);
-  const canEdit = isAdmin && isEditableCollection && !isReadOnlyCollection;
+  const isReadOnlyCollection = false;
+  const canEdit = !!user && isEditor && isEditableCollection;
   const isNew = !slug || slug === "new";
 
   const { data: collections } = useCollections();
@@ -280,14 +283,9 @@ export function ItemEditorPage() {
         </div>
       </div>
 
-      {isReadOnlyCollection && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          Esta colección (<strong>{collection}</strong>) es de <strong>solo lectura</strong>. No se permite crear ni editar (XMS / Almaviva / Casos de éxito). Solo <strong>Tivit Labs</strong> y <strong>PoC</strong> son editables.
-        </div>
-      )}
-      {!isAdmin && !isReadOnlyCollection && (
+      {!canEdit && (
         <div className="rounded-xl border border-alert/20 bg-alert/5 p-3 text-sm text-alert">
-          Solo los administradores pueden editar. Tu rol es <strong>{user?.role}</strong>. Cambia a admin para habilitar el guardado.
+          No tienes permisos para editar. Necesitas estar autenticado como <strong>member/editor/admin</strong>. Tu rol actual: <strong>{user?.role || "—"}</strong>.
         </div>
       )}
 
@@ -345,6 +343,13 @@ export function ItemEditorPage() {
                 />
               ))}
             </div>
+          </Section>
+        )}
+
+        {Array.isArray(data.mediciones) && data.mediciones.length > 0 && (
+          <Section title="Vista previa — dB / Fase (ADS)" description="La magnitud se convierte a dB con 20·log10(|mag|) y la fase se grafica en grados" wide>
+            <RfChart mediciones={data.mediciones} />
+            <p className="mt-2 text-xs text-tivit-ink/45">Esta vista previa es idéntica al gráfico público. Carga <code className="rounded bg-tivit-ink/5 px-1">magnitud lineal</code> o <code className="rounded bg-tivit-ink/5 px-1">magDb</code> + <code className="rounded bg-tivit-ink/5 px-1">fase</code> por punto.</p>
           </Section>
         )}
       </div>

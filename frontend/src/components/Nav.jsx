@@ -68,18 +68,6 @@ export function Nav() {
               <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
             </a>
           ))}
-          <NavLink
-              to="/portal"
-              className={({ isActive }) =>
-                `rounded-full px-4 py-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2 ${
-                  isActive
-                    ? "bg-tivit-red-light text-tivit-red-dark"
-                    : "text-tivit-ink/75 hover:bg-tivit-red-light/60 hover:text-tivit-red"
-                }`
-              }
-            >
-              Portal
-            </NavLink>
         </nav>
 
         <button
@@ -127,18 +115,6 @@ export function Nav() {
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               </a>
             ))}
-            <NavLink
-              to="/portal"
-              className={({ isActive }) =>
-                `rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                  isActive
-                    ? "bg-tivit-red-light text-tivit-red-dark"
-                    : "text-tivit-ink/75 hover:bg-tivit-red-light/60 hover:text-tivit-red"
-                }`
-              }
-            >
-              Portal
-            </NavLink>
           </nav>
         </div>
       )}

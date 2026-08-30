@@ -321,7 +321,7 @@ function normalizarItemApi(item) {
   const result = { ...item };
 
   // Parse JSON strings for array fields (from projects table flat columns)
-  const arrayFields = ["equipo", "stack", "problemas", "que_hicimos", "queHicimos", "resultados", "highlights", "galeria"];
+  const arrayFields = ["equipo", "stack", "problemas", "que_hicimos", "queHicimos", "resultados", "highlights", "galeria", "mediciones", "medicionesRf"];
   for (const campo of arrayFields) {
     const val = result[campo];
     if (typeof val === "string" && val.startsWith("[")) {

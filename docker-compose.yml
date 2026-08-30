@@ -8,12 +8,12 @@ services:
       DATABASE_URL: ${DATABASE_URL:-sqlite:///app/data/portal.db}
       # SEC-001: JWT_SECRET has NO default. docker compose will fail loudly
       # if not set, which is the intended behavior.
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required. Generate with: openssl rand -hex 64}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required. Generate with openssl rand -hex 64}"
+      JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-8h}"
       PORT: 3000
-      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required in production}
-      COOKIE_SECURE: ${COOKIE_SECURE:-false}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      CORS_ORIGIN: "${CORS_ORIGIN:?CORS_ORIGIN is required in production}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
       # SEC-001: SEED_ADMIN_* are optional. If unset, no admin is seeded.
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
@@ -21,7 +21,6 @@ services:
       MEDIA_DIR: /app/media
       UPLOAD_DIR: /app/data/uploads
       SEED_DATA_DIR: /app/seed-data
-      SKIP_SEED_PROJECTS: "1"
     volumes:
       - tivit-db:/app/data
       - tivit-media:/app/media
@@ -57,9 +56,9 @@ services:
     command: >
       sh -c "
         if [ -n \"$$REDIS_PASSWORD\" ]; then
-          redis-server --requirepass \"$$REDIS_PASSWORD\";
+          redis-server --requirepass \"$$REDIS_PASSWORD\" --bind 0.0.0.0;
         else
-          redis-server --bind 127.0.0.1;
+          redis-server --bind 0.0.0.0 --protected-mode no;
         fi
       "
     environment:

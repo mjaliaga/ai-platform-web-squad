@@ -300,6 +300,10 @@ export const api = {
     const qs = new URLSearchParams(params).toString();
     return unwrapPaginated(await request(`/content/audit${qs ? `?${qs}` : ""}`));
   },
+  listSecurityAudit: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return unwrapPaginated(await request(`/admin/audit/security${qs ? `?${qs}` : ""}`));
+  },
 
   // --- Media ---
   listMedia: async (params = {}) => {

@@ -48,6 +48,7 @@ pub async fn build_router(state: Arc<AppState>) -> Router {
         .merge(routes::reports::router(state.clone()))
         .merge(routes::todos::router(state.clone()))
         .merge(routes::certifications::router(state.clone()))
+        .merge(routes::admin_audit::router(state.clone()))
         .merge(content::routes::router(state.clone()))
         .merge(content::media::router(state.clone()))
         .layer(axum::middleware::from_fn_with_state(state.clone(), csrf_protect));

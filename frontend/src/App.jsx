@@ -106,6 +106,9 @@ const MediaManagerPage = lazy(() =>
 const ContentAuditPage = lazy(() =>
   import("./pages/Portal/CMS/ContentAuditPage").then((m) => ({ default: m.ContentAuditPage }))
 );
+const AdminAuditPage = lazy(() =>
+  import("./pages/Portal/AdminAuditPage").then((m) => ({ default: m.AdminAuditPage }))
+);
 
 function PageLoader() {
   return (
@@ -223,6 +226,7 @@ function App() {
               <Route path="media" element={<MediaManagerPage />} />
               <Route path="audit" element={<ContentAuditPage />} />
             </Route>
+            <Route path="admin/audit" element={<AdminAuditPage />} />
           </Route>
         </Routes>
       </Suspense>

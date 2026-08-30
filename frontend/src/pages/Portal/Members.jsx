@@ -159,6 +159,7 @@ export function Members() {
               Rol
               <select className={inputClass} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
                 <option value="member">Miembro</option>
+                <option value="editor">Editor</option>
                 <option value="admin">Administrador</option>
               </select>
             </label>
@@ -313,6 +314,7 @@ function MemberCard({ m, wl, mProjects, user, isAdmin, inputClass, changeRole, c
               <select value={m.role} onChange={(e) => changeRole(m, e.target.value)}
                 className="rounded-lg border border-tivit-red-light bg-white px-2 py-1.5 text-xs font-medium text-tivit-ink outline-none focus:border-tivit-red">
                 <option value="member">Miembro</option>
+                <option value="editor">Editor</option>
                 <option value="admin">Admin</option>
               </select>
               <button onClick={() => toggleActive(m)}

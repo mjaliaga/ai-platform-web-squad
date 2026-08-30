@@ -13,18 +13,15 @@ use uuid::Uuid;
 use crate::middleware::auth::require_auth;
 use crate::models::{Claims, CollectionInfo, ContentItem, ContentItemOut, FieldDef, PublicUser};
 use super::schemas;
-use crate::validation::{error_response, internal_error, require_admin};
+use crate::validation::{error_response, internal_error, require_admin, require_admin_or_editor};
 use crate::AppState;
 
-const READ_ONLY_COLLECTIONS: &[&str] = &["proyectos", "casos-de-exito", "almaviva", "xms"];
+// Ya no hay colecciones de solo lectura: todas son editables desde el portal
+// (el acceso se controla por rol, no por colección). La colección "proyectos"
+// vive en la tabla projects y se gestiona en /portal/portfolio.
+const READ_ONLY_COLLECTIONS: &[&str] = &[];
 
-fn require_mutable(collection: &str) -> Result<(), Response> {
-    if READ_ONLY_COLLECTIONS.contains(&collection) {
-        return Err(error_response(
-            StatusCode::FORBIDDEN,
-            format!("La colección '{}' es de solo lectura y no puede ser editada", collection),
-        ));
-    }
+fn require_mutable(_collection: &str) -> Result<(), Response> {
     Ok(())
 }
 
@@ -287,7 +284,7 @@ pub async fn create_item(
     Path(collection): Path<String>,
     Json(payload): Json<UpsertRequest>,
 ) -> Result<(StatusCode, Json<ContentItemOut>), Response> {
-    require_admin(&claims)?;
+    require_admin_or_editor(&claims)?;
     require_mutable(&collection)?;
     require_collection(&collection)?;
     schemas::validate_data(&collection, &payload.data)
@@ -377,7 +374,7 @@ pub async fn update_item(
     Path((collection, slug)): Path<(String, String)>,
     Json(payload): Json<UpsertRequest>,
 ) -> Result<Json<ContentItemOut>, Response> {
-    require_admin(&claims)?;
+    require_admin_or_editor(&claims)?;
     require_mutable(&collection)?;
     require_collection(&collection)?;
     schemas::validate_data(&collection, &payload.data)
@@ -475,7 +472,7 @@ pub async fn set_published(
     Path((collection, slug)): Path<(String, String)>,
     Json(payload): Json<PublishRequest>,
 ) -> Result<StatusCode, Response> {
-    require_admin(&claims)?;
+    require_admin_or_editor(&claims)?;
     require_mutable(&collection)?;
     require_collection(&collection)?;
 
@@ -516,7 +513,7 @@ pub async fn delete_item(
     Extension(claims): Extension<Claims>,
     Path((collection, slug)): Path<(String, String)>,
 ) -> Result<StatusCode, Response> {
-    require_admin(&claims)?;
+    require_admin_or_editor(&claims)?;
     require_mutable(&collection)?;
     require_collection(&collection)?;
 
@@ -545,7 +542,7 @@ pub async fn duplicate_item(
     Extension(claims): Extension<Claims>,
     Path((collection, slug)): Path<(String, String)>,
 ) -> Result<(StatusCode, Json<ContentItemOut>), Response> {
-    require_admin(&claims)?;
+    require_admin_or_editor(&claims)?;
     require_mutable(&collection)?;
     require_collection(&collection)?;
 

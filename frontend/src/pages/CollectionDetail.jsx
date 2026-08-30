@@ -21,6 +21,7 @@ import { Galeria } from "../components/detalle/Galeria";
 import { VideoPlaceholder } from "../components/detalle/VideoPlaceholder";
 import { SkeletonDetail } from "../components/Skeleton";
 import { RelatedItems } from "../components/RelatedItems";
+import { RfChart } from "../components/RfChart";
 
 /** Ficha de detalle de un elemento: /proyectos/:slug, /laboratorio/:slug, … */
 export function CollectionDetail({ ruta }) {
@@ -163,6 +164,12 @@ export function CollectionDetail({ ruta }) {
   const galeria = item.galeria || [];
   const hayVideos = Boolean(videoPromo || videoTec || item.videoPlaceholder);
   const urlProyecto = item.urlProyecto || item.documentacion;
+  const mediciones = item.mediciones || item.medicionesRf || (() => {
+    try {
+      const pd = typeof item.portfolio_data === "string" ? JSON.parse(item.portfolio_data) : item.portfolio_data;
+      return pd?.mediciones || null;
+    } catch { return null; }
+  })();
 
   return (
     <SiteLayout>
@@ -654,6 +661,18 @@ export function CollectionDetail({ ruta }) {
                         );
                       })}
                     </dl>
+                  </section>
+                </Reveal>
+              )}
+
+              {mediciones?.length > 0 && (
+                <Reveal>
+                  <section className="pt-10">
+                    <Eyebrow>Mediciones RF — Magnitud (dB) y Fase</Eyebrow>
+                    <p className="mt-2 max-w-2xl text-sm text-tivit-ink/60">Magnitud en dB (20·log10) y fase en grados, idéntico a ADS. Datos cargados desde el CMS.</p>
+                    <div className="mt-4">
+                      <RfChart mediciones={mediciones} titulo="" />
+                    </div>
                   </section>
                 </Reveal>
               )}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown, CheckSquare, Award } from "lucide-react";
+import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown, CheckSquare, Award, Shield, FileClock } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { NotificationBell } from "./components/NotificationBell";
 
@@ -12,6 +12,8 @@ const links = [
 
 const adminLinks = [
   { to: "/portal/certifications", label: "Certificaciones", icon: Award },
+  { to: "/portal/cms", label: "Contenido", icon: FileClock },
+  { to: "/portal/admin/audit", label: "Auditoría", icon: Shield },
 ];
 
 export function PortalLayout() {

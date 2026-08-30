@@ -21,21 +21,21 @@ const ICONS = {
   xms: FileText,
 };
 
-const READ_ONLY_COLLECTIONS = ["proyectos", "casos-de-exito", "almaviva", "xms"];
-
 export function ContentManager() {
   const { user } = useAuth();
   const { data: collections, isLoading, error } = useCollections();
-  const canEdit = user?.role === "admin";
-
-  // Solo admin puede editar; otros ven en solo lectura
-  // No bloqueamos el acceso, solo deshabilitamos acciones en hijos
+  const canEdit = !!user && ["member", "editor", "admin"].includes(user.role);
 
   return (
     <>
       {!canEdit && (
+        <div className="mb-4 rounded-xl border border-alert/20 bg-alert/5 p-3 text-sm text-alert">
+          Necesitas iniciar sesión para editar contenido. Rol actual: <strong>{user?.role || "—"}</strong>.
+        </div>
+      )}
+      {canEdit && user?.role !== "admin" && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          Estás en modo <strong>solo lectura</strong> (rol: <strong>{user?.role}</strong>). Solo los <strong>administradores</strong> pueden editar. Puedes ver el contenido pero no crear ni modificar.
+          Estás en modo <strong>editor</strong> (rol: <strong>{user.role}</strong>). Puedes crear y editar. La publicación y eliminación crítica la confirma un <strong>admin</strong> en el historial.
         </div>
       )}
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">

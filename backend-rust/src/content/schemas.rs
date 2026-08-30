@@ -294,6 +294,7 @@ fn proyectos_schema() -> Vec<FieldDef> {
             field("url", "URL imagen", "media", true, None),
             field("alt", "Texto alternativo", "text", false, None),
         ], None),
+        mediciones_array(),
     ]
 }
 
@@ -376,6 +377,7 @@ fn casos_exito_schema() -> Vec<FieldDef> {
             None,
         ),
         field("urlProyecto", "URL del proyecto", "url", false, None),
+        mediciones_array(),
     ]
 }
 
@@ -546,6 +548,7 @@ fn poc_schema() -> Vec<FieldDef> {
         ], None),
         field("documentacion", "Documentación (URL)", "url", false, None),
         field("urlProyecto", "URL del proyecto", "url", false, None),
+        mediciones_array(),
     ]
 }
 
@@ -566,6 +569,25 @@ fn video_ref_fields() -> Vec<FieldDef> {
         ),
         field("url", "URL", "url", true, None),
     ]
+}
+
+fn mediciones_fields() -> Vec<FieldDef> {
+    vec![
+        field("frecuencia", "Frecuencia", "text", true, Some("Ej: 1.5 GHz, 2400 MHz, 2.4e9")),
+        field("magnitud", "Magnitud lineal", "number", false, Some("0..1, se convierte a dB con 20·log10(|mag|)")),
+        field("magDb", "Magnitud (dB)", "number", false, Some("Si ya tienes dB de ADS, ponlo directo (ej: -3.2). Tiene prioridad sobre magnitud lineal")),
+        field("fase", "Fase (°)", "number", true, Some("Grados -180..360")),
+    ]
+}
+
+fn mediciones_array() -> FieldDef {
+    array_field(
+        "mediciones",
+        "Mediciones RF — Magnitud (dB) y Fase",
+        "Punto",
+        mediciones_fields(),
+        Some("Carga puntos de frecuencia para graficar magnitud en dB y fase, igual que ADS. El gráfico convierte lineal→dB automáticamente."),
+    )
 }
 
 // ============================================================================
@@ -625,6 +647,7 @@ fn almaviva_schema() -> Vec<FieldDef> {
         array_field("clientes", "Clientes", "Cliente", vec![
             field("value", "Cliente", "text", true, None),
         ], None),
+        mediciones_array(),
     ]
 }
 
@@ -662,5 +685,6 @@ fn xms_schema() -> Vec<FieldDef> {
         array_field("integraciones", "Integraciones", "Integración", vec![
             field("value", "Integración", "text", true, None),
         ], None),
+        mediciones_array(),
     ]
 }

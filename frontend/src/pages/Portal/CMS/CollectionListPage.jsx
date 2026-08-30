@@ -19,16 +19,16 @@ import {
 } from "../../../lib/contentQueries";
 import { useAuth } from "../../../context/AuthContext";
 
-const READ_ONLY_COLLECTIONS = ["proyectos", "casos-de-exito", "almaviva", "xms"];
-const EDITABLE_COLLECTIONS = ["laboratorio", "poc"];
+const EDITABLE_COLLECTIONS = ["laboratorio", "poc", "casos-de-exito", "almaviva", "xms"];
 
 export function CollectionListPage() {
   const { collection } = useParams();
   const { data: collections } = useCollections();
   const { user } = useAuth();
+  const isEditor = !!user && ["member", "editor", "admin"].includes(user.role);
+  const isReadOnly = false;
+  const isEditable = EDITABLE_COLLECTIONS.includes(collection) && isEditor;
   const isAdmin = user?.role === "admin";
-  const isReadOnly = READ_ONLY_COLLECTIONS.includes(collection);
-  const isEditable = EDITABLE_COLLECTIONS.includes(collection) && isAdmin;
   const meta = collections?.find((c) => c.ruta === collection);
 
   // Proyectos migrado a tabla `projects` — mostrar aviso y redirigir a /portal/portfolio
@@ -111,17 +111,9 @@ export function CollectionListPage() {
         )}
       </div>
 
-      {isReadOnly && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          Esta colección es de <strong>solo lectura</strong> (XMS / Almaviva / Casos de éxito). La edición está deshabilitada incluso para admin. Use <strong>Tivit Labs</strong> o <strong>PoC</strong> para crear contenido editable.
-          {isReadOnly && collection !== "proyectos" && (
-            <span className="ml-1">No se permite crear, editar ni eliminar.</span>
-          )}
-        </div>
-      )}
-      {!isAdmin && !isReadOnly && (
+      {!isEditable && !isReadOnly && (
         <div className="rounded-xl border border-alert/20 bg-alert/5 p-3 text-sm text-alert">
-          Solo los administradores pueden editar esta colección. Tu rol actual es <strong>{user?.role}</strong>.
+          Necesitas estar autenticado para editar. Tu rol: <strong>{user?.role || "—"}</strong>. Contacta a un admin si necesitas acceso.
         </div>
       )}
 
