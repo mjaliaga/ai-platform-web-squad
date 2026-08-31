@@ -37,7 +37,7 @@ pub struct Condition {
     pub value: JqlValue,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum JqlValue {
     String(String),
     Number(f64),
