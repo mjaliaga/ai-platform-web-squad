@@ -31,8 +31,10 @@ class TestCmsProyectosE2E(unittest.TestCase):
             "code": f"PRJ-{self.suffix}",
             "name": f"Proyecto E2E {self.suffix}",
             "description": "Proyecto creado desde suite E2E.",
-            "stage": "Backlog",
-            "categoria": "proyectos",
+            # backend-rust/src/routes/projects.rs:20-27 y 44-51
+            # Categoría y stage deben ser valores válidos; 'proyectos' y 'Backlog' no combinan
+            "stage": "Proyecto",
+            "categoria": "Proyecto",
         }
 
     def test_01_create_and_update_project_with_team_members(self):

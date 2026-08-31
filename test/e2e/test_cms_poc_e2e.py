@@ -29,9 +29,11 @@ class TestCmsPocE2E(unittest.TestCase):
             "slug": slug,
             "data": {
                 "slug": slug,
-                "titulo": f"PoC {self.suffix}",
-                "estado": "Evaluación",
-                "highlights": ["Highlight 1", "Highlight 2"],
+                # Requeridos por poc_schema (schemas.rs:476-553)
+                "nombreComercial": f"PoC {self.suffix}",
+                "descripcion": f"Descripción E2E PoC {self.suffix} — validación automatizada.",
+                "tipo": "Interno",
+                "estado": "En evaluación",
             },
             "published": False,
         }
@@ -41,7 +43,7 @@ class TestCmsPocE2E(unittest.TestCase):
             update = self.client.patch(
                 f"/content/{self.collection}/{slug}",
                 {
-                    "data": {**payload["data"], "estado": "PoC"},
+                    "data": {**payload["data"], "estado": "En desarrollo"},
                     "published": True,
                 },
             )

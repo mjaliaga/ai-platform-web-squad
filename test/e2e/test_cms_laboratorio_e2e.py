@@ -29,10 +29,11 @@ class TestCmsLaboratorioE2E(unittest.TestCase):
             "slug": slug,
             "data": {
                 "slug": slug,
-                "titulo": f"Lab entry {self.suffix}",
-                "autor": "QA Bot",
-                "resumen": "Resumen de prueba E2E.",
+                # Requeridos por laboratorio_schema (schemas.rs:387-471)
+                "nombreComercial": f"Lab entry {self.suffix}",
+                "descripcion": f"Descripción corta E2E laboratorio {self.suffix} — validación automatizada.",
                 "estado": "En curso",
+                "categoria": "Producto",
             },
             "published": False,
         }
@@ -42,7 +43,7 @@ class TestCmsLaboratorioE2E(unittest.TestCase):
             update = self.client.patch(
                 f"/content/{self.collection}/{slug}",
                 {
-                    "data": {**payload["data"], "resumen": "Actualizado E2E."},
+                    "data": {**payload["data"], "descripcion": "Descripción actualizada E2E."},
                     "published": True,
                 },
             )

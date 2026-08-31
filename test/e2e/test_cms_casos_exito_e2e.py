@@ -29,10 +29,12 @@ class TestCmsCasosExitoE2E(unittest.TestCase):
             "slug": slug,
             "data": {
                 "slug": slug,
-                "titulo": f"Caso de éxito {self.suffix}",
+                # Campos requeridos según backend-rust/src/content/schemas.rs:277-382
+                "nombreComercial": f"Caso de éxito {self.suffix}",
+                "descripcion": f"Descripción E2E para {self.suffix} — caso de éxito de prueba automatizada.",
+                "industria": "Minería",
+                "estado": "Implementado en Producción",
                 "cliente": "Cliente Demo",
-                "industria": "Finanzas",
-                "resumen": "Caso de prueba E2E.",
             },
             "published": True,
         }
