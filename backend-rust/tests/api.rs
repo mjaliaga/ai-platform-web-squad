@@ -116,7 +116,7 @@ fn authed_get(uri: &str, token: &str) -> Request<Body> {
     Request::builder()
         .method("GET")
         .uri(uri)
-        .header("cookie", &token)
+        .header("cookie", token)
         .body(Body::empty())
         .unwrap()
 }
@@ -133,7 +133,7 @@ async fn create_task(router: &axum::Router, token: &str, title: &str) -> serde_j
         Request::builder()
             .method("POST")
             .uri("/api/tasks")
-            .header("cookie", &token)
+            .header("cookie", token)
             .header("content-type", "application/json")
             .body(Body::from(body))
             .unwrap(),
@@ -650,7 +650,7 @@ async fn perfil_y_password() {
             "PATCH",
             "/api/auth/password",
             &token,
-            r#"{"current_password":"testpass123","new_password":"corta"}"#,
+            &format!(r#"{{"current_password":"{ADMIN_PASSWORD}","new_password":"corta"}}"#),
         ),
     )
     .await;
@@ -663,7 +663,7 @@ async fn perfil_y_password() {
             "PATCH",
             "/api/auth/password",
             &token,
-            r#"{"current_password":"testpass123","new_password":"nueva1234"}"#,
+            &format!(r#"{{"current_password":"{ADMIN_PASSWORD}","new_password":"nueva1234"}}"#),
         ),
     )
     .await;
@@ -676,7 +676,7 @@ async fn perfil_y_password() {
             .uri("/api/auth/login")
             .header("content-type", "application/json")
             .body(Body::from(format!(
-                r#"{{"email":"{ADMIN_EMAIL}","password":"testpass123"}}"#
+                r#"{{"email":"{ADMIN_EMAIL}","password":"{ADMIN_PASSWORD}"}}"#
             )))
             .unwrap(),
     )

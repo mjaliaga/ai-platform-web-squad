@@ -179,14 +179,17 @@ fn parse_condition(s: &str) -> Result<Condition, ParseError> {
     }
 
     // Find operator position
-    let ops = ["!=", ">=", "<=", "=", ">", "<", " IN ", " NOT IN ", " CONTAINS "];
+    let ops = ["!=", ">=", "<=", "=", ">", "<", " NOT IN ", " IN ", " CONTAINS "];
     let mut op_pos = None;
+    let mut op_matched_len = 0;
     let mut op_str = "";
 
+    let s_upper = s.to_uppercase();
     for op in &ops {
-        if let Some(idx) = s.find(op) {
+        if let Some(idx) = s_upper.find(op) {
             if op_pos.is_none() || idx < op_pos.unwrap() {
                 op_pos = Some(idx);
+                op_matched_len = op.len();
                 op_str = op.trim();
             }
         }
@@ -198,7 +201,7 @@ fn parse_condition(s: &str) -> Result<Condition, ParseError> {
     })?;
 
     let field = s[..op_pos].trim().to_string();
-    let raw_value = s[op_pos + op_str.len()..].trim();
+    let raw_value = s[op_pos + op_matched_len..].trim();
 
     // Validate field
     let field_lower = field.to_lowercase();
