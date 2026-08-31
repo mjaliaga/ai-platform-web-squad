@@ -148,7 +148,7 @@ async fn crud_proyectos() {
         &router,
         "/api/projects",
         &token,
-        r#"{"name":"Proyecto Test","description":"Desc","color":"#2563eb","sector":"Proyecto","code":"TST-001"}"#,
+        r##"{"name":"Proyecto Test","description":"Desc","color":"#2563eb","sector":"Proyecto","code":"TST-001"}"##,
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "debería crear proyecto");
@@ -213,7 +213,7 @@ async fn project_members() {
         &router,
         "/api/projects",
         &token,
-        r#"{"name":"Proyecto Members","color":"#16a34a","sector":"PoC"}"#,
+        r##"{"name":"Proyecto Members","color":"#16a34a","sector":"PoC"}"##,
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
@@ -296,7 +296,7 @@ async fn project_publish_reservado() {
         &router,
         "/api/projects",
         &token,
-        r#"{"name":"Proyecto Publish","color":"#9333ea","sector":"Laboratorio"}"#,
+        r##"{"name":"Proyecto Publish","color":"#9333ea","sector":"Laboratorio"}"##,
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
@@ -385,7 +385,7 @@ async fn sprints_full_cycle() {
         &router,
         "/api/projects",
         &token,
-        r#"{"name":"Proyecto Sprint","color":"#0891b2"}"#,
+        r##"{"name":"Proyecto Sprint","color":"#0891b2"}"##,
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
@@ -460,7 +460,7 @@ async fn announcements_crud() {
         &router,
         "/api/projects",
         &token,
-        r#"{"name":"Proyecto Anuncios","color":"#ea580c"}"#,
+        r##"{"name":"Proyecto Anuncios","color":"#ea580c"}"##,
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
@@ -520,7 +520,7 @@ async fn task_labels_and_dependencies() {
         &router,
         "/api/projects",
         &token,
-        r#"{"name":"Proyecto Labels","color":"#db2777"}"#,
+        r##"{"name":"Proyecto Labels","color":"#db2777"}"##,
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
