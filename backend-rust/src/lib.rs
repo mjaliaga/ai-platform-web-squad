@@ -12,6 +12,7 @@ pub mod jql;
 pub mod middleware;
 pub mod models;
 pub mod pagination;
+#[allow(dead_code)]
 pub mod ratelimit;
 pub mod ratelimit_redis;
 pub mod routes;

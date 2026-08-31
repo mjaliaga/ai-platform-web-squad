@@ -41,14 +41,23 @@ export function TaskForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    const matchedUser = task.assignee_name
+      ? users.find(
+          (u) =>
+            u.name.toLowerCase() === task.assignee_name.trim().toLowerCase() ||
+            u.email?.toLowerCase() === task.assignee_name.trim().toLowerCase() ||
+            u.name.toLowerCase().includes(task.assignee_name.trim().toLowerCase())
+        )
+      : null;
     const payload = {
       ...task,
-      assignee_id: null,
+      assignee_id: matchedUser?.id || task.assignee_id || null,
       project_id: task.project_id || null,
       estimate_hours: task.estimate_hours ? Number(task.estimate_hours) : null,
       due_date: task.due_date || null,
       deliverable: task.deliverable || null,
     };
+    delete payload.assignee_name;
     try {
       const created = await api.createTask(payload);
       toast.success(isSolicitud ? "Solicitud creada" : "Tarea creada");

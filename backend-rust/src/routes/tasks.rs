@@ -827,7 +827,7 @@ pub async fn list_comments(
     Path(task_id): Path<String>,
 ) -> Result<Json<Vec<CommentWithAuthor>>, Response> {
     let comments: Vec<Comment> = sqlx::query_as::<_, Comment>(
-        "SELECT id, task_id, author_id, body, created_at, updated_at, story_points, resolution \
+        "SELECT id, task_id, author_id, body, created_at, updated_at \
          FROM comments WHERE task_id = ? ORDER BY created_at ASC"
     )
     .bind(&task_id)

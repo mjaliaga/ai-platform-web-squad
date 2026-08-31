@@ -32,22 +32,31 @@ export function Members() {
 
   useEffect(() => {
     if (members.length === 0) return;
-    Promise.all(
+    let activo = true;
+    const controller = new AbortController();
+    Promise.allSettled(
       members.map((m) =>
         api.listTasks({ assignee: m.id, limit: 500 }).catch(() => [])
       )
-    ).then((taskArrays) => {
+    ).then((results) => {
+      if (!activo || controller.signal.aborted) return;
       const map = {};
       members.forEach((m, i) => {
-        const tasks = taskArrays[i];
+        const r = results[i];
+        const raw = r.status === "fulfilled" ? r.value : [];
+        const tasks = Array.isArray(raw) ? raw : (raw?.items || []);
         const byStatus = {};
         tasks.forEach((t) => {
           byStatus[t.status] = (byStatus[t.status] || 0) + 1;
         });
         map[m.id] = { total: tasks.length, byStatus };
       });
-      setWorkload(map);
+      if (activo) setWorkload(map);
     });
+    return () => {
+      activo = false;
+      controller.abort();
+    };
   }, [members]);
 
   const memberProjects = {};

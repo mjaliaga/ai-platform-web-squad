@@ -10,21 +10,35 @@ export function NotificationBell() {
   const ref = useRef(null);
 
   useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  async function refresh() {
-    try {
-      const [c, listResp] = await Promise.all([api.unreadCount(), api.listNotifications()]);
-      setCount(c.count);
-      // listNotifications ahora devuelve PaginatedResponse { items, total, ... }
-      setItems(Array.isArray(listResp) ? listResp : (listResp?.items || []));
-    } catch (e) {
-      console.error(e);
+    let mounted = true;
+    const controller = new AbortController();
+    async function refreshWithSignal() {
+      if (document.hidden) return;
+      try {
+        const [c, listResp] = await Promise.all([api.unreadCount(), api.listNotifications()]);
+        if (!mounted || controller.signal.aborted) return;
+        setCount(c.count);
+        // listNotifications ahora devuelve PaginatedResponse { items, total, ... }
+        setItems(Array.isArray(listResp) ? listResp : (listResp?.items || []));
+      } catch (e) {
+        if (e?.name !== "AbortError") console.error(e);
+      }
     }
-  }
+    refreshWithSignal();
+    const interval = setInterval(() => {
+      if (!document.hidden) refreshWithSignal();
+    }, 30000);
+    function onVisibilityChange() {
+      if (!document.hidden) refreshWithSignal();
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      mounted = false;
+      controller.abort();
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e) {

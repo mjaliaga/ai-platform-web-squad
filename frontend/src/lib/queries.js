@@ -59,7 +59,7 @@ export function useTask(id) {
 export function useBoard(scope, project) {
   return useQuery({
     queryKey: queryKeys.board(scope, project),
-    queryFn: () => api.getBoard({ scope, project }),
+    queryFn: () => api.backlog({ scope, project }),
   });
 }
 

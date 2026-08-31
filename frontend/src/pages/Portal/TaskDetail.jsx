@@ -448,7 +448,7 @@ export function TaskDetail() {
                 Subtareas ({task.completed_subtask_count}/{task.subtask_count})
               </h2>
               <button
-                onClick={createSubtask}
+                onClick={() => { const t = prompt("Título subtarea"); if (t) createSubtask(t); }}
                 className="rounded-lg border border-tivit-red/30 px-3 py-1 text-xs font-semibold text-tivit-red hover:bg-tivit-red hover:text-white"
               >
                 + Agregar

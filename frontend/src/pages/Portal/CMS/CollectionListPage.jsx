@@ -25,10 +25,27 @@ export function CollectionListPage() {
   const { collection } = useParams();
   const { data: collections } = useCollections();
   const { user } = useAuth();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filters = {
+    q: search,
+    published:
+      statusFilter === "published"
+        ? true
+        : statusFilter === "drafts"
+          ? false
+          : undefined,
+  };
+
+  const { data, isLoading, error } = useContentItems(collection, filters);
+  const deleteMut = useDeleteContentItem(collection);
+  const duplicateMut = useDuplicateContentItem(collection);
+  const publishMut = usePublishContentItem(collection);
+
   const isEditor = !!user && ["member", "editor", "admin"].includes(user.role);
   const isReadOnly = false;
   const isEditable = EDITABLE_COLLECTIONS.includes(collection) && isEditor;
-  const isAdmin = user?.role === "admin";
   const meta = collections?.find((c) => c.ruta === collection);
 
   // Proyectos migrado a tabla `projects` — mostrar aviso y redirigir a /portal/portfolio
@@ -49,24 +66,6 @@ export function CollectionListPage() {
       </div>
     );
   }
-
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-
-  const filters = {
-    q: search,
-    published:
-      statusFilter === "published"
-        ? true
-        : statusFilter === "drafts"
-          ? false
-          : undefined,
-  };
-
-  const { data, isLoading, error } = useContentItems(collection, filters);
-  const deleteMut = useDeleteContentItem(collection);
-  const duplicateMut = useDuplicateContentItem(collection);
-  const publishMut = usePublishContentItem(collection);
 
   if (!meta) {
     return (

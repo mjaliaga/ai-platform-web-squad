@@ -81,4 +81,4 @@ This design ensures the suite can be run multiple times without manual database 
 |---|---|---|
 | `TEST_API_URL` | `http://localhost:8080/api` | Base URL for E2E test requests |
 | `TEST_ADMIN_EMAIL` | `manuel.aliaga@tivit.com` | Admin account used for authenticated tests |
-| `TEST_ADMIN_PASSWORD` | `tivit2026` | Admin account password |
+| `TEST_ADMIN_PASSWORD` | `tivit2026` | Admin account password — **Valor de ejemplo no usar en producción, generar con `openssl rand -hex 32`** |

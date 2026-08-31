@@ -27,10 +27,9 @@ class TestAuthE2E(unittest.TestCase):
         self.client.login()
         out = self.client.logout()
         assert_ok(out, "logout")
-        # After logout, /me should still respond but without user info,
-        # or return 401 depending on backend behavior. We accept either.
         me = self.client.me()
-        self.assertIn(me["status"], (200, 401))
+        self.assertEqual(me["status"], 401, f"Expected 401 after logout, got {me}")
+        self.assertFalse(me["ok"], f"Expected ok=False after logout, got {me}")
 
     def test_04_login_rejects_invalid_credentials(self):
         client = ApiClient()

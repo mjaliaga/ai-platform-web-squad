@@ -1,3 +1,4 @@
+-- encoding: UTF-8
 -- Migración 028: Portafolio 5 etapas profesional (SQLite)
 -- Unifica 6 categorias → 5 stages + JSON portfolio_data + sponsor
 -- Estapas: Backlog, Evaluación técnica, PoC, Proyecto, Producción, Cerrado

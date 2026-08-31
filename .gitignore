@@ -148,3 +148,8 @@ desktop.ini
 .settings/
 *.sublime-project
 *.sublime-workspace
+
+# coverage
+coverage/
+lcov.info
+.nyc_output/

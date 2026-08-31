@@ -1,3 +1,5 @@
+// Deprecated: InMemory limiter. Use ratelimit_redis::RateLimiterBackend instead. Kept for reference.
+#[allow(dead_code)]
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};

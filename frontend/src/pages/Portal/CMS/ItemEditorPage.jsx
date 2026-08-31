@@ -97,26 +97,29 @@ export function ItemEditorPage() {
     return Object.keys(errs).length === 0;
   }
 
-  async function handleSave() {
+  async function handleSave(forcePublished) {
     if (!canEdit) {
       toast.warning("No tienes permisos para editar esta colección (solo admin en Tivit Labs y PoC).");
       return;
     }
     if (!validate()) return;
+    const pub = forcePublished ?? published;
     try {
       if (isNew) {
         const result = await createMut.mutateAsync({
           slug: data.slug,
           data,
-          published,
+          published: pub,
         });
+        if (forcePublished !== undefined) setPublished(pub);
         toast.success("Item creado");
         navigate(`/portal/cms/${collection}/${result.slug}`, { replace: true });
       } else {
         await updateMut.mutateAsync({
           slug,
-          payload: { slug: data.slug, data, published },
+          payload: { slug: data.slug, data, published: pub },
         });
+        if (forcePublished !== undefined) setPublished(pub);
         toast.success("Cambios guardados");
       }
     } catch (err) {
@@ -125,10 +128,7 @@ export function ItemEditorPage() {
   }
 
   async function handleSaveAndPublish() {
-    setPublished(true);
-    setTimeout(async () => {
-      await handleSave();
-    }, 0);
+    await handleSave(true);
   }
 
   async function handleTogglePublish() {

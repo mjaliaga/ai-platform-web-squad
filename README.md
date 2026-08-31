@@ -53,7 +53,7 @@ The following variables can be set in the root `.env` file. All values shown are
 | `COOKIE_SECURE` | `false` | Set to `true` in HTTPS/production environments. |
 | `REDIS_URL` | `redis://redis:6379` | Redis connection string for distributed rate limiting. |
 | `SEED_ADMIN_EMAIL` | `manuel.aliaga@tivit.com` | Email for the auto-seeded admin account. |
-| `SEED_ADMIN_PASSWORD` | `tivit2026` | Password for the auto-seeded admin account. |
+| `SEED_ADMIN_PASSWORD` | `tivit2026` | Password for the auto-seeded admin account. **Valor de ejemplo no usar en producción, generar con `openssl rand -hex 32`**. |
 | `PORT` | `8080` | Host port exposed by the frontend container. |
 | `VITE_API_URL` | `/api` | Base URL the frontend uses to reach the API. |
 

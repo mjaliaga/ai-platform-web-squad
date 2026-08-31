@@ -48,12 +48,12 @@ class TestUsersE2E(unittest.TestCase):
                 },
             )
         )
-        if not create.get("ok"):
-            # Endpoint may be admin-only in production. Skip without failure.
-            self.skipTest(f"User creation not allowed: status={create['status']}")
+        self.assertTrue(create["ok"], f"Creation failed: {create}")
         uid = create["body"]["id"]
         stats = self.client.get(f"/users/{uid}/stats")
-        self.assertTrue(stats.get("ok") or stats["status"] in (403, 404))
+        # Creation succeeded, so stats should be 200; 403/404 allowed only if
+        # role guard or stats feature is restricted.
+        self.assertTrue(stats["ok"] or stats["status"] in (403, 404), f"Unexpected: {stats}")
 
 
 if __name__ == "__main__":

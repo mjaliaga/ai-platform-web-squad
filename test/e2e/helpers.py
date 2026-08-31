@@ -77,9 +77,13 @@ class ApiClient:
 
         req = urllib.request.Request(url, data=data, headers=req_headers, method=method.upper())
 
+        status: int | None = None
+        resp_headers: dict | None = None
         try:
             with self.opener.open(req) as resp:
                 raw = resp.read()
+                status = resp.status
+                resp_headers = dict(resp.headers)
         except urllib.error.HTTPError as e:
             raw = e.read()
             try:
@@ -90,17 +94,20 @@ class ApiClient:
                 "status": e.code,
                 "body": parsed,
                 "ok": False,
+                "headers": dict(e.headers) if e.headers else None,
             }
 
         if not raw:
-            return {"status": 204, "body": None, "ok": True}
+            return {"status": 204, "body": None, "ok": True, "headers": resp_headers}
 
         try:
             parsed = json.loads(raw.decode("utf-8"))
         except Exception:
             parsed = raw.decode("utf-8", errors="replace")
 
-        return {"status": 200, "body": parsed, "ok": True}
+        # Preserve real HTTP status; ok is 2xx. Headers exposed optionally.
+        assert status is not None  # set inside with block on success
+        return {"status": status, "body": parsed, "ok": 200 <= status < 300, "headers": resp_headers}
 
     # Convenience helpers ------------------------------------------------
 
@@ -134,8 +141,14 @@ def unwrap_paginated(payload):
     """Mirror of the frontend `unwrapPaginated` helper."""
     if isinstance(payload, list):
         return payload
-    if isinstance(payload, dict) and isinstance(payload.get("items"), list):
-        return payload["items"]
+    if isinstance(payload, dict):
+        if isinstance(payload.get("items"), list):
+            return payload["items"]
+        # Payload is an error envelope (e.g. {"error": "..."}) without pagination keys.
+        # Return [] for backwards-compat but don't hide the error: caller already has
+        # response["ok"] == False / status 4xx, so it can branch on that.
+        if "error" in payload and "items" not in payload and "total" not in payload:
+            return []
     return []
 
 

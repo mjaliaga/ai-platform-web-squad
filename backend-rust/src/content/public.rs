@@ -13,16 +13,25 @@ use crate::AppState;
 use super::schemas;
 
 /// Endpoint PÚBLICO (sin auth) para que el sitio público lea items publicados.
-/// Acepta `?published=true` (default) o `?published=all` para incluir borradores
-/// (esto último se usa desde el portal autenticado para preview).
+/// `?published=all` y `?preview=true` requieren autenticación (verificados por header/cookie JWT).
 pub async fn public_list_items(
     State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
     Path(collection): Path<String>,
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, Response> {
+    let want_drafts = params.get("published").map(|s| s == "all").unwrap_or(false);
+    if want_drafts && !is_authenticated(&headers, &state).await {
+        return Err(crate::validation::error_response(
+            StatusCode::UNAUTHORIZED,
+            "Autenticación requerida para ver borradores".to_string(),
+        ));
+    }
+    let include_drafts = want_drafts;
+
     // Special-case: 'proyectos' now lives in the projects table
     if collection == "proyectos" {
-        return public_list_projects(State(state), params).await;
+        return public_list_projects_inner(state, params, include_drafts).await;
     }
 
     if schemas::schema_for(&collection).is_none() {
@@ -31,8 +40,6 @@ pub async fn public_list_items(
             format!("Colección '{}' no soportada", collection),
         ));
     }
-
-    let include_drafts = params.get("published").map(|s| s == "all").unwrap_or(false);
 
     let sql = "SELECT id, collection, slug, data, published, created_by, updated_by, created_at, updated_at \
                FROM content_items WHERE collection = ? AND deleted_at IS NULL \
@@ -82,12 +89,27 @@ pub async fn public_list_items(
     })))
 }
 
-/// Public list for projects (migrated from content_items to projects table).
 async fn public_list_projects(
-    state: State<Arc<AppState>>,
-    params: std::collections::HashMap<String, String>,
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, Response> {
-    let include_drafts = params.get("published").map(|s| s == "all").unwrap_or(false);
+    let want_drafts = params.get("published").map(|s| s == "all").unwrap_or(false);
+    if want_drafts && !is_authenticated(&headers, &state).await {
+        return Err(crate::validation::error_response(
+            StatusCode::UNAUTHORIZED,
+            "Autenticación requerida para ver borradores".to_string(),
+        ));
+    }
+    let include_drafts = want_drafts;
+    public_list_projects_inner(state, params, include_drafts).await
+}
+
+async fn public_list_projects_inner(
+    state: Arc<AppState>,
+    params: std::collections::HashMap<String, String>,
+    include_drafts: bool,
+) -> Result<Json<serde_json::Value>, Response> {
 
     let limit: i64 = params
         .get("limit")
@@ -146,12 +168,21 @@ async fn public_list_projects(
 /// salvo que `?preview=true` (entonces requiere auth).
 pub async fn public_get_item(
     State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
     Path((collection, slug)): Path<(String, String)>,
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, Response> {
+    let preview = params.get("preview").map(|s| s == "true").unwrap_or(false);
+    if preview && !is_authenticated(&headers, &state).await {
+        return Err(crate::validation::error_response(
+            StatusCode::UNAUTHORIZED,
+            "Autenticación requerida para preview".to_string(),
+        ));
+    }
+
     // Special-case: 'proyectos' now lives in the projects table
     if collection == "proyectos" {
-        return public_get_project(State(state), slug, params).await;
+        return public_get_project_inner(state, slug, preview).await;
     }
 
     if schemas::schema_for(&collection).is_none() {
@@ -161,7 +192,6 @@ pub async fn public_get_item(
         ));
     }
 
-    let preview = params.get("preview").map(|s| s == "true").unwrap_or(false);
     let sql = if preview {
         "SELECT id, collection, slug, data, published, created_by, updated_by, created_at, updated_at \
          FROM content_items WHERE collection = ? AND slug = ? AND deleted_at IS NULL"
@@ -191,13 +221,27 @@ pub async fn public_get_item(
     Ok(Json(serde_json::json!(out)))
 }
 
-/// Public get for a single project by slug.
 async fn public_get_project(
-    state: State<Arc<AppState>>,
-    slug: String,
-    params: std::collections::HashMap<String, String>,
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Path(slug): Path<String>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, Response> {
     let preview = params.get("preview").map(|s| s == "true").unwrap_or(false);
+    if preview && !is_authenticated(&headers, &state).await {
+        return Err(crate::validation::error_response(
+            StatusCode::UNAUTHORIZED,
+            "Autenticación requerida para preview".to_string(),
+        ));
+    }
+    public_get_project_inner(state, slug, preview).await
+}
+
+async fn public_get_project_inner(
+    state: Arc<AppState>,
+    slug: String,
+    preview: bool,
+) -> Result<Json<serde_json::Value>, Response> {
 
     let sql = if preview {
         "SELECT id, name, description, color, status, sector, code, po_user_id, created_at, deleted_at, \
@@ -230,15 +274,61 @@ async fn public_get_project(
     }
 }
 
+async fn is_authenticated(headers: &axum::http::HeaderMap, state: &AppState) -> bool {
+    let token = headers
+        .get(axum::http::header::COOKIE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|c| extract_token_from_cookie(c))
+        .or_else(|| {
+            headers
+                .get(axum::http::header::AUTHORIZATION)
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.strip_prefix("Bearer "))
+                .map(|s| s.to_string())
+        });
+    let token = match token {
+        Some(t) => t,
+        None => return false,
+    };
+    let mut validation = jsonwebtoken::Validation::default();
+    validation.leeway = 60;
+    let claims = match jsonwebtoken::decode::<crate::models::Claims>(
+        &token,
+        &jsonwebtoken::DecodingKey::from_secret(state.jwt_secret.as_bytes()),
+        &validation,
+    ) {
+        Ok(d) => d.claims,
+        Err(_) => return false,
+    };
+    let active: Option<(i32, Option<String>)> =
+        sqlx::query_as("SELECT active, deleted_at FROM users WHERE id = ?")
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten();
+    matches!(active, Some((1, None)))
+}
+
+fn extract_token_from_cookie(cookies: &str) -> Option<String> {
+    for pair in cookies.split(';') {
+        let pair = pair.trim();
+        if let Some((k, v)) = pair.split_once('=') {
+            if k == "tivit_token" {
+                return Some(v.to_string());
+            }
+        }
+    }
+    None
+}
+
 #[allow(dead_code)]
 pub fn public_router(state: Arc<AppState>) -> axum::Router {
     use axum::routing::get;
 
     axum::Router::new()
         .route("/api/public/content/:collection", get(public_list_items))
-        .route(
-            "/api/public/content/:collection/:slug",
-            get(public_get_item),
-        )
+        .route("/api/public/content/:collection/:slug", get(public_get_item))
+        .route("/api/public/content/proyectos/:slug", get(public_get_project))
         .with_state(state)
 }

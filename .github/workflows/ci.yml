@@ -6,10 +6,17 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +29,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -41,6 +49,7 @@ jobs:
   test-frontend:
     name: Frontend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -60,6 +69,7 @@ jobs:
   test-backend:
     name: Backend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -77,6 +87,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Check formatting
+        working-directory: backend-rust
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        working-directory: backend-rust
+        run: cargo clippy -- -D warnings
+
       - name: Backend tests
         working-directory: backend-rust
         run: cargo test
@@ -84,20 +102,33 @@ jobs:
   test-python:
     name: Python E2E Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [build]
+    env:
+      JWT_SECRET: ci-test-secret-32-chars-minimum-for-jwt-123456
+      CORS_ORIGIN: http://localhost:8080
+      REDIS_PASSWORD: ""
+      SEED_ADMIN_EMAIL: admin@tivit.com
+      SEED_ADMIN_PASSWORD: tivit2026SuperSegura!2026
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Build and start services
+        env:
+          JWT_SECRET: ci-test-secret-32-chars-minimum-for-jwt-123456
+          CORS_ORIGIN: http://localhost:8080
+          REDIS_PASSWORD: ""
+          SEED_ADMIN_EMAIL: admin@tivit.com
+          SEED_ADMIN_PASSWORD: tivit2026SuperSegura!2026
         run: |
           docker compose build
-          docker compose up -d
-          sleep 10
+          docker compose up -d --wait
+          for i in 1 2 3 4 5 6 7 8 9 10; do curl -f http://localhost:8080/api/health && break; echo "waiting... $i"; sleep 3; done
 
       - name: Run E2E tests
         run: |

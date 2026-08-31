@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Routes, Route } from "react-router-dom";
+import { Link, Navigate, Routes, Route } from "react-router-dom";
 import { listaColecciones } from "./data/contenido";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ScrollManager } from "./components/ScrollManager";
@@ -228,6 +228,7 @@ function App() {
             </Route>
             <Route path="admin/audit" element={<AdminAuditPage />} />
           </Route>
+          <Route path="*" element={<div className="p-8 text-center"><h1 className="text-2xl font-bold">404 — Página no encontrada</h1><Link to="/" className="text-tivit-red hover:underline">Volver al inicio</Link></div>} />
         </Routes>
       </Suspense>
     </>

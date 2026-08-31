@@ -1,3 +1,4 @@
+-- encoding: UTF-8
 -- Migración 027: Portafolio - nueva columna categoria para pipeline profesional
 -- Categorías: Backlog de Propuestas Internas, Backlog de Propuestas Comerciales, Evaluación técnica, PoC, Proyecto, Producción
 ALTER TABLE projects ADD COLUMN categoria TEXT NOT NULL DEFAULT 'Proyecto';

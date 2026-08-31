@@ -12,8 +12,11 @@ CREATE TABLE IF NOT EXISTS content_items (
     deleted_at TEXT,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
-    UNIQUE(collection, slug, deleted_at)
+    UNIQUE(collection, slug, deleted_at) -- P1-3 BROKEN: NULL != NULL en SQLite, unicidad real vía idx_content_unique_active
 );
+
+-- Fix P1-3: partial index para unicidad real con soft-delete
+CREATE UNIQUE INDEX IF NOT EXISTS idx_content_unique_active ON content_items(collection, slug) WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_content_collection ON content_items(collection);
 CREATE INDEX IF NOT EXISTS idx_content_published ON content_items(published);

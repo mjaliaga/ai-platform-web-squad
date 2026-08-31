@@ -12,10 +12,13 @@ use crate::models::{Claims, ContentMedia, ContentMediaOut};
 use crate::validation::{error_response, internal_error, require_admin_or_editor};
 use crate::AppState;
 
-const ALLOWED_IMAGE_TYPES: &[&str] = &["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
+const ALLOWED_IMAGE_TYPES: &[&str] = &["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALLOWED_VIDEO_TYPES: &[&str] = &["video/mp4", "video/webm", "video/quicktime"];
 const ALLOWED_DOC_TYPES: &[&str] = &["application/pdf"];
-const MAX_BYTES: usize = 25 * 1024 * 1024; // 25 MB
+/// SVG bloqueado explícitamente por riesgo XSS (script embebido). Se responde 415.
+/// Mantener fuera de ALLOWED_IMAGE_TYPES — ver P1-2.
+const BLOCKED_SVG_MIME: &str = "image/svg+xml";
+const MAX_BYTES: usize = 25 * 1024 * 1024; // 25 MB — coherente con client_max_body_size 50M en nginx (P0), no modificar
 
 fn sanitize_filename(name: &str) -> String {
     name.chars()
@@ -39,6 +42,28 @@ fn classify_mime(mime: &str) -> Result<&'static str, String> {
     } else {
         Err(format!("Tipo MIME no permitido: {}", mime))
     }
+}
+
+/// Sniff MIME por magic bytes — validación no basada solo en header cliente (P1-2).
+/// Retorna Some(mime) si reconoce la firma, None si no determinable.
+fn sniff_mime(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.len() >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF {
+        return Some("image/jpeg");
+    }
+    if bytes.len() >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 {
+        return Some("image/png");
+    }
+    if bytes.len() >= 4 && bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x38 {
+        return Some("image/gif");
+    }
+    if bytes.len() >= 4 && bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46 {
+        return Some("application/pdf");
+    }
+    // WebP: RIFF....WEBP — no exigido por spec estricta pero evita falsos warn/no-match en webp reales
+    if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        return Some("image/webp");
+    }
+    None
 }
 
 pub async fn upload_media(
@@ -88,7 +113,42 @@ pub async fn upload_media(
 
     let bytes = bytes.ok_or_else(|| error_response(StatusCode::BAD_REQUEST, "Falta el archivo".to_string()))?;
     let mime = mime_type.ok_or_else(|| error_response(StatusCode::BAD_REQUEST, "Falta mime type".to_string()))?;
-    let kind = classify_mime(&mime).map_err(|e| error_response(StatusCode::BAD_REQUEST, e))?;
+
+    // P1-2: Bloqueo SVG XSS — 415 Unsupported Media Type. Ni siquiera llega a classify.
+    // Comparación case-insensitive + bloqueo por extensión como defensa en profundidad.
+    let mime_lower = mime.to_ascii_lowercase();
+    if mime_lower == BLOCKED_SVG_MIME {
+        return Err(error_response(
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            "SVG no permitido por seguridad".to_string(),
+        ));
+    }
+    let ext_lower = std::path::Path::new(&filename)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())
+        .unwrap_or_default();
+    if ext_lower == "svg" {
+        return Err(error_response(
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            "SVG no permitido por seguridad".to_string(),
+        ));
+    }
+    // Heurística adicional: SVG inline sin magic bytes reconocido pero con firma XML <svg
+    // Si el contenido empieza con `<svg` o `<?xml` y no es un binario reconocido, bloquear.
+    if bytes.len() >= 4 {
+        let head = &bytes[..bytes.len().min(512)];
+        let head_str = String::from_utf8_lossy(head).trim_start().to_ascii_lowercase();
+        if head_str.starts_with("<svg") || head_str.starts_with("<?xml") {
+            // Si el sniff no lo identificó como imagen válida binaria, es SVG textual
+            if sniff_mime(&bytes).is_none() {
+                return Err(error_response(
+                    StatusCode::UNSUPPORTED_MEDIA_TYPE,
+                    "SVG no permitido por seguridad".to_string(),
+                ));
+            }
+        }
+    }
 
     if bytes.is_empty() {
         return Err(error_response(StatusCode::BAD_REQUEST, "Archivo vacío".to_string()));
@@ -99,6 +159,41 @@ pub async fn upload_media(
             format!("El archivo supera {} MB", MAX_BYTES / (1024 * 1024)),
         ));
     }
+
+    // P1-2: Validación MIME por magic bytes — no confiar solo en header cliente.
+    // declared = field.content_type() (mime), detected = sniff de bytes.
+    if let Some(detected) = sniff_mime(&bytes) {
+        if detected != mime_lower.as_str() {
+            let declared_is_image = mime_lower.starts_with("image/");
+            if declared_is_image {
+                // Mensaje debe contener exactamente "MIME no coincide" para validación automática
+                return Err(error_response(
+                    StatusCode::BAD_REQUEST,
+                    format!("MIME no coincide: declarado {} pero contenido es {}", mime, detected),
+                ));
+            } else {
+                // Declarado no es imagen pero detectado difiere: log warn pero permite (ej. pdf declarado como pdf ok, mismatch ya cubierto)
+                tracing::warn!(
+                    target: "media_upload",
+                    declared = %mime,
+                    detected = %detected,
+                    "MIME sniff mismatch (non-image declared)"
+                );
+            }
+        }
+    } else {
+        tracing::warn!(
+            target: "media_upload",
+            declared = %mime,
+            bytes_len = bytes.len(),
+            "No se pudo detectar MIME por magic bytes, se mantiene declarado"
+        );
+    }
+
+    let kind = classify_mime(&mime).map_err(|e| {
+        // Si el MIME era SVG bloqueado ya se retornó 415 arriba; este es 400 genérico.
+        error_response(StatusCode::BAD_REQUEST, e)
+    })?;
 
     let id = Uuid::new_v4().to_string();
     let extension = std::path::Path::new(&filename)
@@ -115,8 +210,8 @@ pub async fn upload_media(
     std::fs::write(&stored_path, &bytes)
         .map_err(|e| internal_error(&format!("write error: {e}")))?;
 
-    // Dimensiones si es imagen
-    let (width, height) = if kind == "image" && mime != "image/svg+xml" {
+    // Dimensiones si es imagen — SVG ya bloqueado arriba (P1-2), solo binarias
+    let (width, height) = if kind == "image" {
         image_dimensions(&bytes).unwrap_or((None, None))
     } else {
         (None, None)

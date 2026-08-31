@@ -34,7 +34,7 @@ class TestSavedFiltersE2E(unittest.TestCase):
         )
         assert_ok(create, "create saved filter")
 
-        exec_ = self.client.post(f"/saved-filters/{create['body']['id']}/execute")
+        exec_ = self.client.get(f"/saved-filters/{create['body']['id']}/execute")
         assert_ok(exec_, "execute saved filter")
         self.assertIsInstance(exec_["body"], list)
 
@@ -63,7 +63,7 @@ class TestSavedFiltersE2E(unittest.TestCase):
         if result.get("ok"):
             self._track(result)
             # When executing, the backend must not crash; results may be empty.
-            exec_ = self.client.post(f"/saved-filters/{result['body']['id']}/execute")
+            exec_ = self.client.get(f"/saved-filters/{result['body']['id']}/execute")
             self.assertTrue(exec_.get("ok") or exec_["status"] in (400, 422))
 
 

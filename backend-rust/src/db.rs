@@ -62,6 +62,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
         ("026_certifications", include_str!("../migrations/026_certifications.sql")),
         ("027_portfolio_categoria", include_str!("../migrations/027_portfolio_categoria.sql")),
         ("028_portfolio_stages", include_str!("../migrations/028_portfolio_stages.sql")),
+        ("029_todos_enhanced", include_str!("../migrations/029_todos_enhanced.sql")),
     ];
 
     for (name, sql) in migrations {
