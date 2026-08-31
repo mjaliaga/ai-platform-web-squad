@@ -8,7 +8,7 @@ use tower::util::ServiceExt;
 use tivit_portal_backend::{build_router, db, AppState};
 
 const ADMIN_EMAIL: &str = "admin-test@tivit.com";
-const ADMIN_PASSWORD: &str = "testpass123";
+const ADMIN_PASSWORD: &str = "testpass12345";
 
 static COUNTER: AtomicUsize = AtomicUsize::new(0);
 static ENV_SET: std::sync::Once = std::sync::Once::new();
@@ -116,7 +116,7 @@ fn authed_get(uri: &str, token: &str) -> Request<Body> {
     Request::builder()
         .method("GET")
         .uri(uri)
-        .header("cookie", token)
+        .header("cookie", &token)
         .body(Body::empty())
         .unwrap()
 }
@@ -133,7 +133,7 @@ async fn create_task(router: &axum::Router, token: &str, title: &str) -> serde_j
         Request::builder()
             .method("POST")
             .uri("/api/tasks")
-            .header("cookie", token)
+            .header("cookie", &token)
             .header("content-type", "application/json")
             .body(Body::from(body))
             .unwrap(),

@@ -136,7 +136,7 @@ pub async fn seed_admin(pool: &SqlitePool) -> Result<()> {
         Ok(v) => {
             if v.len() < 12 {
                 tracing::error!("SEED_ADMIN_PASSWORD too short (min 12 chars). Aborting.");
-                std::process::exit(1);
+                anyhow::bail!("SEED_ADMIN_PASSWORD too short (min 12 chars)");
             }
             v
         }
@@ -151,7 +151,7 @@ pub async fn seed_admin(pool: &SqlitePool) -> Result<()> {
     let weak = ["tivit2026", "admin123", "password", "changeme", "12345678"];
     if weak.iter().any(|w| password.eq_ignore_ascii_case(w)) {
         tracing::error!("SEED_ADMIN_PASSWORD is in the weak-password blocklist. Choose a stronger one.");
-        std::process::exit(1);
+        anyhow::bail!("SEED_ADMIN_PASSWORD is in weak blocklist");
     }
 
     let existing: Option<(String,)> =
