@@ -43,6 +43,7 @@ class TestCmsPocE2E(unittest.TestCase):
             update = self.client.patch(
                 f"/content/{self.collection}/{slug}",
                 {
+                    "slug": slug,
                     "data": {**payload["data"], "estado": "En desarrollo"},
                     "published": True,
                 },

@@ -350,7 +350,7 @@ async fn project_list_simple() {
             &router,
             "/api/projects",
             &token,
-            &format!(r#"{{"name":"Simple {i}","color":"#dc2626"}}"#),
+            &format!(r##"{{"name":"Simple {i}","color":"#dc2626"}}"##),
         )
         .await;
     }
@@ -632,7 +632,7 @@ async fn time_tracking() {
         Request::builder()
             .method("DELETE")
             .uri(format!("/api/tasks/{task_id}/time/{entry_id}"))
-            .header("cookie", token)
+            .header("cookie", &token)
             .body(Body::empty())
             .unwrap(),
     )
@@ -705,7 +705,7 @@ async fn solicitudes_flow() {
         &router,
         "/api/projects",
         &token,
-        r#"{"name":"Proyecto Solicitudes","color":"#65a30d"}"#,
+        r##"{"name":"Proyecto Solicitudes","color":"#65a30d"}"##,
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);

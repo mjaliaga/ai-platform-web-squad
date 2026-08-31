@@ -43,6 +43,7 @@ class TestCmsLaboratorioE2E(unittest.TestCase):
             update = self.client.patch(
                 f"/content/{self.collection}/{slug}",
                 {
+                    "slug": slug,
                     "data": {**payload["data"], "descripcion": "Descripción actualizada E2E."},
                     "published": True,
                 },
