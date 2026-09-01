@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Megaphone,
@@ -14,7 +15,6 @@ import {
   Users,
   ListTodo,
 } from "lucide-react";
-import { api } from "../../lib/api";
 import {
   useDashboard,
   useDashboardMe,
@@ -52,6 +52,7 @@ export function Dashboard() {
   const adminStatsQuery = useDashboard();
   const statsQuery = isAdmin ? adminStatsQuery : meStatsQuery;
 
+  // Parallel queries already have staleTime: 30_000 via queryClient & queries.js for caching
   const sprintQuery = useActiveSprint();
   const tasksQuery = useTasks(
     user?.id ? { assignee: user.id, limit: 50 } : { limit: 50 },
@@ -62,17 +63,19 @@ export function Dashboard() {
 
   const stats = statsQuery.data;
   const activeSprint = sprintQuery.data;
-  const myTasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : (tasksQuery.data?.items || []);
-  const projects = isAdmin ? (Array.isArray(projectsQuery.data) ? projectsQuery.data : (projectsQuery.data?.items || [])) : [];
-  const announcements = Array.isArray(announcementsQuery.data)
-    ? announcementsQuery.data
-    : (announcementsQuery.data?.items || []);
+  // list* now consistently returns unwrapped array via unwrapPaginated in api.js
+  const myTasks = tasksQuery.data || [];
+  const projects = isAdmin ? (projectsQuery.data || []) : [];
+  const announcements = announcementsQuery.data || [];
 
   if (statsQuery.error)
     return <div className="text-alert">Error: {statsQuery.error.message}</div>;
   if (!stats) return <div className="text-tivit-ink/60">Cargando…</div>;
 
-  const statusMap = Object.fromEntries(stats.by_status.map((s) => [s.status, s.count]));
+  const statusMap = useMemo(
+    () => Object.fromEntries((stats.by_status || []).map((s) => [s.status, s.count])),
+    [stats.by_status]
+  );
   const pinned = announcements.filter((a) => a.pinned === 1);
   const recentAnnouncements = announcements.slice(0, 3);
 
@@ -129,7 +132,7 @@ export function Dashboard() {
 
       {activeSprint && <ActiveSprintCard sprint={activeSprint} />}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
           <SectionHeader title="Mis tareas" count={myTasks.length} />
           {myTasks.length === 0 ? (
@@ -228,7 +231,7 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-tivit-ink/55">
@@ -266,7 +269,7 @@ export function Dashboard() {
           <div className="space-y-4">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-tivit-ink/55">Estado del equipo</h2>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <KpiCard label="Total" value={stats.total_tasks} icon={<ListTodo className="h-4 w-4" />} />
               <KpiCard label="En progreso" value={statusMap.in_progress || 0} accent="yellow" icon={<PlayCircle className="h-4 w-4" />} />
               <KpiCard label="Completadas" value={statusMap.done || 0} accent="green" icon={<CheckCircle2 className="h-4 w-4" />} />
@@ -320,7 +323,7 @@ export function Dashboard() {
         ) : (
           <div className="space-y-4">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-tivit-ink/55">Mi resumen</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <KpiCard label="Mis tareas" value={stats.total_tasks} icon={<ListTodo className="h-4 w-4" />} />
               <KpiCard label="En progreso" value={statusMap.in_progress || 0} accent="yellow" icon={<PlayCircle className="h-4 w-4" />} />
               <KpiCard label="Completadas" value={statusMap.done || 0} accent="green" icon={<CheckCircle2 className="h-4 w-4" />} />
@@ -330,7 +333,7 @@ export function Dashboard() {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-tivit-red" aria-hidden="true" />
@@ -346,7 +349,7 @@ export function Dashboard() {
                 <Link
                   key={t.id}
                   to={`/portal/tasks/${t.id}`}
-                  className="flex items-center justify-between rounded-xl border border-black/5 p-3 transition hover:border-tivit-red/20 hover:bg-tivit-red-light/30"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 flex-wrap min-w-0 rounded-xl border border-black/5 p-3 transition hover:border-tivit-red/20 hover:bg-tivit-red-light/30"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <TypeBadge type={t.type} />
@@ -410,7 +413,7 @@ function Hero({ name, date, avatarColor }) {
           </div>
           <div>
             <p className="text-sm font-medium capitalize text-white/60">{date}</p>
-            <h1 className="mt-0.5 text-2xl font-bold tracking-tight">
+            <h1 className="mt-0.5 text-xl sm:text-2xl font-bold tracking-tight">
               Hola, {name?.split(" ")?.[0] ?? ""}
             </h1>
             <p className="mt-0.5 text-sm text-white/60">Buen día. Resumimos tu trabajo de hoy.</p>
@@ -522,9 +525,9 @@ function TaskGroup({ label, icon, dot, tasks }) {
           <Link
             key={t.id}
             to={`/portal/tasks/${t.id}`}
-            className="group flex items-center justify-between rounded-xl px-3 py-2.5 transition hover:bg-tivit-red-light/50"
+            className="group flex flex-col sm:flex-row sm:items-center gap-1 sm:justify-between flex-wrap min-w-0 rounded-xl px-3 py-2.5 transition hover:bg-tivit-red-light/50"
           >
-            <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex min-w-0 items-center gap-2.5 flex-wrap">
               {icon}
               <span className="truncate text-sm font-medium text-tivit-ink group-hover:text-tivit-red">{t.title}</span>
               <TypeBadge type={t.type} />
@@ -562,14 +565,14 @@ function KpiCard({ label, value, accent, icon }) {
   };
   const a = accentMap[accent] || { chip: "bg-tivit-ink/5 text-tivit-ink/60", value: "text-tivit-ink" };
   return (
-    <div className="rounded-2xl border border-black/5 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-black/5 bg-white p-3 sm:p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-tivit-ink/50">{label}</span>
         <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${a.chip}`}>
           {icon}
         </span>
       </div>
-      <div className={`mt-2 text-2xl font-bold ${a.value}`}>{value}</div>
+      <div className={`mt-2 text-xl sm:text-2xl font-bold ${a.value}`}>{value}</div>
     </div>
   );
 }

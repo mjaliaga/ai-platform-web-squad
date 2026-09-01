@@ -1,8 +1,34 @@
 import { lazy, Suspense } from "react";
-import { Link, Navigate, Routes, Route } from "react-router-dom";
+import { Link, Navigate, Routes, Route, useParams, useLocation } from "react-router-dom";
 import { listaColecciones } from "./data/contenido";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ScrollManager } from "./components/ScrollManager";
+
+// Alias legacy /portal/projects/:id/* -> /portal/portfolio/:id/*
+function ProjectAliasRedirect() {
+  const { id } = useParams();
+  const location = useLocation();
+  // Reemplaza el primer segmento /projects/ por /portfolio/ preservando subruta, query y hash
+  const target = location.pathname.replace(`/projects/${id}`, `/portfolio/${id}`) + location.search + location.hash;
+  // Fallback seguro si el replace no aplicó (ej. ruta sin id)
+  const fallback = location.pathname.replace("/projects/", "/portfolio/") + location.search + location.hash;
+  const to = target.includes("/portfolio/") ? target : fallback;
+  return <Navigate to={to} replace />;
+}
+
+// Rutas hijas canónicas del portafolio (reutilizadas sin duplicar)
+const projectChildRoutes = (
+  <>
+    <Route index element={<ProjectBacklog />} />
+    <Route path="summary" element={<ProjectSummary />} />
+    <Route path="calendar" element={<ProjectCalendar />} />
+    <Route path="settings" element={<ProjectSettings />} />
+    <Route path="feed" element={<Feed />} />
+    <Route path="team" element={<Members />} />
+    <Route path="solicitudes" element={<Solicitudes />} />
+    <Route path="tasks/new" element={<TaskForm />} />
+  </>
+);
 
 const PublicSite = lazy(() =>
   import("./pages/PublicSite").then((modulo) => ({ default: modulo.PublicSite }))
@@ -194,28 +220,12 @@ function App() {
             <Route path="sprints" element={<Sprints />} />
             <Route path="feed" element={<Feed />} />
 
-            {/* Portafolio-scoped routes — canónico */}
+            {/* Portafolio-scoped routes — canónico (single source of truth) */}
             <Route path="portfolio/:id" element={<ProjectLayout />}>
-              <Route index element={<ProjectBacklog />} />
-              <Route path="summary" element={<ProjectSummary />} />
-              <Route path="calendar" element={<ProjectCalendar />} />
-              <Route path="settings" element={<ProjectSettings />} />
-              <Route path="feed" element={<Feed />} />
-              <Route path="team" element={<Members />} />
-              <Route path="solicitudes" element={<Solicitudes />} />
-              <Route path="tasks/new" element={<TaskForm />} />
+              {projectChildRoutes}
             </Route>
-            {/* Legacy alias portfolio → projects para compatibilidad */}
-            <Route path="projects/:id" element={<ProjectLayout />}>
-              <Route index element={<ProjectBacklog />} />
-              <Route path="summary" element={<ProjectSummary />} />
-              <Route path="calendar" element={<ProjectCalendar />} />
-              <Route path="settings" element={<ProjectSettings />} />
-              <Route path="feed" element={<Feed />} />
-              <Route path="team" element={<Members />} />
-              <Route path="solicitudes" element={<Solicitudes />} />
-              <Route path="tasks/new" element={<TaskForm />} />
-            </Route>
+            {/* Legacy alias: /portal/projects/:id/* -> /portal/portfolio/:id/* (evita duplicar 8 tabs) */}
+            <Route path="projects/:id/*" element={<ProjectAliasRedirect />} />
 
             {/* CMS de contenido público (editor/admin) */}
             <Route path="cms" element={<ContentManager />}>

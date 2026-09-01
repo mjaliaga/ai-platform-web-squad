@@ -17,11 +17,13 @@ function shouldNotRetry(error) {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 1000,
+      staleTime: 30_000,
       gcTime: 5 * 60 * 1000,
+      // Spec: retry only on 5xx, not on 4xx; keep helper for legacy message check
       retry: (failureCount, error) => {
         if (shouldNotRetry(error)) return false;
-        return failureCount < 2;
+        const status = error?.status ?? error?.response?.status ?? 0;
+        return status >= 500 && failureCount < 2;
       },
       refetchOnWindowFocus: false,
     },
@@ -58,6 +60,7 @@ export const queryKeys = {
   me: ["auth", "me"],
   users: (params) => ["users", params],
   userStats: (id) => ["users", id, "stats"],
+  workload: ["users", "workload"],
   projects: (params) => ["projects", params],
   project: (id) => ["projects", id],
   tasks: (filters) => ["tasks", filters],
@@ -66,6 +69,8 @@ export const queryKeys = {
   backlog: (scope, project) => ["backlog", scope, project],
   sprints: (params) => ["sprints", params],
   activeSprint: ["sprints", "active"],
+  epics: (params) => ["epics", params],
+  versions: (params) => ["versions", params],
   comments: (taskId) => ["tasks", taskId, "comments"],
   activity: (taskId) => ["tasks", taskId, "activity"],
   attachments: (taskId) => ["tasks", taskId, "attachments"],

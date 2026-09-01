@@ -1,6 +1,6 @@
 // Portafolio 5 etapas — fuente única profesional para formularios y validación
 // Cada etapa tiene campos clave, tipos, opciones y criterios de salida
-export const STAGES = ["Backlog", "Evaluación técnica", "PoC", "Proyecto", "Producción"];
+export const STAGES = ["Backlog", "Evaluación técnica", "PoC", "Proyecto", "Producción", "Cerrado"];
 export const STAGE_CLOSED = "Cerrado";
 
 export const PAISES = [

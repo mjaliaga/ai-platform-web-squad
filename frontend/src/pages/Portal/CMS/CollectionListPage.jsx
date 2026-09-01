@@ -159,8 +159,112 @@ export function CollectionListPage() {
           </Link>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm">
-          <table className="w-full text-sm">
+        <>
+          <div className="grid gap-3 sm:hidden">
+            {items.map((item) => {
+              const title = item.data.nombreComercial || item.data.nombre || item.slug;
+              return (
+                <div key={item.id} className="rounded-2xl border border-black/5 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <Link
+                      to={`/portal/cms/${collection}/${item.slug}`}
+                      className="min-w-0 flex-1 truncate font-semibold text-tivit-ink hover:text-tivit-red"
+                    >
+                      {title}
+                    </Link>
+                    {item.published ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+                        <Eye className="h-3 w-3" /> Publicado
+                      </span>
+                    ) : (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-bold text-yellow-700">
+                        <EyeOff className="h-3 w-3" /> Borrador
+                      </span>
+                    )}
+                  </div>
+                  <code className="mt-2 inline-block rounded bg-tivit-ink/5 px-1.5 py-0.5 text-xs text-tivit-ink/60">
+                    {item.slug}
+                  </code>
+                  {item.data.codigo && (
+                    <span className="ml-2 rounded bg-tivit-ink/5 px-1.5 py-0.5 font-mono text-[10px] text-tivit-ink/60">
+                      {item.data.codigo}
+                    </span>
+                  )}
+                  <div className="mt-2 text-xs text-tivit-ink/55">
+                    {new Date(item.updated_at).toLocaleString("es-AR", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </div>
+                  <div className="mt-3 flex items-center justify-end gap-1 border-t border-black/5 pt-3">
+                    {isEditable ? (
+                      <>
+                        <Link
+                          to={`/portal/cms/${collection}/${item.slug}`}
+                          className="rounded p-1.5 text-tivit-ink/55 hover:bg-tivit-red-light hover:text-tivit-red"
+                          title="Editar"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </Link>
+                        <button
+                          onClick={() =>
+                            publishMut.mutate({
+                              slug: item.slug,
+                              published: !item.published,
+                            })
+                          }
+                          className="rounded p-1.5 text-tivit-ink/55 hover:bg-tivit-red-light hover:text-tivit-red"
+                          title={item.published ? "Despublicar" : "Publicar"}
+                        >
+                          {item.published ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`¿Duplicar "${title}"?`)) {
+                              duplicateMut.mutate(item.slug);
+                            }
+                          }}
+                          className="rounded p-1.5 text-tivit-ink/55 hover:bg-tivit-red-light hover:text-tivit-red"
+                          title="Duplicar"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (
+                              confirm(
+                                `¿Eliminar "${title}"? Esta acción no se puede deshacer.`
+                              )
+                            ) {
+                              deleteMut.mutate(item.slug);
+                            }
+                          }}
+                          className="rounded p-1.5 text-tivit-ink/55 hover:bg-alert/10 hover:text-alert"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <Link
+                        to={`/portal/cms/${collection}/${item.slug}`}
+                        className="rounded p-1.5 text-tivit-ink/30 hover:bg-black/5 hover:text-tivit-ink/50"
+                        title="Ver (solo lectura)"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="hidden overflow-x-auto rounded-2xl border border-black/5 bg-white shadow-sm sm:block">
+            <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-tivit-red-light/40 text-xs uppercase tracking-wider text-tivit-ink/55">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold">Item</th>
@@ -283,7 +387,8 @@ export function CollectionListPage() {
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       <p className="text-xs text-tivit-ink/45">

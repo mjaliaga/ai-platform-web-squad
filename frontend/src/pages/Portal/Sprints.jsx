@@ -88,9 +88,9 @@ export function Sprints({ projectId } = {}) {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold text-tivit-ink">Sprints</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-tivit-ink">Sprints</h1>
           <p className="mt-1 text-sm text-tivit-ink/60">
             Planificá y ejecutá el trabajo en iteraciones de tiempo definido.
           </p>
@@ -108,7 +108,7 @@ export function Sprints({ projectId } = {}) {
           <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-tivit-ink/60">
             Crear sprint
           </h2>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nombre" required>
               <input
                 type="text"
@@ -119,7 +119,7 @@ export function Sprints({ projectId } = {}) {
                 placeholder="Sprint 12"
               />
             </Field>
-            <div className="sm:col-span-2">
+            <div className="md:col-span-2">
               <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-tivit-ink/60">
                 Objetivos
               </span>
@@ -175,7 +175,7 @@ export function Sprints({ projectId } = {}) {
               />
             </Field>
           </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Riesgos">
               <textarea
                 rows={2}
@@ -244,7 +244,7 @@ export function Sprints({ projectId } = {}) {
       {sprints.length === 0 ? (
         <p className="text-sm text-tivit-ink/50">Sin sprints todavía.</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {sprints.map((s) => (
             <div
               key={s.id}

@@ -76,11 +76,34 @@ async function uploadFile(path, file) {
   return request(path, { method: "POST", body: formData });
 }
 
+/**
+ * @typedef {Object} PaginatedResponse
+ * @property {Array<any>} items - Lista de ítems paginados
+ * @property {number} [total]
+ * @property {number} [limit]
+ * @property {number} [offset]
+ */
+
+/**
+ * Normaliza respuestas paginadas del backend a un array plano.
+ * El backend puede devolver directamente un array o un objeto paginado `{ items: [...] }`.
+ * Coordinado con agente D: todas las listas que pueden paginar (listSprints, listAnnouncements,
+ * listUsers/users, listProjects, etc.) DEBEN usar este helper para consistencia.
+ *
+ * @param {Array<any> | PaginatedResponse | null | undefined} resp - Respuesta cruda del fetch
+ * @returns {Array<any>} Array normalizado (vacío si resp es null/undefined/inválido)
+ * @example
+ * const items = unwrapPaginated(await request("/sprints"));
+ * // items === [] | [...]
+ */
 export function unwrapPaginated(resp) {
   if (Array.isArray(resp)) return resp;
   if (resp && Array.isArray(resp.items)) return resp.items;
   return [];
 }
+
+/** @typedef {PaginatedResponse} PaginatedResp @deprecated alias */
+/** @typedef {Array<any>} UnwrappedArray */
 
 export const api = {
   login: (email, password) =>
@@ -88,8 +111,18 @@ export const api = {
   logout: () => request("/auth/logout", { method: "POST" }),
   me: () => request("/auth/me"),
 
-  users: async () => unwrapPaginated(await request("/users")),
+  users: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return unwrapPaginated(await request(`/users${qs ? `?${qs}` : ""}`));
+  },
+  // alias para compatibilidad con código que usa listUsers
+  listUsers: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return unwrapPaginated(await request(`/users${qs ? `?${qs}` : ""}`));
+  },
   getUserStats: (id) => request(`/users/${id}/stats`),
+  getWorkload: () => request("/users/workload"),
+  getWorkloadBulk: () => request("/users/workload"),
   createUser: (payload) =>
     request("/users", { method: "POST", body: JSON.stringify(payload) }),
   updateUser: (id, payload) =>
@@ -100,9 +133,9 @@ export const api = {
   changePassword: (payload) =>
     request("/auth/password", { method: "PATCH", body: JSON.stringify(payload) }),
 
-  listAnnouncements: (params = {}) => {
+  listAnnouncements: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request(`/announcements${qs ? `?${qs}` : ""}`);
+    return unwrapPaginated(await request(`/announcements${qs ? `?${qs}` : ""}`));
   },
   createAnnouncement: (payload) =>
     request("/announcements", { method: "POST", body: JSON.stringify(payload) }),
@@ -111,9 +144,9 @@ export const api = {
   deleteAnnouncement: (id) =>
     request(`/announcements/${id}`, { method: "DELETE" }),
 
-  listWiki: (params = {}) => {
+  listWiki: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request(`/wiki${qs ? `?${qs}` : ""}`);
+    return unwrapPaginated(await request(`/wiki${qs ? `?${qs}` : ""}`));
   },
   getWiki: (slug) => request(`/wiki/${slug}`),
   createWiki: (payload) =>
@@ -156,18 +189,18 @@ export const api = {
   dashboardMe: () => request("/dashboard/me"),
 
   dashboard: () => request("/dashboard"),
-  backlog: (params = {}) => {
+  backlog: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request(`/backlog${qs ? `?${qs}` : ""}`);
+    return unwrapPaginated(await request(`/backlog${qs ? `?${qs}` : ""}`));
   },
 
-  listTasks: (filters = {}) => {
+  listTasks: async (filters = {}) => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== "") params.append(k, v);
     });
     const qs = params.toString();
-    return request(`/tasks${qs ? `?${qs}` : ""}`);
+    return unwrapPaginated(await request(`/tasks${qs ? `?${qs}` : ""}`));
   },
   getTask: (id) => request(`/tasks/${id}`),
   createTask: (payload) =>
@@ -207,9 +240,9 @@ export const api = {
       body: JSON.stringify({ completed }),
     }),
 
-  listSprints: (params = {}) => {
+  listSprints: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request(`/sprints${qs ? `?${qs}` : ""}`);
+    return unwrapPaginated(await request(`/sprints${qs ? `?${qs}` : ""}`));
   },
   getActiveSprint: () => request("/sprints/active"),
   getSprint: (id) => request(`/sprints/${id}`),
@@ -323,9 +356,9 @@ export const api = {
     }),
   deleteMedia: (id) => request(`/media/${id}`, { method: "DELETE" }),
 
-  listEpics: (params = {}) => {
+  listEpics: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request(`/epics${qs ? `?${qs}` : ""}`);
+    return unwrapPaginated(await request(`/epics${qs ? `?${qs}` : ""}`));
   },
   getEpic: (id) => request(`/epics/${id}`),
   createEpic: (payload) =>
@@ -334,9 +367,9 @@ export const api = {
     request(`/epics/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteEpic: (id) => request(`/epics/${id}`, { method: "DELETE" }),
 
-  listVersions: (params = {}) => {
+  listVersions: async (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request(`/versions${qs ? `?${qs}` : ""}`);
+    return unwrapPaginated(await request(`/versions${qs ? `?${qs}` : ""}`));
   },
   getVersion: (id) => request(`/versions/${id}`),
   createVersion: (payload) =>

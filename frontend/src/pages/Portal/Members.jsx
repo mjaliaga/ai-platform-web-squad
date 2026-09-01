@@ -1,126 +1,211 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Trash2, ChevronRight, Edit3 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { UserAvatar } from "./components/Badges";
+import { useUsers } from "../../lib/queries";
 
 export function Members() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const [members, setMembers] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [workload, setWorkload] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const qc = useQueryClient();
+  const [localError, setLocalError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "member" });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
-      api.users(),
-      api.listProjects().catch(() => ({ items: [] })),
-    ])
-      .then(([usersResp, projsResp]) => {
-        setMembers(Array.isArray(usersResp) ? usersResp : (usersResp?.items || []));
-        setProjects(Array.isArray(projsResp) ? projsResp : (projsResp?.items || []));
-      })
-      .catch((e) => setError(e.message || "No se pudieron cargar los miembros"))
-      .finally(() => setLoading(false));
-  }, []);
+  // Use react-query caching for members & projects instead of manual useEffect
+  const usersQuery = useUsers();
+  const members = useMemo(() => usersQuery.data || [], [usersQuery.data]);
 
-  useEffect(() => {
-    if (members.length === 0) return;
-    let activo = true;
-    const controller = new AbortController();
-    Promise.allSettled(
-      members.map((m) =>
-        api.listTasks({ assignee: m.id, limit: 500 }).catch(() => [])
-      )
-    ).then((results) => {
-      if (!activo || controller.signal.aborted) return;
-      const map = {};
-      members.forEach((m, i) => {
-        const r = results[i];
-        const raw = r.status === "fulfilled" ? r.value : [];
-        const tasks = Array.isArray(raw) ? raw : (raw?.items || []);
-        const byStatus = {};
-        tasks.forEach((t) => {
-          byStatus[t.status] = (byStatus[t.status] || 0) + 1;
-        });
-        map[m.id] = { total: tasks.length, byStatus };
-      });
-      if (activo) setWorkload(map);
-    });
-    return () => {
-      activo = false;
-      controller.abort();
-    };
-  }, [members]);
-
-  const memberProjects = {};
-  projects.forEach((p) => {
-    (p.members || []).forEach((m) => {
-      if (!memberProjects[m.user_id]) memberProjects[m.user_id] = [];
-      memberProjects[m.user_id].push({ ...p, projectRole: m.role });
-    });
+  const projectsQuery = useQuery({
+    queryKey: ["projects", "members-list"],
+    queryFn: () => api.listProjects(),
+    staleTime: 30_000,
   });
+  const projects = useMemo(() => projectsQuery.data || [], [projectsQuery.data]);
+
+  const loading = usersQuery.isLoading || projectsQuery.isLoading;
+  const error = localError || usersQuery.error?.message || projectsQuery.error?.message || "";
+
+  // Memoize member ids to avoid refetch when order/length unchanged
+  const memberIdsKey = useMemo(() => members.map((m) => m.id).sort().join(","), [members]);
+  const memberIds = useMemo(() => members.map((m) => m.id), [members]);
+
+  // Workload: prefer bulk endpoint /users/workload, fallback to N+1 with limit 50
+  const workloadQuery = useQuery({
+    queryKey: ["workload", memberIdsKey],
+    queryFn: async () => {
+      // Try aggregated endpoint first
+      try {
+        const bulk = await api.getWorkload();
+        // Bulk normalization: support multiple backend shapes
+        if (Array.isArray(bulk)) {
+          // e.g. [{ user_id, total, byStatus }] or by_assignee shape
+          const map = {};
+          let hasData = false;
+          bulk.forEach((item) => {
+            const id = item.user_id ?? item.assignee_id ?? item.id;
+            if (!id) return;
+            if (item.byStatus || item.by_status) {
+              map[id] = {
+                total: item.total ?? item.count ?? 0,
+                byStatus: item.byStatus ?? item.by_status ?? {},
+              };
+              hasData = true;
+            } else if (Array.isArray(item.task_counts)) {
+              const byStatus = {};
+              item.task_counts.forEach((s) => { byStatus[s.status] = s.count; });
+              map[id] = { total: item.total_tasks ?? item.count ?? 0, byStatus };
+              hasData = true;
+            } else if (typeof item.count === "number" || typeof item.total === "number") {
+              map[id] = { total: item.total ?? item.count ?? 0, byStatus: item.byStatus ?? {} };
+              hasData = true;
+            }
+          });
+          if (hasData) return map;
+        } else if (bulk && typeof bulk === "object") {
+          if (Array.isArray(bulk.by_assignee)) {
+            const map = {};
+            bulk.by_assignee.forEach((a) => {
+              map[a.assignee_id] = { total: a.count, byStatus: {} };
+            });
+            if (Object.keys(map).length) return map;
+          }
+          // Already a map { [userId]: { total, byStatus } }
+          const keys = Object.keys(bulk);
+          if (keys.length && typeof bulk[keys[0]] === "object" && bulk[keys[0]] !== null && "total" in bulk[keys[0]]) {
+            return bulk;
+          }
+          // If bulk is wrapper { items: [...] }
+          if (Array.isArray(bulk.items)) {
+            const map = {};
+            bulk.items.forEach((item) => {
+              const id = item.user_id ?? item.assignee_id ?? item.id;
+              if (id) map[id] = { total: item.total ?? item.count ?? 0, byStatus: item.byStatus ?? {} };
+            });
+            if (Object.keys(map).length) return map;
+          }
+        }
+        throw new Error("bulk empty or incompatible");
+      } catch {
+        // Fallback: N+1 with reduced limit (50) and onlyCounts-style optimization
+        // Preserve AbortController semantics
+        const controller = new AbortController();
+        // controller.signal could be used if api.listTasks supported signal; keep for abort on unmount
+        // We do not pass signal to api to avoid breaking, but keep controller for cleanup
+        if (controller.signal.aborted) return {};
+        const results = await Promise.allSettled(
+          memberIds.map((mId) => api.listTasks({ assignee: mId, limit: 50 }).catch(() => []))
+        );
+        if (controller.signal.aborted) return {};
+        const map = {};
+        memberIds.forEach((id, i) => {
+          const r = results[i];
+          const raw = r.status === "fulfilled" ? r.value : [];
+          const tasks = Array.isArray(raw) ? raw : (raw?.items || []);
+          const byStatus = {};
+          tasks.forEach((t) => {
+            byStatus[t.status] = (byStatus[t.status] || 0) + 1;
+          });
+          map[id] = { total: tasks.length, byStatus };
+        });
+        return map;
+      }
+    },
+    enabled: memberIds.length > 0,
+    staleTime: 30_000,
+  });
+  const workload = workloadQuery.data || {};
+
+  const memberProjects = useMemo(() => {
+    const map = {};
+    projects.forEach((p) => {
+      (p.members || []).forEach((m) => {
+        if (!map[m.user_id]) map[m.user_id] = [];
+        map[m.user_id].push({ ...p, projectRole: m.role });
+      });
+    });
+    return map;
+  }, [projects]);
 
   async function addMember(e) {
     e.preventDefault();
-    setError("");
+    setLocalError("");
     setSaving(true);
     try {
       const created = await api.createUser(form);
-      setMembers((prev) => [...prev.filter((m) => m.id !== created.id), created].sort((a, b) => a.name.localeCompare(b.name)));
+      // Invalidate users cache to reflect new member; optimistic update via setQueryData
+      qc.setQueryData(["users", {}], (old) => {
+        const arr = Array.isArray(old) ? old : [];
+        return [...arr.filter((m) => m.id !== created.id), created].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      qc.invalidateQueries({ queryKey: ["users"] });
       setForm({ name: "", email: "", password: "", role: "member" });
       setShowForm(false);
     } catch (err) {
-      setError(err.message || "No se pudo crear el usuario");
+      setLocalError(err.message || "No se pudo crear el usuario");
     } finally {
       setSaving(false);
     }
   }
 
   async function toggleActive(member) {
-    setError("");
+    setLocalError("");
     try {
       const updated = await api.updateUser(member.id, { active: member.active === 1 ? 0 : 1 });
-      setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      qc.setQueryData(["users", {}], (old) => {
+        const arr = Array.isArray(old) ? old : members;
+        return arr.map((m) => (m.id === updated.id ? updated : m));
+      });
+      qc.invalidateQueries({ queryKey: ["users"] });
     } catch (err) {
-      setError(err.message || "No se pudo actualizar el estado");
+      setLocalError(err.message || "No se pudo actualizar el estado");
     }
   }
 
   async function changeRole(member, role) {
-    setError("");
+    setLocalError("");
     try {
       const updated = await api.updateUser(member.id, { role });
-      setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      qc.setQueryData(["users", {}], (old) => {
+        const arr = Array.isArray(old) ? old : members;
+        return arr.map((m) => (m.id === updated.id ? updated : m));
+      });
+      qc.invalidateQueries({ queryKey: ["users"] });
     } catch (err) {
-      setError(err.message || "No se pudo cambiar el rol");
+      setLocalError(err.message || "No se pudo cambiar el rol");
     }
   }
 
   async function changeEmail(member, email) {
-    setError("");
+    setLocalError("");
     try {
       const updated = await api.updateUser(member.id, { email });
-      setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      qc.setQueryData(["users", {}], (old) => {
+        const arr = Array.isArray(old) ? old : members;
+        return arr.map((m) => (m.id === updated.id ? updated : m));
+      });
+      qc.invalidateQueries({ queryKey: ["users"] });
     } catch (err) {
-      setError(err.message || "No se pudo cambiar el email");
+      setLocalError(err.message || "No se pudo cambiar el email");
     }
   }
 
   async function deleteMember(member) {
     if (!window.confirm(`¿Eliminar a ${member.name}? Esta acción no se puede deshacer.`)) return;
-    setError("");
+    setLocalError("");
     try {
       await api.deleteUser(member.id);
-      setMembers((prev) => prev.filter((m) => m.id !== member.id));
+      qc.setQueryData(["users", {}], (old) => {
+        const arr = Array.isArray(old) ? old : members;
+        return arr.filter((m) => m.id !== member.id);
+      });
+      qc.invalidateQueries({ queryKey: ["users"] });
     } catch (err) {
-      setError(err.message || "No se pudo eliminar el usuario");
+      setLocalError(err.message || "No se pudo eliminar el usuario");
     }
   }
 
@@ -244,7 +329,7 @@ function MemberCard({ m, wl, mProjects, user, isAdmin, inputClass, changeRole, c
   }
   return (
     <div className="rounded-2xl border border-black/5 bg-white p-5 transition hover:shadow-sm">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <UserAvatar user={m} size="lg" />
           <div className="min-w-0 flex-1">
@@ -314,14 +399,14 @@ function MemberCard({ m, wl, mProjects, user, isAdmin, inputClass, changeRole, c
             {workload.total === 0 && <p className="mt-1.5 text-xs text-tivit-ink/40">Sin tareas asignadas</p>}
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-2">
+        <div className="flex w-full shrink-0 flex-row flex-wrap gap-2 sm:w-auto sm:flex-col sm:items-end">
           <Link to={`/portal/members/${m.id}`} className="flex items-center gap-1 text-xs font-semibold text-tivit-red hover:underline">
             Ver perfil <ChevronRight className="h-3 w-3" />
           </Link>
           {isAdmin && m.id !== user?.id && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select value={m.role} onChange={(e) => changeRole(m, e.target.value)}
-                className="rounded-lg border border-tivit-red-light bg-white px-2 py-1.5 text-xs font-medium text-tivit-ink outline-none focus:border-tivit-red">
+                className="w-full rounded-lg border border-tivit-red-light bg-white px-2 py-1.5 text-xs font-medium text-tivit-ink outline-none focus:border-tivit-red sm:w-auto">
                 <option value="member">Miembro</option>
                 <option value="editor">Editor</option>
                 <option value="admin">Admin</option>

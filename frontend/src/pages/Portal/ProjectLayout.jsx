@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useParams } from "react-router-dom";
 import { FolderKanban, ArrowLeft, Calendar, Settings, Globe, LayoutDashboard, ArrowRight } from "lucide-react";
 import { api } from "../../lib/api";
+import { STAGES } from "../../lib/portfolioFields";
 import { ProjectSummary } from "./ProjectSummary";
 import { ModalEvaluacionTecnica } from "./ModalEvaluacionTecnica";
 import { ModalPoC } from "./ModalPoC";
@@ -77,7 +78,8 @@ export function ProjectLayout() {
     portfolioData = {};
   }
   const country = portfolioData.country;
-  const VALID_STAGES = ["Backlog", "Backlog de Propuestas Internas", "Backlog de Propuestas Comerciales", "Evaluación técnica", "PoC", "Proyecto", "Producción"];
+  // Single source of truth: STAGES de portfolioFields.js + legacy categorias para compatibilidad
+  const VALID_STAGES = [...new Set([...STAGES, "Backlog de Propuestas Internas", "Backlog de Propuestas Comerciales"])];
   const rawStage = project.stage || project.categoria || "Backlog";
   const currentStage = VALID_STAGES.includes(rawStage) ? rawStage : (project.categoria || "Backlog");
   const isBacklog = currentStage === "Backlog" || (project.categoria && project.categoria.includes("Backlog"));
@@ -92,14 +94,14 @@ export function ProjectLayout() {
         <Link to="/portal/portfolio" className="inline-flex items-center gap-1.5 text-xs font-semibold text-tivit-red hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Portafolio
         </Link>
-        <div className="mt-2 flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ background: project.color }}>
               <FolderKanban className="h-4 w-4" aria-hidden="true" />
             </span>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold text-tivit-ink">{project.name}</h1>
+                <h1 className="min-w-0 truncate text-lg font-bold text-tivit-ink sm:text-xl">{project.name}</h1>
                 {project.code && <span className="font-mono text-xs text-tivit-ink/50">{project.code}</span>}
                 {currentStage && <span className="rounded-full border bg-white px-2 py-0.5 text-[10px] font-semibold text-tivit-ink/60">{currentStage}</span>}
                 {country && (
@@ -112,79 +114,94 @@ export function ProjectLayout() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {isBacklog && (
               <button
                 onClick={() => setShowMoveToET(true)}
-                className="flex items-center gap-2 rounded-xl bg-tivit-red px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-tivit-red-dark"
+                className="flex items-center gap-2 rounded-xl bg-tivit-red px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-tivit-red-dark sm:px-4 sm:text-sm"
               >
                 <ArrowRight className="h-4 w-4" />
-                Mover a ET
+                <span className="hidden sm:inline">Mover a ET</span>
+                <span className="sm:hidden">ET</span>
               </button>
             )}
             {isEvaluacionTecnica && (
               <>
                 <button
                   onClick={() => setShowMoveToPoC(true)}
-                  className="flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+                  className="flex items-center gap-2 rounded-xl bg-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-purple-700 sm:px-4 sm:text-sm"
                 >
                   <ArrowRight className="h-4 w-4" />
-                  Mover a PoC
+                  <span className="hidden sm:inline">Mover a PoC</span>
+                  <span className="sm:hidden">PoC</span>
                 </button>
                 <button
                   onClick={() => setShowMoveToProyecto(true)}
-                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 sm:px-4 sm:text-sm"
                 >
                   <ArrowRight className="h-4 w-4" />
-                  Mover a Proyecto
+                  <span className="hidden sm:inline">Mover a Proyecto</span>
+                  <span className="sm:hidden">Proyecto</span>
                 </button>
               </>
             )}
             {isPoC && (
               <button
                 onClick={() => setShowMoveToProyecto(true)}
-                className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                className="flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 sm:px-4 sm:text-sm"
               >
                 <ArrowRight className="h-4 w-4" />
-                Mover a Proyecto
+                <span className="hidden sm:inline">Mover a Proyecto</span>
+                <span className="sm:hidden">Proyecto</span>
               </button>
             )}
             {isProyecto && (
               <button
                 onClick={() => setShowMoveToProduccion(true)}
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 sm:px-4 sm:text-sm"
               >
                 <ArrowRight className="h-4 w-4" />
-                Mover a Producción
+                <span className="hidden sm:inline">Mover a Producción</span>
+                <span className="sm:hidden">Producción</span>
               </button>
             )}
           </div>
         </div>
       </div>
 
-      <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-black/5 pb-px text-sm font-medium">
-        {tabs.map((t) => {
-          const to = t.to === "" ? `/portal/portfolio/${id}` : `/portal/portfolio/${id}/${t.to}`;
-          const Icon = t.icon;
-          return (
-            <NavLink
-              key={t.to}
-              to={to}
-              end={t.end}
-              className={({ isActive }) =>
-                `flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 transition ${
-                  isActive
-                    ? "border-tivit-red text-tivit-red"
-                    : "border-transparent text-tivit-ink/60 hover:border-tivit-ink/20 hover:text-tivit-ink"
-                }`
-              }
-            >
-              {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
-              {t.label}
-            </NavLink>
-          );
-        })}
-      </nav>
+      <div className="relative mb-6">
+        <nav
+          aria-label="Navegación del proyecto"
+          className="flex snap-x gap-1 overflow-x-auto border-b border-black/5 pb-px text-sm font-medium scrollbar-thin scrollbar-thumb-black/10 scrollbar-track-transparent scrollbar-none"
+        >
+          {tabs.map((t) => {
+            const to = t.to === "" ? `/portal/portfolio/${id}` : `/portal/portfolio/${id}/${t.to}`;
+            const Icon = t.icon;
+            return (
+              <NavLink
+                key={t.to}
+                to={to}
+                end={t.end}
+                aria-label={t.label}
+                className={({ isActive }) =>
+                  `flex snap-start items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-1 ${
+                    isActive
+                      ? "border-tivit-red text-tivit-red"
+                      : "border-transparent text-tivit-ink/60 hover:border-tivit-ink/20 hover:text-tivit-ink"
+                  }`
+                }
+              >
+                {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
+                {t.label}
+              </NavLink>
+            );
+          })}
+        </nav>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 hidden h-full w-8 bg-gradient-to-l from-white to-transparent sm:block"
+        />
+      </div>
 
       <Outlet context={{ project, setProject }} />
 

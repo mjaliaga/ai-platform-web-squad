@@ -15,13 +15,15 @@ export default defineConfig({
     },
   },
   build: {
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules/react')) return 'react'
-          if (id.includes('node_modules/lucide-react')) return 'icons'
+          if (id.includes('node_modules/lucide-react')) return 'lucide-react'
           if (id.includes('@fullcalendar')) return 'fullcalendar'
           if (id.includes('@tanstack/react-query')) return 'react-query'
+          if (id.includes('node_modules')) return 'vendor'
         },
       },
     },

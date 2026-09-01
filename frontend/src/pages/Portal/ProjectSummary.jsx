@@ -100,7 +100,7 @@ export function ProjectSummary() {
     <div className="space-y-6">
       <div className="rounded-xl border border-black/5 bg-white p-6">
         <h2 className="mb-4 text-lg font-semibold text-tivit-ink">Información del Proyecto</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <InfoField icon={FolderKanban} label="Nombre" value={project.name} />
           <InfoField icon={FileText} label="Código" value={project.code || "Sin código"} />
           <InfoField icon={Tag} label="Tipo" value={tipoLabel} />
@@ -137,7 +137,7 @@ export function ProjectSummary() {
             <Wrench className="h-5 w-5 text-amber-600" />
             Información de Evaluación Técnica
           </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {portfolioData.ingeniero_encargado ? (
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 rounded-lg bg-amber-100 p-2 text-amber-700">
@@ -225,7 +225,7 @@ export function ProjectSummary() {
             <FlaskConical className="h-5 w-5 text-purple-600" />
             Información de PoC
           </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {portfolioData.hipotesis && (
               <div className="md:col-span-2">
                 <h3 className="mb-2 text-sm font-medium text-tivit-ink">Hipótesis a Validar</h3>
@@ -307,7 +307,7 @@ export function ProjectSummary() {
             <FolderOpen className="h-5 w-5 text-blue-600" />
             Información del Proyecto
           </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {portfolioData.pm_scrum_master ? (
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 rounded-lg bg-blue-100 p-2 text-blue-700">
@@ -452,7 +452,7 @@ export function ProjectSummary() {
             <Rocket className="h-5 w-5 text-emerald-600" />
             Información de Producción
           </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {portfolioData.fecha_deploy ? (
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 rounded-lg bg-emerald-100 p-2 text-emerald-700">
@@ -622,7 +622,7 @@ export function ProjectSummary() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2">
         <div className="rounded-xl border border-black/5 bg-white p-6">
           <h2 className="mb-4 text-lg font-semibold text-tivit-ink">Color del Proyecto</h2>
           <div className="flex items-center gap-4">

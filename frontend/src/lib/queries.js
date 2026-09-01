@@ -6,37 +6,55 @@ export function useMe(options = {}) {
   return useQuery({
     queryKey: queryKeys.me,
     queryFn: () => api.me(),
+    staleTime: 30_000,
     ...options,
   });
 }
 
-export function useUsers(params = {}) {
+export function useUsers(params = {}, options = {}) {
   return useQuery({
     queryKey: queryKeys.users(params),
     queryFn: () => api.users(params),
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useUserStats(id) {
+export function useUserStats(id, options = {}) {
   return useQuery({
     queryKey: queryKeys.userStats(id),
     queryFn: () => api.getUserStats(id),
     enabled: !!id,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useProjects(params = {}) {
+export function useWorkload(options = {}) {
+  return useQuery({
+    queryKey: queryKeys.workload,
+    queryFn: () => api.getWorkload(),
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
+export function useProjects(params = {}, options = {}) {
   return useQuery({
     queryKey: queryKeys.projects(params),
     queryFn: () => api.listProjects(params),
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useProject(id) {
+export function useProject(id, options = {}) {
   return useQuery({
     queryKey: queryKeys.project(id),
     queryFn: () => api.getProject(id),
     enabled: !!id,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
@@ -44,137 +62,191 @@ export function useTasks(filters = {}, options = {}) {
   return useQuery({
     queryKey: queryKeys.tasks(filters),
     queryFn: () => api.listTasks(filters),
+    staleTime: 30_000,
     enabled: options.enabled ?? true,
+    ...options,
   });
 }
 
-export function useTask(id) {
+export function useTask(id, options = {}) {
   return useQuery({
     queryKey: queryKeys.task(id),
     queryFn: () => api.getTask(id),
     enabled: !!id,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useBoard(scope, project) {
+export function useBoard(scope, project, options = {}) {
   return useQuery({
     queryKey: queryKeys.board(scope, project),
     queryFn: () => api.backlog({ scope, project }),
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useBacklog(scope, project) {
+export function useBacklog(scope, project, options = {}) {
   return useQuery({
     queryKey: queryKeys.backlog(scope, project),
     queryFn: () => api.backlog({ scope, project }),
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useSprints(params = {}) {
+export function useSprints(params = {}, options = {}) {
   return useQuery({
     queryKey: queryKeys.sprints(params),
     queryFn: () => api.listSprints(params),
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useActiveSprint() {
+export function useEpics(params = {}, options = {}) {
+  return useQuery({
+    queryKey: queryKeys.epics(params),
+    queryFn: () => api.listEpics(params),
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
+export function useVersions(params = {}, options = {}) {
+  return useQuery({
+    queryKey: queryKeys.versions(params),
+    queryFn: () => api.listVersions(params),
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
+export function useActiveSprint(options = {}) {
   return useQuery({
     queryKey: queryKeys.activeSprint,
     queryFn: () => api.getActiveSprint(),
+    staleTime: 30_000,
     retry: false,
+    ...options,
   });
 }
 
-export function useComments(taskId) {
+export function useComments(taskId, options = {}) {
   return useQuery({
     queryKey: queryKeys.comments(taskId),
     queryFn: () => api.listComments(taskId),
     enabled: !!taskId,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useActivity(taskId) {
+export function useActivity(taskId, options = {}) {
   return useQuery({
     queryKey: queryKeys.activity(taskId),
     queryFn: () => api.listActivity(taskId),
     enabled: !!taskId,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useAttachments(taskId) {
+export function useAttachments(taskId, options = {}) {
   return useQuery({
     queryKey: queryKeys.attachments(taskId),
     queryFn: () => api.listAttachments(taskId),
     enabled: !!taskId,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useSubtasks(taskId) {
+export function useSubtasks(taskId, options = {}) {
   return useQuery({
     queryKey: queryKeys.subtasks(taskId),
     queryFn: () => api.listSubtasks(taskId),
     enabled: !!taskId,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useDependencies(taskId) {
+export function useDependencies(taskId, options = {}) {
   return useQuery({
     queryKey: queryKeys.dependencies(taskId),
     queryFn: () => api.listDependencies(taskId),
     enabled: !!taskId,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useBlocking(taskId) {
+export function useBlocking(taskId, options = {}) {
   return useQuery({
     queryKey: queryKeys.blocking(taskId),
     queryFn: () => api.listBlocking(taskId),
     enabled: !!taskId,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useTimeEntries(taskId) {
+export function useTimeEntries(taskId, options = {}) {
   return useQuery({
     queryKey: queryKeys.timeEntries(taskId),
     queryFn: () => api.listTimeEntries(taskId),
     enabled: !!taskId,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useWatchers(taskId) {
+export function useWatchers(taskId, options = {}) {
   return useQuery({
     queryKey: queryKeys.watchers(taskId),
     queryFn: () => api.listWatchers(taskId),
     enabled: !!taskId,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useNotifications(params = {}) {
+export function useNotifications(params = {}, options = {}) {
   return useQuery({
     queryKey: queryKeys.notifications(params),
     queryFn: () => api.listNotifications(params),
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useUnreadCount() {
+export function useUnreadCount(options = {}) {
   return useQuery({
     queryKey: queryKeys.unreadCount,
     queryFn: () => api.unreadCount(),
     refetchInterval: 60 * 1000,
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useDashboard() {
+export function useDashboard(options = {}) {
   return useQuery({
     queryKey: queryKeys.dashboard,
     queryFn: () => api.dashboard(),
+    staleTime: 30_000,
+    ...options,
   });
 }
 
-export function useDashboardMe() {
+export function useDashboardMe(options = {}) {
   return useQuery({
     queryKey: queryKeys.dashboardMe,
     queryFn: () => api.dashboardMe(),
+    staleTime: 30_000,
+    ...options,
   });
 }
 
@@ -317,10 +389,12 @@ export function useMarkNotificationsRead() {
   });
 }
 
-export function useAnnouncements(params = {}) {
+export function useAnnouncements(params = {}, options = {}) {
   return useQuery({
     queryKey: queryKeys.announcements(params),
     queryFn: () => api.listAnnouncements(params),
+    staleTime: 30_000,
+    ...options,
   });
 }
 
@@ -358,6 +432,7 @@ export function useTodos(options = {}) {
   return useQuery({
     queryKey: queryKeys.todos,
     queryFn: () => api.listTodos(),
+    staleTime: 30_000,
     ...options,
   });
 }
@@ -366,6 +441,7 @@ export function useTodosStats(options = {}) {
   return useQuery({
     queryKey: queryKeys.todosStats,
     queryFn: () => api.getTodosStats(),
+    staleTime: 30_000,
     ...options,
   });
 }

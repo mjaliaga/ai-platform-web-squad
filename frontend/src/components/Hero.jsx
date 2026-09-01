@@ -74,22 +74,29 @@ export function Hero() {
               Somos el equipo detrás de proyectos de software, datos e inteligencia
               artificial para clientes internos y externos de Almaviva Group.
             </p>
-            <div className="hero-anim mt-8 flex flex-wrap items-center gap-6" style={{ animationDelay: "300ms" }}>
+            <div className="hero-anim mt-8 flex flex-wrap items-center gap-3 sm:gap-6" style={{ animationDelay: "300ms" }}>
               <a
                 href="#equipo"
-                className="rounded-full bg-tivit-red px-6 py-3 font-semibold text-white shadow-sm shadow-tivit-red/25 transition hover:bg-tivit-red-dark hover:shadow-md hover:shadow-tivit-red/30 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2"
+                className="rounded-full bg-tivit-red px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-tivit-red/25 transition hover:bg-tivit-red-dark hover:shadow-md hover:shadow-tivit-red/30 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2 sm:px-6 sm:py-3 sm:text-base"
               >
                 Conoce al equipo
               </a>
               <Link
                 to="/proyectos"
-                className="group inline-flex items-center gap-2 rounded-full border border-tivit-red/25 bg-white/70 px-6 py-3 font-semibold text-tivit-red backdrop-blur transition hover:border-tivit-red hover:bg-tivit-red-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2"
+                className="group inline-flex items-center gap-2 rounded-full border border-tivit-red/25 bg-white/70 px-5 py-3 text-sm font-semibold text-tivit-red backdrop-blur transition hover:border-tivit-red hover:bg-tivit-red-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2 sm:px-6 sm:py-3 sm:text-base"
               >
                 Ver proyectos
                 <ArrowRight
                   className="h-4 w-4 transition-transform group-hover:translate-x-1"
                   aria-hidden="true"
                 />
+              </Link>
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 rounded-full bg-tivit-ink px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-ink focus-visible:ring-offset-2 sm:px-6 sm:py-3 sm:text-base"
+              >
+                Iniciar sesión
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </div>
           </div>

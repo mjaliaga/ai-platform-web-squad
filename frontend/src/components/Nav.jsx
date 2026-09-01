@@ -70,6 +70,15 @@ export function Nav() {
           ))}
         </nav>
 
+        <div className="hidden items-center gap-2 lg:flex">
+          <Link
+            to="/login"
+            className="inline-flex items-center justify-center rounded-full bg-tivit-red px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-tivit-red-dark hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2"
+          >
+            Iniciar sesión
+          </Link>
+        </div>
+
         <button
           type="button"
           onClick={() => setAbierto((actual) => !actual)}
@@ -115,6 +124,12 @@ export function Nav() {
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               </a>
             ))}
+            <Link
+              to="/login"
+              className="mt-2 inline-flex items-center justify-center rounded-xl bg-tivit-red px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-tivit-red-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2"
+            >
+              Iniciar sesión
+            </Link>
           </nav>
         </div>
       )}

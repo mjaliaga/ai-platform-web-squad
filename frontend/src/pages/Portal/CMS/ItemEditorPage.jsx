@@ -236,7 +236,7 @@ export function ItemEditorPage() {
           >
             <ChevronLeft className="h-3 w-3" /> {meta.nombre}
           </Link>
-          <h1 className="text-2xl font-bold text-tivit-ink">
+          <h1 className="text-xl sm:text-2xl font-bold text-tivit-ink">
             {isNew
               ? `Nuevo item · ${meta.nombre}`
               : data.nombreComercial || data.slug || slug}
@@ -289,7 +289,7 @@ export function ItemEditorPage() {
         </div>
       )}
 
-      <div className={`grid gap-5 lg:grid-cols-2 ${!canEdit ? "opacity-60 pointer-events-none" : ""}`}>
+      <div className={`grid gap-5 md:grid-cols-2 ${!canEdit ? "opacity-60 pointer-events-none" : ""}`}>
         <Section title="Datos básicos & Metadatos" description="Identificación y clasificación principal">
           {groupedFields.basics.map((f) => (
             <FieldRow

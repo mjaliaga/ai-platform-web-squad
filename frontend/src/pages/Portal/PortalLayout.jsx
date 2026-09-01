@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown, CheckSquare, Award, Shield, FileClock } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -22,11 +22,52 @@ export function PortalLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const profileRef = useRef(null);
 
   useEffect(() => {
     setMobileOpen(false);
     setProfileOpen(false);
   }, [location.pathname]);
+
+  // UX/a11y: cerrar dropdown perfil con Escape y click outside + focus-trap simple
+  useEffect(() => {
+    if (!profileOpen) return;
+    function onKeyDown(e) {
+      if (e.key === "Escape") {
+        setProfileOpen(false);
+        // devolver foco al botón disparador si existe
+        const btn = profileRef.current?.querySelector('button[aria-haspopup="menu"]');
+        if (btn) btn.focus();
+      }
+      // focus-trap sencillo: si está abierto y se presiona Tab, ciclar dentro del menú
+      if (e.key === "Tab" && profileRef.current) {
+        const focusable = profileRef.current.querySelectorAll(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    function onMouseDown(e) {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onMouseDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onMouseDown);
+    };
+  }, [profileOpen]);
 
   useEffect(() => {
     function onScroll() {
@@ -66,7 +107,7 @@ export function PortalLayout() {
             </Link>
           </div>
 
-          <nav className="hidden items-center gap-1 xl:gap-1.5 lg:flex" aria-label="Principal">
+          <nav className="hidden items-center gap-1 xl:gap-1.5 md:flex" aria-label="Principal">
             {links.map((l) => (
               <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
                 <l.icon className="h-4 w-4" aria-hidden="true" />
@@ -88,12 +129,13 @@ export function PortalLayout() {
 
           <div className="flex shrink-0 items-center gap-2">
             <NotificationBell />
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen((o) => !o)}
-                className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-tivit-red-light/70"
+                className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-tivit-red-light/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2"
                 aria-haspopup="menu"
                 aria-expanded={profileOpen}
+                aria-label="Menú de perfil"
               >
                 <div
                   className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-white shadow-sm"
@@ -101,16 +143,16 @@ export function PortalLayout() {
                 >
                   {user?.name?.[0]?.toUpperCase()}
                 </div>
-                <div className="hidden text-left md:block">
-                  <div className="max-w-[10rem] truncate text-sm font-semibold leading-tight text-tivit-ink">
+                <div className="hidden text-left sm:block">
+                  <div className="max-w-[7rem] sm:max-w-[10rem] truncate text-sm font-semibold leading-tight text-tivit-ink">
                     {user?.name}
                   </div>
-                  <div className="max-w-[10rem] truncate text-xs leading-tight text-tivit-ink/50">
+                  <div className="max-w-[7rem] sm:max-w-[10rem] truncate text-xs leading-tight text-tivit-ink/50">
                     {user?.email}
                   </div>
                 </div>
                 <ChevronDown
-                  className={`hidden h-4 w-4 text-tivit-ink/40 transition-transform md:block ${
+                  className={`hidden h-4 w-4 text-tivit-ink/40 transition-transform sm:block ${
                     profileOpen ? "rotate-180" : ""
                   }`}
                   aria-hidden="true"
@@ -120,12 +162,12 @@ export function PortalLayout() {
               {profileOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-black/5 bg-white p-1.5 shadow-xl"
+                  className="absolute right-0 top-full z-50 mt-2 w-56 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-black/5 bg-white p-1.5 shadow-xl"
                 >
                   <Link
                     to="/portal/profile"
                     role="menuitem"
-                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-tivit-ink transition hover:bg-tivit-red-light/70"
+                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-tivit-ink transition hover:bg-tivit-red-light/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-1"
                   >
                     <div
                       className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
@@ -139,7 +181,7 @@ export function PortalLayout() {
                   <button
                     onClick={logout}
                     role="menuitem"
-                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-alert transition hover:bg-alert/10"
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-alert transition hover:bg-alert/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alert focus-visible:ring-offset-1"
                   >
                     <LogOut className="h-4 w-4" aria-hidden="true" /> Salir
                   </button>
@@ -149,9 +191,10 @@ export function PortalLayout() {
 
             <button
               onClick={() => setMobileOpen((o) => !o)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/5 text-tivit-ink/70 transition hover:bg-tivit-red-light/70 lg:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/5 text-tivit-ink/70 transition hover:bg-tivit-red-light/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2 md:hidden"
               aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
               aria-expanded={mobileOpen}
+              aria-controls="portal-mobile-nav"
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -160,7 +203,8 @@ export function PortalLayout() {
 
         {mobileOpen && (
           <nav
-            className="border-t border-black/5 bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden"
+            id="portal-mobile-nav"
+            className="border-t border-black/5 bg-white/95 px-4 py-3 backdrop-blur-md md:hidden"
             aria-label="Principal"
           >
             <div className="flex flex-col gap-1">
@@ -186,7 +230,7 @@ export function PortalLayout() {
         )}
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full">
         <Outlet />
       </main>
     </div>

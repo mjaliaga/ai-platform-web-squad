@@ -44,6 +44,7 @@ export const PORTFOLIO_CATEGORIAS = [
   "PoC",
   "Proyecto",
   "Producción",
+  "Cerrado",
 ];
 
 export const CATEGORIA_COLORS = {
@@ -53,6 +54,7 @@ export const CATEGORIA_COLORS = {
   "PoC": "bg-purple-50 text-purple-700 border-purple-200",
   "Proyecto": "bg-tivit-red/10 text-tivit-red border-tivit-red/20",
   "Producción": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Cerrado": "bg-gray-100 text-gray-600 border-gray-200",
 };
 
 export const CATEGORIA_DOT = {
@@ -62,22 +64,25 @@ export const CATEGORIA_DOT = {
   "PoC": "bg-purple-500",
   "Proyecto": "bg-tivit-red",
   "Producción": "bg-emerald-500",
+  "Cerrado": "bg-gray-400",
 };
 
 export const STAGE_DOT = {
   Backlog: "bg-slate-400",
-  Evaluación: "bg-amber-500",
+  "Evaluación técnica": "bg-amber-500",
   PoC: "bg-purple-500",
-  Proyecto: "bg-tivit-red",
+  Proyecto: "bg-purple-500",
   Producción: "bg-emerald-500",
+  Cerrado: "bg-gray-400",
 };
 
 export const STAGE_COLORS = {
   Backlog: "bg-slate-50 border-slate-200",
-  Evaluación: "bg-amber-50 border-amber-200",
+  "Evaluación técnica": "bg-amber-50 border-amber-200",
   PoC: "bg-purple-50 border-purple-200",
   Proyecto: "bg-red-50 border-red-200",
   Producción: "bg-emerald-50 border-emerald-200",
+  Cerrado: "bg-gray-50 border-gray-200",
 };
 
 export function getNextStages(currentStage) {

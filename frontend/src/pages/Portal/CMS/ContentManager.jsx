@@ -38,7 +38,7 @@ export function ContentManager() {
           Estás en modo <strong>editor</strong> (rol: <strong>{user.role}</strong>). Puedes crear y editar. La publicación y eliminación crítica la confirma un <strong>admin</strong> en el historial.
         </div>
       )}
-      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+      <div className="grid gap-6 md:grid-cols-[220px_1fr] lg:grid-cols-[260px_1fr]">
       <aside className="space-y-4">
         <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-tivit-ink/55">

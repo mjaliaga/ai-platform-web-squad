@@ -43,7 +43,7 @@ export function MediaManagerPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <Link
             to="/portal/cms"
@@ -51,7 +51,7 @@ export function MediaManagerPage() {
           >
             <ChevronLeft className="h-3 w-3" /> Contenido
           </Link>
-          <h1 className="text-2xl font-bold text-tivit-ink">Biblioteca de medios</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-tivit-ink">Biblioteca de medios</h1>
           <p className="mt-1 text-sm text-tivit-ink/55">
             Imágenes, videos y documentos subidos al CMS.
           </p>
@@ -151,7 +151,7 @@ export function MediaManagerPage() {
                 onClick={() => {
                   if (confirm(`¿Eliminar "${m.filename}"?`)) deleteMut.mutate(m.id);
                 }}
-                className="absolute right-2 top-2 hidden rounded-lg bg-white/90 p-1.5 text-tivit-ink/55 shadow-sm hover:text-alert group-hover:block"
+                className="absolute right-2 top-2 rounded-lg bg-white/90 p-1.5 text-tivit-ink/55 shadow-sm hover:text-alert opacity-100 sm:opacity-0 sm:group-hover:opacity-100 group-hover:opacity-100 transition-opacity"
                 title="Eliminar"
               >
                 <Trash2 className="h-4 w-4" />

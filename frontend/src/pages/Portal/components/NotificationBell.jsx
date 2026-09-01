@@ -80,7 +80,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-96 max-h-[480px] overflow-y-auto rounded-2xl border border-black/5 bg-white shadow-xl z-50">
+        <div className="absolute -right-2 sm:right-0 top-full mt-2 w-[calc(100vw-1.5rem)] max-w-80 max-h-[80vh] overflow-y-auto rounded-2xl border border-black/5 bg-white shadow-xl z-50 sm:w-96 sm:max-w-none sm:max-h-[480px]">
           <div className="sticky top-0 border-b border-black/5 bg-white p-3 text-xs font-bold uppercase tracking-wider text-tivit-ink/60">
             Notificaciones
           </div>

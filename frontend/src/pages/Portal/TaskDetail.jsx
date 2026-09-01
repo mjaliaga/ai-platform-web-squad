@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, downloadAttachment } from "../../lib/api";
 import { useToast } from "../../context/ToastContext.jsx";
@@ -14,6 +14,7 @@ import {
   useWatchers,
   useUsers,
   useSprints,
+  useEpics,
   useMe,
   useCreateComment,
   useUpdateTask,
@@ -69,6 +70,8 @@ export function TaskDetail() {
   const qc = useQueryClient();
   const toast = useToast();
 
+  // All data hooks are gated with enabled: !!id (inside queries.js) to avoid fetching without id;
+  // sprints/users are global lists with staleTime 30s caching
   const taskQuery = useTask(id);
   const commentsQuery = useComments(id);
   const activityQuery = useActivity(id);
@@ -81,16 +84,8 @@ export function TaskDetail() {
   const usersQuery = useUsers({ limit: 200 });
   const sprintsQuery = useSprints({ limit: 200 });
   const meQuery = useMe();
-  const [epics, setEpics] = useState([]);
-
-  // FIX-011: include `id` in the dependency array so the effect re-fires
-  // when the user navigates between different tasks without unmounting.
-  useEffect(() => {
-    api
-      .listEpics()
-      .then((d) => setEpics(Array.isArray(d) ? d : []))
-      .catch(() => setEpics([]));
-  }, [id]);
+  const epicsQuery = useEpics({}, { enabled: true });
+  const epics = epicsQuery.data || [];
 
   const task = taskQuery.data;
   const comments = commentsQuery.data || [];
@@ -101,8 +96,9 @@ export function TaskDetail() {
   const blocking = blockingQuery.data || [];
   const timeEntries = timeQuery.data || [];
   const watchers = watchersQuery.data || [];
-  const users = Array.isArray(usersQuery.data) ? usersQuery.data : (usersQuery.data?.items || []);
-  const sprints = Array.isArray(sprintsQuery.data) ? sprintsQuery.data : (sprintsQuery.data?.items || []);
+  // list* now returns unwrapped array directly via api.js unwrapPaginated
+  const users = usersQuery.data || [];
+  const sprints = sprintsQuery.data || [];
   const me = meQuery.data;
 
   const isWatching = useMemo(
@@ -135,6 +131,8 @@ export function TaskDetail() {
   const [newLabel, setNewLabel] = useState("");
   const [editingTimeEntry, setEditingTimeEntry] = useState(null);
   const [editTimeForm, setEditTimeForm] = useState({ hours: "", description: "" });
+  const [showAddSubtask, setShowAddSubtask] = useState(false);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
   async function submitComment(e) {
     e.preventDefault();
@@ -342,8 +340,8 @@ export function TaskDetail() {
         </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
           <div className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
             <div className="mb-3 flex items-center gap-3">
               <TypeBadge type={task.type} />
@@ -357,14 +355,14 @@ export function TaskDetail() {
                   onChange={(e) => setEditTitle(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
                   autoFocus
-                  className="flex-1 rounded-xl border border-tivit-red bg-white px-3.5 py-2 text-2xl font-bold text-tivit-ink outline-none focus:ring-2 focus:ring-tivit-red/20"
+                  className="flex-1 rounded-xl border border-tivit-red bg-white px-3.5 py-2 text-xl sm:text-2xl font-bold text-tivit-ink outline-none focus:ring-2 focus:ring-tivit-red/20"
                 />
                 <button onClick={saveTitle} className="rounded-full bg-tivit-red px-3 py-1 text-xs font-semibold text-white hover:bg-tivit-red-dark">Guardar</button>
                 <button onClick={() => setEditingTitle(false)} className="rounded-full border border-tivit-red-light px-3 py-1 text-xs font-semibold text-tivit-ink hover:bg-tivit-red-light">Cancelar</button>
               </div>
             ) : (
               <h1
-                className="text-2xl font-bold text-tivit-ink cursor-pointer hover:text-tivit-red transition"
+                className="text-xl sm:text-2xl font-bold text-tivit-ink cursor-pointer hover:text-tivit-red transition"
                 onClick={() => { setEditTitle(task.title); setEditingTitle(true); }}
                 title="Clic para editar"
               >
@@ -447,13 +445,60 @@ export function TaskDetail() {
               <h2 className="text-sm font-bold uppercase tracking-wider text-tivit-ink/80">
                 Subtareas ({task.completed_subtask_count}/{task.subtask_count})
               </h2>
-              <button
-                onClick={() => { const t = prompt("Título subtarea"); if (t) createSubtask(t); }}
-                className="rounded-lg border border-tivit-red/30 px-3 py-1 text-xs font-semibold text-tivit-red hover:bg-tivit-red hover:text-white"
-              >
-                + Agregar
-              </button>
+              {!showAddSubtask && (
+                <button
+                  onClick={() => setShowAddSubtask(true)}
+                  className="rounded-lg border border-tivit-red/30 px-3 py-1 text-xs font-semibold text-tivit-red hover:bg-tivit-red hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red/40"
+                >
+                  + Agregar
+                </button>
+              )}
             </div>
+            {showAddSubtask && (
+              <div className="mb-4 flex gap-2">
+                <input
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newSubtaskTitle.trim()) {
+                      createSubtask(newSubtaskTitle);
+                      setShowAddSubtask(false);
+                      setNewSubtaskTitle("");
+                    }
+                    if (e.key === "Escape") {
+                      setShowAddSubtask(false);
+                      setNewSubtaskTitle("");
+                    }
+                  }}
+                  autoFocus
+                  placeholder="Título subtarea"
+                  aria-label="Título de la nueva subtarea"
+                  className="flex-1 rounded-lg border border-tivit-red/30 bg-white px-3 py-1.5 text-sm text-tivit-ink placeholder:text-tivit-ink/40 outline-none focus:border-tivit-red focus:ring-2 focus:ring-tivit-red/20"
+                />
+                <button
+                  onClick={() => {
+                    if (newSubtaskTitle.trim()) {
+                      createSubtask(newSubtaskTitle);
+                      setShowAddSubtask(false);
+                      setNewSubtaskTitle("");
+                    }
+                  }}
+                  disabled={!newSubtaskTitle.trim()}
+                  className="rounded-lg bg-tivit-red px-3 py-1.5 text-xs font-semibold text-white hover:bg-tivit-red-dark disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red/40"
+                >
+                  Guardar
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddSubtask(false);
+                    setNewSubtaskTitle("");
+                  }}
+                  className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-semibold text-tivit-ink hover:bg-tivit-red-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red/40"
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
             {subtasks.length === 0 ? (
               <p className="text-sm text-tivit-ink/50">Sin subtareas.</p>
             ) : (
@@ -466,7 +511,7 @@ export function TaskDetail() {
                       onChange={(e) => handleToggleSubtask(st.id, e.target.checked)}
                       className="h-4 w-4 accent-tivit-red"
                     />
-                    <span className={`flex-1 text-sm ${st.status === "done" ? "text-tivit-ink/40 line-through" : "text-tivit-ink"}`}>
+                    <span className={`flex-1 min-w-0 truncate text-sm ${st.status === "done" ? "text-tivit-ink/40 line-through" : "text-tivit-ink"}`}>
                       {st.title}
                     </span>
                     <PriorityBadge priority={st.priority} />
@@ -997,8 +1042,8 @@ function CommentItem({ comment: c, currentUser, taskId, users, onEdit, onDelete 
   return (
     <div className="flex gap-3 group">
       <UserAvatar user={c.author} />
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-tivit-ink">{c.author.name}</span>
           <span className="text-xs text-tivit-ink/50">{formatRelative(c.created_at)}</span>
           {isOwner && !editing && (
@@ -1061,7 +1106,7 @@ function CommentBody({ body, users }) {
     i++;
   }
   if (buffer) parts.push(buffer);
-  return <div className="mt-1 whitespace-pre-wrap text-sm text-tivit-ink/80">{parts}</div>;
+  return <div className="mt-1 whitespace-pre-wrap break-words text-sm text-tivit-ink/80">{parts}</div>;
 }
 
 function describeActivity(a) {

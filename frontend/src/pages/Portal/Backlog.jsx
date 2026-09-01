@@ -92,13 +92,13 @@ export function Backlog({ projectId } = {}) {
 
 function BacklogRow({ task, onMove }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-black/5 bg-white p-4 shadow-sm">
-      <div className="flex flex-1 items-center gap-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-black/5 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
         <TypeBadge type={task.type} />
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <Link
             to={`/portal/tasks/${task.id}`}
-            className="font-semibold text-tivit-ink hover:text-tivit-red"
+            className="block truncate font-semibold text-tivit-ink hover:text-tivit-red"
           >
             {task.title}
           </Link>
@@ -110,11 +110,11 @@ function BacklogRow({ task, onMove }) {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 sm:shrink-0">
         <UserAvatar user={task.assignee} size="sm" />
         <button
           onClick={() => onMove(task.id, "todo")}
-          className="rounded-lg bg-tivit-red px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-tivit-red-dark"
+          className="w-full rounded-lg bg-tivit-red px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-tivit-red-dark sm:w-auto"
         >
           Promover
         </button>

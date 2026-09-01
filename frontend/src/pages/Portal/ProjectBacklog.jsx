@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useParams, Outlet } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext.jsx";
 import { TypeBadge, PriorityBadge, StatusBadge, UserAvatar, AreaBadge, formatDate } from "./components/Badges";
 import { Plus, Filter, Users, Globe } from "lucide-react";
 
 export function ProjectBacklog() {
   const { id: projectId } = useParams();
   const { user } = useAuth();
+  const toast = useToast();
   const isAdmin = user?.role === "admin";
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
@@ -15,6 +17,7 @@ export function ProjectBacklog() {
   const [error, setError] = useState(null);
   const [selectedAssignee, setSelectedAssignee] = useState("");
   const [showTaskByMember, setShowTaskByMember] = useState(false);
+  const [updatingTaskId, setUpdatingTaskId] = useState(null);
 
   useEffect(() => {
     refresh();
@@ -38,11 +41,20 @@ export function ProjectBacklog() {
   }
 
   async function moveToStatus(taskId, status) {
+    const previousTasks = tasks;
+    // optimistic update
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)));
+    setUpdatingTaskId(taskId);
     try {
       await api.updateTaskStatus(taskId, status);
-      refresh();
+      toast.success("Estado actualizado");
     } catch (e) {
+      // rollback
+      setTasks(previousTasks);
       setError(e.message);
+      toast.error(e.message || "Error al actualizar estado");
+    } finally {
+      setUpdatingTaskId(null);
     }
   }
 
@@ -93,8 +105,55 @@ export function ProjectBacklog() {
               <p className="text-sm text-tivit-ink/50">No hay tareas en el backlog.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-black/5 bg-white">
-              <table className="w-full text-sm">
+            <>
+              {/* Mobile cards */}
+              <div className="grid gap-3 sm:hidden">
+                {filteredTasks.map((task) => (
+                  <div key={task.id} className="rounded-xl border border-black/5 bg-white p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <Link to={`/portal/tasks/${task.id}`} className="text-sm font-semibold text-tivit-ink hover:text-tivit-red">
+                        {task.title}
+                      </Link>
+                      <PriorityBadge priority={task.priority} />
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-mono text-tivit-ink/60">{task.code}</span>
+                      <TypeBadge type={task.type} />
+                      <StatusBadge status={task.status} />
+                    </div>
+                    <div className="mt-2 flex items-center gap-2 text-xs">
+                      {task.assignee ? (
+                        <>
+                          <UserAvatar user={task.assignee} size="sm" />
+                          <span>{task.assignee.name}</span>
+                        </>
+                      ) : (
+                        <span className="text-tivit-ink/40">Sin asignar</span>
+                      )}
+                      <span className="ml-auto text-tivit-ink/60">{task.sprint?.name || "Sin sprint"}</span>
+                    </div>
+                    <div className="mt-3">
+                      <select
+                        value={task.status || "todo"}
+                        onChange={(e) => moveToStatus(task.id, e.target.value)}
+                        disabled={updatingTaskId === task.id}
+                        aria-label={`Cambiar estado de ${task.title}`}
+                        aria-busy={updatingTaskId === task.id}
+                        className="w-full rounded-lg border border-black/10 px-2 py-2 text-sm disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red/30"
+                      >
+                        <option value="backlog">Backlog</option>
+                        <option value="todo">Por hacer</option>
+                        <option value="in_progress">En progreso</option>
+                        <option value="review">En revisión</option>
+                        <option value="done">Completada</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table */}
+              <div className="hidden overflow-x-auto rounded-xl border border-black/5 bg-white sm:block">
+                <table className="w-full min-w-[900px] text-sm">
                 <thead>
                   <tr className="border-b border-black/5 bg-gray-50/50 text-left text-xs font-semibold uppercase tracking-wider text-tivit-ink/60">
                     <th className="px-3 py-3">Código</th>
@@ -158,7 +217,10 @@ export function ProjectBacklog() {
                           <select
                             value={task.status || "todo"}
                             onChange={(e) => moveToStatus(task.id, e.target.value)}
-                            className="rounded-lg border border-black/10 px-2 py-1 text-xs"
+                            disabled={updatingTaskId === task.id}
+                            aria-label={`Cambiar estado de ${task.title}`}
+                            aria-busy={updatingTaskId === task.id}
+                            className="rounded-lg border border-black/10 px-2 py-1 text-xs disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red/30"
                           >
                             <option value="backlog">Backlog</option>
                             <option value="todo">Por hacer</option>
@@ -173,6 +235,7 @@ export function ProjectBacklog() {
                 </tbody>
               </table>
             </div>
+              </>
           )}
         </section>
       ) : (
@@ -191,10 +254,10 @@ export function ProjectBacklog() {
               </div>
               <div className="space-y-2">
                 {utasks.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between rounded-lg border border-black/5 bg-gray-50/50 p-3">
-                    <div className="flex items-center gap-3">
+                  <div key={task.id} className="flex flex-col gap-2 rounded-lg border border-black/5 bg-gray-50/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
                       <TypeBadge type={task.type} />
-                      <Link to={`/portal/tasks/${task.id}`} className="font-medium text-tivit-ink hover:text-tivit-red">
+                      <Link to={`/portal/tasks/${task.id}`} className="min-w-0 truncate font-medium text-tivit-ink hover:text-tivit-red">
                         {task.title}
                       </Link>
                       <PriorityBadge priority={task.priority} />
@@ -206,7 +269,10 @@ export function ProjectBacklog() {
                       <select
                         value={task.status || "todo"}
                         onChange={(e) => moveToStatus(task.id, e.target.value)}
-                        className="rounded-lg border border-black/10 px-2 py-1 text-xs"
+                        disabled={updatingTaskId === task.id}
+                        aria-label={`Cambiar estado de ${task.title}`}
+                        aria-busy={updatingTaskId === task.id}
+                        className="w-full rounded-lg border border-black/10 px-2 py-1 text-xs disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red/30 sm:w-auto"
                       >
                         <option value="backlog">Backlog</option>
                         <option value="todo">Por hacer</option>
@@ -236,10 +302,10 @@ export function ProjectBacklog() {
               </div>
               <div className="space-y-2">
                 {unassignedTasks.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between rounded-lg border border-black/5 bg-gray-50/50 p-3">
-                    <div className="flex items-center gap-3">
+                  <div key={task.id} className="flex flex-col gap-2 rounded-lg border border-black/5 bg-gray-50/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
                       <TypeBadge type={task.type} />
-                      <Link to={`/portal/tasks/${task.id}`} className="font-medium text-tivit-ink hover:text-tivit-red">
+                      <Link to={`/portal/tasks/${task.id}`} className="min-w-0 truncate font-medium text-tivit-ink hover:text-tivit-red">
                         {task.title}
                       </Link>
                       <PriorityBadge priority={task.priority} />
@@ -251,7 +317,10 @@ export function ProjectBacklog() {
                       <select
                         value={task.status || "todo"}
                         onChange={(e) => moveToStatus(task.id, e.target.value)}
-                        className="rounded-lg border border-black/10 px-2 py-1 text-xs"
+                        disabled={updatingTaskId === task.id}
+                        aria-label={`Cambiar estado de ${task.title}`}
+                        aria-busy={updatingTaskId === task.id}
+                        className="w-full rounded-lg border border-black/10 px-2 py-1 text-xs disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red/30 sm:w-auto"
                       >
                         <option value="backlog">Backlog</option>
                         <option value="todo">Por hacer</option>

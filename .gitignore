@@ -153,3 +153,6 @@ desktop.ini
 coverage/
 lcov.info
 .nyc_output/
+portal.db-backup-*.tar.gz
+tivit-media-backup-*.tar.gz
+test-results/

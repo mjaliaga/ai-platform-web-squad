@@ -125,13 +125,32 @@ pub async fn seed_admin(pool: &SqlitePool) -> Result<()> {
 
     // SEC-001: Require explicit env var, fail loudly if missing.
     // No insecure defaults — admin seeding must be opt-in via environment.
-    let email = match std::env::var("SEED_ADMIN_EMAIL") {
+    let email_raw = match std::env::var("SEED_ADMIN_EMAIL") {
         Ok(v) => v,
         Err(_) => {
             tracing::info!("SEED_ADMIN_EMAIL not set — skipping admin seed (set it to enable seeding).");
             return Ok(());
         }
     };
+    let email = email_raw.trim().to_string();
+    if email.is_empty() {
+        tracing::info!("SEED_ADMIN_EMAIL empty — skipping admin seed (set a valid email to enable seeding).");
+        return Ok(());
+    }
+
+    // FIX: Check existing BEFORE validating password. This allows restarts
+    // to succeed even if SEED_ADMIN_PASSWORD is short/weak but user already exists,
+    // and avoids creating a corrupted user with email="" when env is empty string.
+    let existing: Option<(String,)> =
+        sqlx::query_as("SELECT id FROM users WHERE email = ?")
+            .bind(&email)
+            .fetch_optional(pool)
+            .await?;
+
+    if existing.is_some() {
+        return Ok(());
+    }
+
     let password = match std::env::var("SEED_ADMIN_PASSWORD") {
         Ok(v) => {
             if v.len() < 12 {
@@ -152,16 +171,6 @@ pub async fn seed_admin(pool: &SqlitePool) -> Result<()> {
     if weak.iter().any(|w| password.eq_ignore_ascii_case(w)) {
         tracing::error!("SEED_ADMIN_PASSWORD is in the weak-password blocklist. Choose a stronger one.");
         anyhow::bail!("SEED_ADMIN_PASSWORD is in weak blocklist");
-    }
-
-    let existing: Option<(String,)> =
-        sqlx::query_as("SELECT id FROM users WHERE email = ?")
-            .bind(&email)
-            .fetch_optional(pool)
-            .await?;
-
-    if existing.is_some() {
-        return Ok(());
     }
 
     let id = uuid::Uuid::new_v4().to_string();

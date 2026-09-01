@@ -67,12 +67,12 @@ export function PortfolioKanban() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-tivit-ink">Portafolio — Tablero Kanban</h1>
+        <h1 className="text-xl font-bold text-tivit-ink sm:text-2xl">Portafolio — Tablero Kanban</h1>
         <p className="mt-1 text-sm text-tivit-ink/60">Cada tarjeta es un proyecto entero. Arrastra entre etapas si tienes permiso (Sponsor/Tech Lead/Admin). Tareas técnicas viven dentro de la etapa Proyecto.</p>
       </div>
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 sm:grid sm:grid-cols-2 sm:snap-none sm:overflow-visible lg:flex lg:flex-nowrap lg:overflow-x-auto">
         {STAGES.map(stage => (
-          <div key={stage} onDragOver={onDragOver} onDrop={(e)=>onDrop(e, stage)} className={`w-72 shrink-0 rounded-xl border p-3 ${STAGE_COLORS[stage]}`}>
+          <div key={stage} onDragOver={onDragOver} onDrop={(e)=>onDrop(e, stage)} className={`w-full shrink-0 snap-start rounded-xl border p-3 sm:w-auto lg:w-72 ${STAGE_COLORS[stage]}`}>
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-sm font-bold text-tivit-ink">
                 <span className={`h-2 w-2 rounded-full ${STAGE_DOT[stage]}`} /> {stage}

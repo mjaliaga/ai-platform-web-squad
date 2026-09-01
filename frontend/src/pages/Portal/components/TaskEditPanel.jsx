@@ -118,7 +118,7 @@ export function TaskEditPanel({ task, onClose, onUpdate, onDelete }) {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-black/10 bg-white shadow-2xl">
+      <div className="fixed right-0 top-0 z-50 flex h-[100dvh] w-full max-w-[95vw] flex-col border-l border-black/10 bg-white shadow-2xl sm:h-full sm:max-w-md">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-black/5 px-5 py-4">
           <div className="flex items-center gap-2">

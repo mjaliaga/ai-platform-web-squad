@@ -24,6 +24,7 @@ pub const PORTFOLIO_CATEGORIAS: &[&str] = &[
     "PoC",
     "Proyecto",
     "Producción",
+    "Cerrado",
 ];
 
 pub fn validate_categoria(cat: &str) -> Result<(), axum::response::Response> {
@@ -482,6 +483,7 @@ pub async fn create_project(
         "PoC" => "PoC".to_string(),
         "Proyecto" => "Proyecto".to_string(),
         "Producción" => "Producción".to_string(),
+        "Cerrado" => "Cerrado".to_string(),
         _ => payload.categoria.clone(),
     };
 

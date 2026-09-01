@@ -188,11 +188,11 @@ export function ProjectBoard() {
         </button>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4">
         {COLUMNS.map((column) => (
           <div
             key={column.key}
-            className={`flex-shrink-0 w-72 rounded-xl border ${column.color} p-3`}
+            className={`min-w-[280px] max-w-[85vw] w-[85vw] sm:w-72 shrink-0 snap-start rounded-xl border ${column.color} p-3`}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, column.key === "backlog" ? "backlog" : column.key === "done" ? "done" : column.key)}
           >
@@ -286,7 +286,7 @@ function TaskModal({ form, sprints, users, onChange, onSubmit, onClose, editing 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+      <div className="mx-4 w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-white shadow-xl sm:mx-auto">
         <div className="flex items-center justify-between border-b border-black/5 p-4">
           <h2 className="text-lg font-semibold text-tivit-ink">
             {editing ? "Editar tarea" : "Nueva tarea"}
@@ -310,7 +310,7 @@ function TaskModal({ form, sprints, users, onChange, onSubmit, onClose, editing 
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-tivit-ink">Tipo</label>
               <select
@@ -358,7 +358,7 @@ function TaskModal({ form, sprints, users, onChange, onSubmit, onClose, editing 
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-tivit-ink">Fecha vencimiento</label>
               <input
