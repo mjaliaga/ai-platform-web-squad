@@ -92,7 +92,7 @@ export function PortalLayout() {
           scrolled ? "shadow-sm" : ""
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
           <div className="flex shrink-0 items-center gap-3">
             <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="TIVIT">
               <img src="/media/logos/logo-tivit-tile.png" alt="TIVIT" className="h-8 w-auto" />
@@ -107,7 +107,7 @@ export function PortalLayout() {
             </Link>
           </div>
 
-          <nav className="hidden items-center gap-1 xl:gap-1.5 md:flex" aria-label="Principal">
+          <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex xl:gap-1.5" aria-label="Principal">
             {links.map((l) => (
               <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
                 <l.icon className="h-4 w-4" aria-hidden="true" />
@@ -129,10 +129,10 @@ export function PortalLayout() {
 
           <div className="flex shrink-0 items-center gap-2">
             <NotificationBell />
-            <div className="relative" ref={profileRef}>
+            <div className="relative shrink-0" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen((o) => !o)}
-                className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-tivit-red-light/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2"
+                className="flex shrink-0 items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-tivit-red-light/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2"
                 aria-haspopup="menu"
                 aria-expanded={profileOpen}
                 aria-label="Menú de perfil"
@@ -230,7 +230,7 @@ export function PortalLayout() {
         )}
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full">
+      <main className="portal-main mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full">
         <Outlet />
       </main>
     </div>

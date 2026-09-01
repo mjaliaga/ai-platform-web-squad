@@ -72,7 +72,6 @@
 }
 
 html {
-  overflow-x: clip;
   scroll-behavior: smooth;
 }
 
@@ -86,9 +85,10 @@ body {
   @apply bg-white text-tivit-ink antialiased overflow-x-hidden;
 }
 
-html,
-body {
-  overflow-x: clip;
+/* Evitar scroll horizontal del viewport por tablas/kanban anchos,
+   pero sin clippear header sticky. El clip solo en main. */
+.portal-main {
+  overflow-x: hidden;
 }
 
 .portal-main {
