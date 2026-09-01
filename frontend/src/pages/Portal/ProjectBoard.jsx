@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
-import { TypeBadge, PriorityBadge, UserAvatar, formatDate } from "./components/Badges";
+import { TypeBadge, PriorityBadge, UserAvatar, formatDate, toDate } from "./components/Badges";
 import { Plus, GripVertical, X } from "lucide-react";
 
 const COLUMNS = [
@@ -278,7 +278,8 @@ function TaskCard({ task, onDragStart, onEdit, isDragging }) {
 
 function isPastDue(dueDate) {
   if (!dueDate) return false;
-  return new Date(dueDate) < new Date();
+  const d = toDate(dueDate);
+  return d ? d < new Date() : false;
 }
 
 function TaskModal({ form, sprints, users, onChange, onSubmit, onClose, editing }) {

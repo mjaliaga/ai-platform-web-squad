@@ -155,7 +155,7 @@ export function MemberProfile() {
             <AlertTriangle className="h-4 w-4" /> {overdue_count} tarea{overdue_count > 1 ? "s" : ""} vencida{overdue_count > 1 ? "s" : ""}
           </div>
           <div className="mt-2 space-y-1">
-            {tasks.filter((t) => t.due_date && new Date(t.due_date) < new Date() && t.status !== "done").slice(0, 5).map((t) => (
+            {tasks.filter((t) => { const d = t.due_date ? new Date(t.due_date) : null; return d && d < new Date() && t.status !== "done"; }).slice(0, 5).map((t) => (
               <Link key={t.id} to={`/portal/tasks/${t.id}`} className="flex items-center gap-2 text-sm text-amber-800 hover:underline">
                 <TypeBadge type={t.type} /> {t.title} <span className="text-xs">({formatDate(t.due_date)})</span>
               </Link>

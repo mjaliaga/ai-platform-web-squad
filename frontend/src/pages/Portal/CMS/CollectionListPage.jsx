@@ -18,6 +18,7 @@ import {
   usePublishContentItem,
 } from "../../../lib/contentQueries";
 import { useAuth } from "../../../context/AuthContext";
+import { formatDateTime } from "../components/Badges";
 
 const EDITABLE_COLLECTIONS = ["laboratorio", "poc", "casos-de-exito", "almaviva", "xms"];
 
@@ -190,11 +191,8 @@ export function CollectionListPage() {
                       {item.data.codigo}
                     </span>
                   )}
-                  <div className="mt-2 text-xs text-tivit-ink/55">
-                    {new Date(item.updated_at).toLocaleString("es-AR", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
+                  <div className="mt-2 text-xs text-tivit-ink/55" title={formatDateTime(item.updated_at)}>
+                    {formatDateTime(item.updated_at)}
                   </div>
                   <div className="mt-3 flex items-center justify-end gap-1 border-t border-black/5 pt-3">
                     {isEditable ? (
@@ -311,11 +309,8 @@ export function CollectionListPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-tivit-ink/55">
-                      {new Date(item.updated_at).toLocaleString("es-AR", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
+                    <td className="px-4 py-3 text-xs text-tivit-ink/55" title={formatDateTime(item.updated_at)}>
+                      {formatDateTime(item.updated_at)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">

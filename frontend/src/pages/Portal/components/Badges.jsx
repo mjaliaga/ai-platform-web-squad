@@ -136,18 +136,41 @@ export function UserAvatar({ user, size = "md" }) {
 
 export function toDate(value) {
   if (!value) return null;
-  const s = String(value).trim();
-  // SQLite devuelve "YYYY-MM-DD HH:MM:SS" (UTC, sin zona horaria), que no es
-  // un formato ISO válido para Safari/Firefox. Lo normalizamos a ISO con 'Z'.
+  let s = String(value).trim();
+  // Fecha sola "YYYY-MM-DD" (due_date, issue_date) -> tratar como fecha local a medianoche, sin conversión UTC
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const d = new Date(`${s}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  // SQLite "YYYY-MM-DD HH:MM:SS[.ms]" en UTC sin zona -> normalizar a ISO Z
   const sqlite = s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.\d+)?$/);
-  const date = sqlite ? new Date(`${sqlite[1]}T${sqlite[2]}Z`) : new Date(s);
-  return Number.isNaN(date.getTime()) ? null : date;
+  if (sqlite) return new Date(`${sqlite[1]}T${sqlite[2]}Z`);
+  // ISO sin zona "YYYY-MM-DDTHH:MM:SS[.ms]" -> tratar como UTC (evita que se interprete como local)
+  const isoNoTz = s.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?$/);
+  if (isoNoTz) return new Date(`${s}Z`);
+  // Ya tiene Z u offset (+HH:MM / -HH:MM) -> parse directo como UTC
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 export function formatDate(iso) {
   const d = toDate(iso);
   if (!d) return iso;
+  // toLocaleDateString usa la zona horaria local del navegador (persona)
   return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+export function formatDateTime(iso) {
+  const d = toDate(iso);
+  if (!d) return iso ?? "";
+  // Hora estandarizada a la zona local de la persona (navegador)
+  return d.toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
+}
+
+export function formatDateTimeLong(iso) {
+  const d = toDate(iso);
+  if (!d) return iso ?? "";
+  return d.toLocaleString("es-AR", { dateStyle: "long", timeStyle: "short" });
 }
 
 export function formatRelative(iso) {

@@ -2,21 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { ActivityIcon, Plus, Edit, ArrowRight, MessageSquare, Paperclip, CheckCircle } from "lucide-react";
+import { formatRelative, toDate } from "./components/Badges";
 
 function formatRelativeTime(isoString) {
-  if (!isoString) return "";
-  const date = new Date(isoString);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Hace un momento";
-  if (diffMins < 60) return `Hace ${diffMins} min`;
-  if (diffHours < 24) return `Hace ${diffHours} h`;
-  if (diffDays < 7) return `Hace ${diffDays} día${diffDays > 1 ? "s" : ""}`;
-  return date.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  // Reusa lógica centralizada con toDate (UTC->local) para consistencia
+  return formatRelative(isoString) || "";
 }
 
 function getActivityIcon(type) {
@@ -81,7 +71,7 @@ export function ProjectActivity() {
         }
       });
 
-      activityItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      activityItems.sort((a, b) => (toDate(b.timestamp)?.getTime() || 0) - (toDate(a.timestamp)?.getTime() || 0));
       setActivities(activityItems.slice(0, 30));
     } catch (e) {
       setError(e.message);

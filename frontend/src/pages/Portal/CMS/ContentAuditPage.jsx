@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { ChevronLeft, History, Filter } from "lucide-react";
 import { useContentAudit, useCollections } from "../../../lib/contentQueries";
+import { formatDateTime } from "../components/Badges";
 
 const ACTION_LABELS = {
   created: { label: "Creado", color: "bg-green-100 text-green-700" },
@@ -93,11 +94,8 @@ export function ContentAuditPage() {
                       </p>
                     )}
                   </div>
-                  <time className="shrink-0 text-xs text-tivit-ink/45">
-                    {new Date(entry.created_at).toLocaleString("es-AR", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
+                  <time className="shrink-0 text-xs text-tivit-ink/45" title={formatDateTime(entry.created_at)}>
+                    {formatDateTime(entry.created_at)}
                   </time>
                 </li>
               );

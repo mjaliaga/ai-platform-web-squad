@@ -13,6 +13,7 @@ import { DynamicFormField } from "../../../components/CMS/DynamicFormField";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext.jsx";
 import { RfChart } from "../../../components/RfChart";
+import { formatDateTime } from "../components/Badges";
 
 // Todas las colecciones son editables para usuarios autenticados (RBAC en backend)
 // "proyectos" se redirige a /portal/portfolio por vivir en tabla projects
@@ -242,9 +243,9 @@ export function ItemEditorPage() {
               : data.nombreComercial || data.slug || slug}
           </h1>
           {!isNew && existing && (
-            <p className="mt-1 text-xs text-tivit-ink/45">
-              Creado {new Date(existing.created_at).toLocaleString("es-AR")} ·{" "}
-              Actualizado {new Date(existing.updated_at).toLocaleString("es-AR")}
+            <p className="mt-1 text-xs text-tivit-ink/45" title={`${formatDateTime(existing.created_at)} · ${formatDateTime(existing.updated_at)}`}>
+              Creado {formatDateTime(existing.created_at)} ·{" "}
+              Actualizado {formatDateTime(existing.updated_at)}
             </p>
           )}
         </div>

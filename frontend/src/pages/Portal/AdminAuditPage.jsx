@@ -4,6 +4,7 @@ import { Shield, Filter, Clock, User, AlertTriangle, CheckCircle } from "lucide-
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { formatDateTime } from "./components/Badges";
 
 const EVENT_LABELS = {
   login_success: { label: "Login OK", color: "bg-green-100 text-green-700" },
@@ -105,7 +106,7 @@ export function AdminAuditPage() {
                           {e.user_agent && <span className="truncate max-w-[20rem]">{e.user_agent}</span>}
                         </p>
                       </div>
-                      <time className="shrink-0 text-xs text-tivit-ink/45">{new Date(e.created_at).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}</time>
+                      <time className="shrink-0 text-xs text-tivit-ink/45" title={formatDateTime(e.created_at)}>{formatDateTime(e.created_at)}</time>
                     </li>
                   );
                 })}
@@ -135,7 +136,7 @@ export function AdminAuditPage() {
                       </p>
                       {entry.details && <p className="mt-0.5 text-xs text-tivit-ink/55">{entry.details}</p>}
                     </div>
-                    <time className="shrink-0 text-xs text-tivit-ink/45">{new Date(entry.created_at).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}</time>
+                    <time className="shrink-0 text-xs text-tivit-ink/45" title={formatDateTime(entry.created_at)}>{formatDateTime(entry.created_at)}</time>
                   </li>
                 );
               })}

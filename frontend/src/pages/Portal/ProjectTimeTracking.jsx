@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { Clock, Plus, Trash2, Calendar, User } from "lucide-react";
+import { formatDate, toDate } from "./components/Badges";
 
 export function ProjectTimeTracking() {
   const { id: projectId } = useParams();
@@ -41,7 +42,7 @@ export function ProjectTimeTracking() {
           }
         } catch (e) {}
       }
-      entries.sort((a, b) => new Date(b.logged_at) - new Date(a.logged_at));
+      entries.sort((a, b) => (toDate(b.logged_at)?.getTime() || 0) - (toDate(a.logged_at)?.getTime() || 0));
       setProjectTimeEntries(entries.slice(0, 100));
     } catch (e) {
       setError(e.message);
@@ -218,8 +219,8 @@ export function ProjectTimeTracking() {
             ) : (
               projectTimeEntries.map((entry) => (
                 <tr key={entry.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-tivit-ink">
-                    {new Date(entry.logged_at).toLocaleDateString("es-ES")}
+                  <td className="px-4 py-3 text-sm text-tivit-ink" title={formatDate(entry.logged_at)}>
+                    {formatDate(entry.logged_at)}
                   </td>
                   <td className="px-4 py-3">
                     <span className="font-mono text-xs text-tivit-ink/60">{entry.taskCode}</span>

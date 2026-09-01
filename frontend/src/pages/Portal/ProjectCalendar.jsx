@@ -3,10 +3,12 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, X, Star } from "lucide-react";
 
+import { formatDate, toDate } from "./components/Badges";
+
 function formatDateShort(iso) {
   if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  // Usa toDate para manejar UTC->local correctamente, pero para fecha corta usa formatDate
+  return formatDate(iso);
 }
 
 function isToday(date) {

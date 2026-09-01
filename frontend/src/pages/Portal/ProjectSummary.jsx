@@ -1,5 +1,6 @@
 import { useOutletContext } from "react-router-dom";
 import { FolderKanban, FileText, Tag, Building2, Calendar, User, Mail, Globe, FileText as DocIcon, AlertTriangle, Wrench, FlaskConical, FolderOpen, Rocket, Check } from "lucide-react";
+import { formatDate } from "./components/Badges";
 
 const TIPO_PROYECTO_LABELS = {
   interno: "Interno",
@@ -649,11 +650,7 @@ export function ProjectSummary() {
                 <Calendar className="h-4 w-4" />
               </div>
               <p className="font-medium text-tivit-ink">
-                {new Date(project.created_at).toLocaleDateString("es-ES", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {formatDate(project.created_at)}
               </p>
             </div>
           </div>

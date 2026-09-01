@@ -5,6 +5,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { Award, Plus, X, User } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { formatDate } from "./components/Badges";
 
 export function Certificaciones() {
   const { user } = useAuth();
@@ -183,8 +184,8 @@ export function Certificaciones() {
               )}
             </div>
             <div className="mt-3 pt-3 border-t border-gray-100">
-              <div className="text-xs text-gray-500">
-                Fecha: {new Date(cert.issue_date).toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })}
+              <div className="text-xs text-gray-500" title={formatDate(cert.issue_date)}>
+                Fecha: {formatDate(cert.issue_date)}
               </div>
             </div>
           </div>
