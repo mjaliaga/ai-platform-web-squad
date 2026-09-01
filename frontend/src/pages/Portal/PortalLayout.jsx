@@ -92,7 +92,7 @@ export function PortalLayout() {
           scrolled ? "shadow-sm" : ""
         }`}
       >
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto grid h-16 w-full max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
           <div className="flex shrink-0 items-center gap-3">
             <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="TIVIT">
               <img src="/media/logos/logo-tivit-tile.png" alt="TIVIT" className="h-8 w-auto" />
@@ -107,7 +107,7 @@ export function PortalLayout() {
             </Link>
           </div>
 
-          <nav className="hidden min-w-0 flex-1 items-center justify-start gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex lg:justify-center xl:gap-1.5" aria-label="Principal">
+          <nav className="hidden min-w-0 items-center justify-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex xl:gap-1.5" aria-label="Principal">
             {links.map((l) => (
               <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
                 <l.icon className="h-4 w-4" aria-hidden="true" />
