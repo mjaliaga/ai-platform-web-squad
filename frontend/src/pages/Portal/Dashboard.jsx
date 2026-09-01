@@ -68,14 +68,14 @@ export function Dashboard() {
   const projects = isAdmin ? (projectsQuery.data || []) : [];
   const announcements = announcementsQuery.data || [];
 
+  const statusMap = useMemo(
+    () => Object.fromEntries((stats?.by_status || []).map((s) => [s.status, s.count])),
+    [stats?.by_status]
+  );
+
   if (statsQuery.error)
     return <div className="text-alert">Error: {statsQuery.error.message}</div>;
   if (!stats) return <div className="text-tivit-ink/60">Cargando…</div>;
-
-  const statusMap = useMemo(
-    () => Object.fromEntries((stats.by_status || []).map((s) => [s.status, s.count])),
-    [stats.by_status]
-  );
   const pinned = announcements.filter((a) => a.pinned === 1);
   const recentAnnouncements = announcements.slice(0, 3);
 
