@@ -79,7 +79,7 @@ export function PortalLayout() {
   }, []);
 
   const navLinkClass = ({ isActive }) =>
-    `flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-medium transition-colors xl:gap-2 xl:px-3.5 xl:text-sm ${
+    `flex shrink-0 items-center gap-1 whitespace-nowrap rounded-xl px-1.5 py-1 text-[10px] font-medium transition-colors lg:gap-1 lg:px-2 lg:py-1.5 lg:text-[11px] xl:gap-1.5 xl:px-2.5 xl:py-1.5 xl:text-xs ${
       isActive
         ? "bg-tivit-red text-white shadow-sm"
         : "text-tivit-ink/70 hover:bg-tivit-red-light/70 hover:text-tivit-ink"
@@ -92,11 +92,11 @@ export function PortalLayout() {
           scrolled ? "shadow-sm" : ""
         }`}
       >
-        <div className="mx-auto grid h-16 w-full max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto grid h-16 w-full max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-4 sm:px-6 lg:gap-3 lg:px-6 xl:px-8">
           <div className="flex shrink-0 items-center gap-3">
             <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="TIVIT">
               <img src="/media/logos/logo-tivit-tile.png" alt="TIVIT" className="h-8 w-auto" />
-              <div className="hidden flex-col leading-tight sm:flex">
+              <div className="hidden flex-col leading-tight xl:flex">
                 <span className="text-sm font-semibold tracking-tight text-tivit-ink">
                   Portal del equipo
                 </span>
@@ -107,32 +107,32 @@ export function PortalLayout() {
             </Link>
           </div>
 
-          <nav className="hidden min-w-0 items-center justify-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex xl:gap-1.5" aria-label="Principal">
+          <nav className="hidden min-w-0 items-center justify-start gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex lg:gap-1 xl:gap-1.5" aria-label="Principal">
             {links.map((l) => (
               <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
-                <l.icon className="h-4 w-4" aria-hidden="true" />
+                <l.icon className="h-3 w-3 lg:h-3.5 lg:w-3.5 xl:h-4 xl:w-4" aria-hidden="true" />
                 {l.label}
               </NavLink>
             ))}
             {user?.role === "admin" &&
               adminLinks.map((l) => (
                 <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
-                  <l.icon className="h-4 w-4" aria-hidden="true" />
+                  <l.icon className="h-3 w-3 lg:h-3.5 lg:w-3.5 xl:h-4 xl:w-4" aria-hidden="true" />
                   {l.label}
                 </NavLink>
               ))}
-            <NavLink to="/portal/members" className={navLinkClass}>
-              <Users className="h-4 w-4" aria-hidden="true" />
-              Miembros
-            </NavLink>
           </nav>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 lg:gap-2">
+            <NavLink to="/portal/members" className={navLinkClass}>
+              <Users className="h-3 w-3 lg:h-3.5 lg:w-3.5 xl:h-4 xl:w-4" aria-hidden="true" />
+              Miembros
+            </NavLink>
             <NotificationBell />
             <div className="relative shrink-0" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen((o) => !o)}
-                className="flex shrink-0 items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-tivit-red-light/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2"
+                className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-1 lg:pr-2 transition hover:bg-tivit-red-light/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2"
                 aria-haspopup="menu"
                 aria-expanded={profileOpen}
                 aria-label="Menú de perfil"
@@ -143,16 +143,16 @@ export function PortalLayout() {
                 >
                   {user?.name?.[0]?.toUpperCase()}
                 </div>
-                <div className="hidden text-left sm:block">
-                  <div className="max-w-[7rem] sm:max-w-[10rem] truncate text-sm font-semibold leading-tight text-tivit-ink">
+                <div className="hidden text-left lg:block">
+                  <div className="max-w-[5rem] xl:max-w-[6rem] truncate text-sm font-semibold leading-tight text-tivit-ink">
                     {user?.name}
                   </div>
-                  <div className="max-w-[7rem] sm:max-w-[10rem] truncate text-xs leading-tight text-tivit-ink/50">
+                  <div className="max-w-[5rem] xl:max-w-[6rem] truncate text-xs leading-tight text-tivit-ink/50">
                     {user?.email}
                   </div>
                 </div>
                 <ChevronDown
-                  className={`hidden h-4 w-4 text-tivit-ink/40 transition-transform sm:block ${
+                  className={`hidden h-4 w-4 text-tivit-ink/40 transition-transform lg:block ${
                     profileOpen ? "rotate-180" : ""
                   }`}
                   aria-hidden="true"
