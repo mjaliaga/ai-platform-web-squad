@@ -79,7 +79,7 @@ export function PortalLayout() {
   }, []);
 
   const navLinkClass = ({ isActive }) =>
-    `flex items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+    `flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-medium transition-colors xl:gap-2 xl:px-3.5 xl:text-sm ${
       isActive
         ? "bg-tivit-red text-white shadow-sm"
         : "text-tivit-ink/70 hover:bg-tivit-red-light/70 hover:text-tivit-ink"
@@ -107,7 +107,7 @@ export function PortalLayout() {
             </Link>
           </div>
 
-          <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex xl:gap-1.5" aria-label="Principal">
+          <nav className="hidden min-w-0 flex-1 items-center justify-start gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex lg:justify-center xl:gap-1.5" aria-label="Principal">
             {links.map((l) => (
               <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
                 <l.icon className="h-4 w-4" aria-hidden="true" />
