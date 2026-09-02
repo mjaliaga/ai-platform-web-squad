@@ -499,3 +499,83 @@ export function useReorderTodos() {
     },
   });
 }
+
+export function useTickets(params = {}, options = {}) {
+  return useQuery({
+    queryKey: queryKeys.tickets(params),
+    queryFn: () => api.listTickets(params),
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
+export function useTicket(id, options = {}) {
+  return useQuery({
+    queryKey: queryKeys.ticket(id),
+    queryFn: () => api.getTicket(id),
+    enabled: !!id,
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
+export function useTicketConfig(options = {}) {
+  return useQuery({
+    queryKey: queryKeys.ticketConfig,
+    queryFn: () => api.getTicketConfig(),
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
+export function useCreateTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => api.createTicket(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+    },
+  });
+}
+
+export function useUpdateTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }) => api.updateTicket(id, payload),
+    onSuccess: (data, { id }) => {
+      qc.setQueryData(queryKeys.ticket(id), data);
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+    },
+  });
+}
+
+export function useUpdateTicketStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, resolution }) => api.updateTicketStatus(id, { status, resolution }),
+    onSuccess: (data, { id }) => {
+      qc.setQueryData(queryKeys.ticket(id), data);
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+    },
+  });
+}
+
+export function useTicketComments(ticketId, options = {}) {
+  return useQuery({
+    queryKey: queryKeys.ticketComments(ticketId),
+    queryFn: () => api.listTicketComments(ticketId),
+    enabled: !!ticketId,
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
+export function useTicketActivity(ticketId, options = {}) {
+  return useQuery({
+    queryKey: queryKeys.ticketActivity(ticketId),
+    queryFn: () => api.listTicketActivity(ticketId),
+    enabled: !!ticketId,
+    staleTime: 30_000,
+    ...options,
+  });
+}

@@ -9,6 +9,11 @@ pub const SOLICITUD_STATUSES: &[&str] = &["pendiente", "en_revision", "aprobada"
 pub const PRIORITIES: &[&str] = &["low", "medium", "high", "urgent"];
 pub const TYPES: &[&str] = &["tarea", "bug", "solicitud"];
 pub const MAX_UPLOAD_BYTES: usize = 10 * 1024 * 1024;
+// Tickets
+pub const TICKET_STATUSES: &[&str] = &["abierto", "en_progreso", "resuelto", "cerrado"];
+pub const TICKET_PRIORITIES: &[&str] = &["low", "medium", "high", "urgent"];
+pub const TICKET_CATEGORIES: &[&str] = &["incidencia", "solicitud", "consulta"];
+pub const TICKET_LEVELS: &[i64] = &[1, 2];
 
 fn err(status: StatusCode, msg: String) -> Response {
     (status, Json(serde_json::json!({ "error": msg }))).into_response()
@@ -100,6 +105,38 @@ pub fn validate_hours(hours: f64) -> Result<(), Response> {
         return Err(err(
             StatusCode::BAD_REQUEST,
             "Las horas deben ser un número entre 0 y 168".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+pub fn validate_password(password: &str) -> Result<(), Response> {
+    if password.len() < 8 {
+        return Err(err(
+            StatusCode::BAD_REQUEST,
+            "La contraseña debe tener al menos 8 caracteres".to_string(),
+        ));
+    }
+    if password.len() > 200 {
+        return Err(err(
+            StatusCode::BAD_REQUEST,
+            "La contraseña no puede superar 200 caracteres".to_string(),
+        ));
+    }
+    const WEAK: &[&str] = &[
+        "tivit2026",
+        "admin123",
+        "password",
+        "changeme",
+        "12345678",
+        "qwerty123",
+        "tivit2026!",
+        "password123",
+    ];
+    if WEAK.iter().any(|w| password.eq_ignore_ascii_case(w)) {
+        return Err(err(
+            StatusCode::BAD_REQUEST,
+            "La contraseña es demasiado débil o común, elige otra".to_string(),
         ));
     }
     Ok(())

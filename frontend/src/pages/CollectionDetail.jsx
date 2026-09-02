@@ -528,7 +528,7 @@ export function CollectionDetail({ ruta }) {
                   <a
                     href={item.documentoDrive}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="text-tivit-red underline"
                   >
                     en Google Drive
@@ -722,7 +722,7 @@ export function CollectionDetail({ ruta }) {
                     <a
                       href={urlProyecto}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className={`inline-flex items-center gap-2 rounded-full px-6 py-3 font-semibold text-white shadow-sm transition active:scale-95 focus-visible:ring-2 focus-visible:ring-offset-2 ${
                         esXms
                           ? "bg-xms-blue hover:bg-xms-blue-dark focus-visible:ring-xms-blue"

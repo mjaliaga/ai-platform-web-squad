@@ -40,19 +40,33 @@ async function request(path, options = {}) {
     }
   }
 
+  // Timeout + AbortSignal: 15s por defecto, respeta signal externo (React Query)
+  const timeoutMs = options.timeout ?? 15000;
+  const hasExternalSignal = !!options.signal;
+  const controller = hasExternalSignal ? null : new AbortController();
+  const signal = options.signal ?? controller?.signal ?? null;
+  let timeoutId = null;
+  if (!hasExternalSignal && timeoutMs > 0 && signal) {
+    timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  }
+
   let res;
   try {
+    // Extrae timeout/headers/signal para no duplicar; headers calculado prevalece
+    const { timeout: _t, headers: _oh, signal: _os, ...fetchOptions } = options;
     res = await fetch(`${API_URL}${path}`, {
       credentials: "include",
+      ...fetchOptions,
       headers,
-      ...options,
+      signal,
     });
   } catch (networkError) {
-    throw new ApiError(
-      "Error de red. Verifica tu conexión.",
-      0,
-      null
-    );
+    if (networkError?.name === "AbortError") {
+      throw new ApiError("Tiempo de espera agotado. Intenta nuevamente.", 408, null);
+    }
+    throw new ApiError("Error de red. Verifica tu conexión.", 0, null);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 
   if (!res.ok) {
@@ -431,6 +445,31 @@ export const api = {
     request("/certifications", { method: "POST", body: JSON.stringify(payload) }),
   deleteCertification: (id) =>
     request(`/certifications/${id}`, { method: "DELETE" }),
+
+  // --- Tickets (asociados a portfolio) ---
+  listTickets: async (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") qs.append(k, v);
+    });
+    const q = qs.toString();
+    return unwrapPaginated(await request(`/tickets${q ? `?${q}` : ""}`));
+  },
+  getTicket: (id) => request(`/tickets/${id}`),
+  createTicket: (payload) =>
+    request("/tickets", { method: "POST", body: JSON.stringify(payload) }),
+  updateTicket: (id, payload) =>
+    request(`/tickets/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteTicket: (id) => request(`/tickets/${id}`, { method: "DELETE" }),
+  updateTicketStatus: (id, payload) =>
+    request(`/tickets/${id}/status`, { method: "PATCH", body: JSON.stringify(payload) }),
+  listTicketActivity: (id) => request(`/tickets/${id}/activity`),
+  listTicketComments: (id) => request(`/tickets/${id}/comments`),
+  createTicketComment: (id, body) =>
+    request(`/tickets/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) }),
+  getTicketConfig: () => request("/tickets/config"),
+  updateTicketConfig: (payload) =>
+    request("/tickets/config", { method: "POST", body: JSON.stringify(payload) }),
 };
 
 export async function downloadAttachment(taskId, attachmentId, filename) {

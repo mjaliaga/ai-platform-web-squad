@@ -13,6 +13,7 @@ services:
       PORT: 3000
       CORS_ORIGIN: "${CORS_ORIGIN:?CORS_ORIGIN is required in production}"
       COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+      # NOTE: If REDIS_PASSWORD is set, set REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379 manually.
       REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
       # SEC-001: SEED_ADMIN_* are optional. If unset, no admin is seeded.
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
@@ -21,11 +22,17 @@ services:
       MEDIA_DIR: /app/media
       UPLOAD_DIR: /app/data/uploads
       SEED_DATA_DIR: /app/seed-data
+      SKIP_SEED_PROJECTS: "1"
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-noreply@31032005.xyz}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-TIVIT Portal}
+      FRONTEND_URL: ${FRONTEND_URL:-http://10.249.27.210:8080}
     volumes:
       - tivit-db:/app/data
       - tivit-media:/app/media
     networks:
-      - tivit
+      - tivit-frontend
+      - tivit-backend
     depends_on:
       redis:
         condition: service_healthy
@@ -40,6 +47,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: 768m
+    cpus: 1.0
     deploy:
       resources:
         limits:
@@ -64,9 +73,9 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     networks:
-      - tivit
+      - tivit-backend
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping"]
+      test: ["CMD-SHELL", "sh -c 'if [ -n \"$REDIS_PASSWORD\" ]; then redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG; else redis-cli ping | grep -q PONG; fi'"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -75,6 +84,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: 256m
+    cpus: 0.5
     deploy:
       resources:
         limits:
@@ -99,7 +110,9 @@ services:
     volumes:
       - tivit-media:/usr/share/nginx/html/media-cms:ro
     networks:
-      - tivit
+      - tivit-frontend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # FIX-006: Healthcheck now hits the nginx root, not a backend endpoint
     # (which doesn't exist on the frontend container).
     healthcheck:
@@ -113,6 +126,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: 256m
+    cpus: 0.5
     deploy:
       resources:
         limits:
@@ -127,4 +142,5 @@ volumes:
   tivit-media:
 
 networks:
-  tivit:
+  tivit-frontend:
+  tivit-backend:

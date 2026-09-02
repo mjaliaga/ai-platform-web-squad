@@ -56,7 +56,7 @@ pub fn generate_csrf_token() -> String {
 
 pub fn set_csrf_cookie(headers: &mut axum::http::HeaderMap, token: &str, secure: bool) {
     let cookie = format!(
-        "{}={}; SameSite=Lax; Path=/; Max-Age=86400{}",
+        "{}={}; SameSite=Strict; Path=/; Max-Age=86400{}",
         CSRF_COOKIE,
         token,
         if secure { "; Secure" } else { "" }
@@ -78,6 +78,13 @@ fn extract_cookie(cookies: &str, name: &str) -> Option<String> {
     None
 }
 
+#[cfg(any(test, debug_assertions))]
 pub fn disable_csrf_for_testing() {
     CSRF_DISABLED.store(true, Ordering::SeqCst);
+}
+
+#[cfg(not(any(test, debug_assertions)))]
+pub fn disable_csrf_for_testing() {
+    // No-op en release — CSRF nunca se deshabilita en producción
+    tracing::warn!("disable_csrf_for_testing llamado en release — ignorado");
 }

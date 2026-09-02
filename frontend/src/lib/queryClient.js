@@ -44,13 +44,30 @@ export function notifyUnauthorized() {
   if (typeof onUnauthorized === "function") onUnauthorized();
 }
 
-// Wrap fetch to detect 401 and trigger the global handler.
+// Wrap fetch to detect 401 and trigger the global handler ONLY for protected API routes.
+// Evita disparar logout fantasma en rutas públicas (/api/public, /content, etc.).
 const originalFetch = globalThis.fetch?.bind(globalThis);
 if (originalFetch) {
   globalThis.fetch = async (...args) => {
     const res = await originalFetch(...args);
     if (res.status === 401) {
-      notifyUnauthorized();
+      let url = "";
+      try {
+        const first = args[0];
+        if (typeof first === "string") url = first;
+        else if (typeof Request !== "undefined" && first instanceof Request) url = first.url;
+        else if (first && typeof first.url === "string") url = first.url;
+      } catch {}
+      const isPublicApi =
+        url.includes("/public/") ||
+        url.includes("/public") ||
+        url.includes("/health") ||
+        url.includes("/api/auth/login");
+      const isApi = url.includes("/api/");
+      // Solo notificar si es API protegida; ignora fetches públicos, assets, y third-party
+      if (isApi && !isPublicApi) {
+        notifyUnauthorized();
+      }
     }
     return res;
   };
@@ -86,4 +103,9 @@ export const queryKeys = {
   announcements: (params) => ["announcements", params],
   todos: ["todos"],
   todosStats: ["todos", "stats"],
+  tickets: (params) => ["tickets", params],
+  ticket: (id) => ["tickets", id],
+  ticketActivity: (id) => ["tickets", id, "activity"],
+  ticketComments: (id) => ["tickets", id, "comments"],
+  ticketConfig: ["tickets", "config"],
 };

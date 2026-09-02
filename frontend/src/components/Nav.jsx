@@ -61,7 +61,7 @@ export function Nav() {
               key={enlace.nombre}
               href={enlace.url}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2 text-tivit-ink/75 hover:bg-tivit-red-light/60 hover:text-tivit-red"
             >
               {enlace.nombre}
@@ -117,7 +117,7 @@ export function Nav() {
                 key={enlace.nombre}
                 href={enlace.url}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-xl px-4 py-3 text-sm font-semibold transition text-tivit-ink/75 hover:bg-tivit-red-light/60 hover:text-tivit-red"
               >
                 {enlace.nombre}

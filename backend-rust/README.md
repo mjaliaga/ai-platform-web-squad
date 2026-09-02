@@ -82,16 +82,17 @@ Copy `.env.example` to `.env` and adjust the values before running locally.
 | Variable | Default | Description |
 |---|---|---|
 | `DATABASE_URL` | `sqlite://data/portal.db` | SQLite database path |
-| `JWT_SECRET` | `change-me-in-production` | HMAC secret for JWT signing. Generate with `openssl rand -hex 64`. |
+| `JWT_SECRET` | *(requerido, sin default)* | HMAC secret for JWT signing. **Requerido** — generar con `openssl rand -hex 64`. Sin default; el binario falla si está vacío o `<32 chars`. |
 | `JWT_EXPIRES_IN` | `8h` | Token TTL. Accepts `Xh`, `Xd`, `Xm`. |
 | `PORT` | `3000` | Listening port |
-| `CORS_ORIGIN` | `http://localhost:8080` | Allowed CORS origin(s), comma-separated |
-| `COOKIE_SECURE` | `false` | Set to `true` in production (HTTPS required) |
-| `REDIS_URL` | *(unset)* | Redis connection string. If unset, rate limiting is per-process only. |
+| `CORS_ORIGIN` | `http://localhost:8080` | Allowed CORS origin(s), comma-separated. **Requerido en producción**. |
+| `COOKIE_SECURE` | `false` (dev) | Set to `true` in production (HTTPS required). Default `true` si no se especifica. |
+| `REDIS_URL` | *(unset)* | Redis connection string. Si `REDIS_PASSWORD` está seteado, usar `redis://:${REDIS_PASSWORD}@redis:6379`. Si unset, rate limiting es per-process. |
+| `REDIS_PASSWORD` | *(unset)* | Contraseña Redis. Ver `docker-compose.yml`. |
 | `UPLOAD_DIR` | `data/uploads` | Directory for file attachments |
 | `MEDIA_DIR` | `data/media` | Directory for CMS media files |
-| `SEED_ADMIN_EMAIL` | `manuel.aliaga@tivit.com` | Initial admin account email |
-| `SEED_ADMIN_PASSWORD` | `tivit2026` | Initial admin account password |
+| `SEED_ADMIN_EMAIL` | *(vacío — opt-in)* | Initial admin account email. Si vacío, no se crea admin. |
+| `SEED_ADMIN_PASSWORD` | *(vacío — opt-in, mín 12)* | Initial admin account password. **Mín 12 chars, no en blocklist (`tivit2026`, `admin123`...). Generar con `openssl rand -base64 24`.** |
 | `SEED_ADMIN_NAME` | `Admin` | Initial admin account display name |
 
 ## Local Development

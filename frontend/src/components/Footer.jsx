@@ -24,7 +24,7 @@ export function Footer() {
             <a
               href="https://latam.tivit.com/"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="transition-opacity hover:opacity-90"
             >
               <img
@@ -59,7 +59,7 @@ export function Footer() {
                   <a
                     href={enlace.url}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-white/80 underline-offset-4 transition hover:text-white hover:underline"
                   >
                     {enlace.nombre}
@@ -79,7 +79,7 @@ export function Footer() {
                 <a
                   href="https://tivit.com/es/nova-home-espanhol/"
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="group inline-flex items-center gap-2 underline-offset-4 transition hover:text-white hover:underline"
                 >
                   <ExternalLink className="h-4 w-4 text-white/60 transition group-hover:text-white" />
@@ -90,7 +90,7 @@ export function Footer() {
                 <a
                   href="https://www.almaviva.it/en_GB"
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="group inline-flex items-center gap-2 underline-offset-4 transition hover:text-white hover:underline"
                 >
                   <ExternalLink className="h-4 w-4 text-white/60 transition group-hover:text-white" />
@@ -106,7 +106,7 @@ export function Footer() {
               <a
                 href="https://www.linkedin.com/company/tivit"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               >
                 <LinkedInIcon />
@@ -124,7 +124,7 @@ export function Footer() {
             <a
               href="https://latam.tivit.com/"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="text-white/80 underline-offset-4 transition hover:text-white hover:underline"
             >
               Política de privacidad
@@ -132,7 +132,7 @@ export function Footer() {
             <a
               href="https://www.almaviva.it/en_GB"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="text-white/80 underline-offset-4 transition hover:text-white hover:underline"
             >
               Términos

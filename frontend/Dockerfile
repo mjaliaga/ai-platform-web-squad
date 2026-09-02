@@ -8,7 +8,7 @@ ARG VITE_SHOW_DEMO_CREDENTIALS=false
 ENV VITE_SHOW_DEMO_CREDENTIALS=$VITE_SHOW_DEMO_CREDENTIALS
 
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci --omit=dev=false || npm install
 
 COPY . .
 RUN npm run build
@@ -23,7 +23,7 @@ RUN find /usr/share/nginx/html -type f -name ".gitkeep" -delete \
     && adduser -D -u 10001 -G appuser -h /var/cache/nginx -s /sbin/nologin appuser \
     && touch /var/run/nginx.pid \
     && chown -R appuser:appuser /usr/share/nginx/html /var/cache/nginx /var/log/nginx /var/run/nginx.pid /etc/nginx/conf.d \
-    && chmod 775 /etc/nginx/conf.d
+    && chmod 755 /etc/nginx/conf.d
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 COPY start.sh /start.sh

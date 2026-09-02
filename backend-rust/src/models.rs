@@ -366,6 +366,99 @@ pub struct AssigneeCount {
 }
 
 // ============================================================================
+// Tickets — Zona de Tickets asociada a portfolio
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Ticket {
+    pub id: String,
+    pub code: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: String,
+    pub priority: String,
+    pub level: i64,
+    pub category: Option<String>,
+    pub project_id: String,
+    pub reporter_id: String,
+    pub assignee_id: Option<String>,
+    pub due_date: Option<String>,
+    pub resolution: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    pub closed_at: Option<String>,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TicketWithDetails {
+    #[serde(flatten)]
+    pub ticket: Ticket,
+    pub reporter: PublicUser,
+    pub assignee: Option<PublicUser>,
+    pub project_name: Option<String>,
+    pub project_code: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TicketLevelConfig {
+    pub level: i64,
+    pub user_id: String,
+    pub updated_by: Option<String>,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TicketLevelConfigWithUser {
+    pub level: i64,
+    pub user_id: String,
+    pub user_name: String,
+    pub user_email: String,
+    pub updated_by: Option<String>,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TicketActivity {
+    pub id: String,
+    pub ticket_id: String,
+    pub user_id: String,
+    pub action: String,
+    pub field_changed: Option<String>,
+    pub old_value: Option<String>,
+    pub new_value: Option<String>,
+    pub metadata: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TicketActivityWithUser {
+    #[serde(flatten)]
+    pub activity: TicketActivity,
+    pub user: PublicUser,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TicketComment {
+    pub id: String,
+    pub ticket_id: String,
+    pub author_id: String,
+    pub body: String,
+    pub created_at: String,
+    pub updated_at: String,
+    #[sqlx(default)]
+    pub deleted_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TicketCommentWithAuthor {
+    #[serde(flatten)]
+    pub comment: TicketComment,
+    pub author: PublicUser,
+}
+
+// ============================================================================
 // CMS de Contenido Público
 // ============================================================================
 

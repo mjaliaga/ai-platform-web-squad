@@ -29,7 +29,7 @@ export function CtaFinal() {
               <a
                 href={repositorio}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-tivit-red-dark shadow-sm transition hover:bg-tivit-red-light active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-tivit-ink"
               >
                 Repositorio

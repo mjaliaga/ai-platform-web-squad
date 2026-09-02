@@ -9,6 +9,10 @@ const STATUS_DOT = {
   aprobada: "bg-green-500",
   rechazada: "bg-red-500",
   resuelta: "bg-emerald-500",
+  abierto: "bg-blue-500",
+  en_progreso: "bg-amber-500",
+  resuelto: "bg-green-500",
+  cerrado: "bg-gray-500",
 };
 
 const STATUS_COLORS = {
@@ -22,6 +26,10 @@ const STATUS_COLORS = {
   aprobada: "bg-green-50 text-green-700",
   rechazada: "bg-red-50 text-red-700",
   resuelta: "bg-emerald-50 text-emerald-700",
+  abierto: "bg-blue-50 text-blue-700",
+  en_progreso: "bg-amber-50 text-amber-700",
+  resuelto: "bg-green-50 text-green-700",
+  cerrado: "bg-gray-100 text-gray-600",
 };
 
 const STATUS_LABELS = {
@@ -35,6 +43,10 @@ const STATUS_LABELS = {
   aprobada: "Aprobada",
   rechazada: "Rechazada",
   resuelta: "Resuelta",
+  abierto: "Abierto",
+  en_progreso: "En progreso",
+  resuelto: "Resuelto",
+  cerrado: "Cerrado",
 };
 
 const TYPE_COLORS = {
@@ -110,6 +122,24 @@ export function AreaBadge({ area }) {
   return (
     <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${AREA_COLORS[area] || "bg-gray-100 text-gray-600"}`}>
       {AREA_LABELS[area] || area}
+    </span>
+  );
+}
+
+export const LEVEL_COLORS = {
+  1: "bg-amber-50 text-amber-700 border-amber-200",
+  2: "bg-purple-50 text-purple-700 border-purple-200",
+};
+
+export const LEVEL_LABELS = {
+  1: "Nivel 1",
+  2: "Nivel 2",
+};
+
+export function LevelBadge({ level }) {
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${LEVEL_COLORS[level] || "bg-gray-100 text-gray-600"}`}>
+      {LEVEL_LABELS[level] || `Nivel ${level}`}
     </span>
   );
 }

@@ -3,11 +3,12 @@ use axum::extract::DefaultBodyLimit;
 use axum::http::{header::HeaderValue, Method};
 use axum::Router;
 use sqlx::SqlitePool;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 
 pub mod audit;
 pub mod content;
 pub mod db;
+pub mod email;
 pub mod jql;
 pub mod middleware;
 pub mod models;
@@ -50,6 +51,7 @@ pub async fn build_router(state: Arc<AppState>) -> Router {
         .merge(routes::todos::router(state.clone()))
         .merge(routes::certifications::router(state.clone()))
         .merge(routes::admin_audit::router(state.clone()))
+        .merge(routes::tickets::router(state.clone()))
         .merge(content::routes::router(state.clone()))
         .merge(content::media::router(state.clone()))
         .layer(axum::middleware::from_fn_with_state(state.clone(), csrf_protect));
@@ -62,33 +64,42 @@ pub async fn build_router(state: Arc<AppState>) -> Router {
         .collect();
 
     let cors = if cors_origins.is_empty() {
-        CorsLayer::new().allow_origin(Any)
+        tracing::warn!(
+            "CORS_ORIGIN vacío — se denegarán peticiones cross-origin. Configure CORS_ORIGIN en producción."
+        );
+        // No wildcard — se deniega por defecto. Usar capa vacía que rechaza orígenes no whitelisteados.
+        CorsLayer::new()
     } else {
         let origins: Vec<HeaderValue> = cors_origins
             .iter()
             .filter_map(|o| o.parse().ok())
             .collect();
-        CorsLayer::new()
-            .allow_origin(origins)
-            .allow_methods([
-                Method::GET,
-                Method::POST,
-                Method::PATCH,
-                Method::DELETE,
-                Method::OPTIONS,
-            ])
-            .allow_headers([
-                axum::http::header::CONTENT_TYPE,
-                axum::http::header::AUTHORIZATION,
-                axum::http::header::COOKIE,
-                axum::http::header::HeaderName::from_static("x-csrf-token"),
-            ])
-            .allow_credentials(true)
+        if origins.is_empty() {
+            tracing::warn!("CORS_ORIGIN no contiene orígenes válidos — denegando cross-origin");
+            CorsLayer::new()
+        } else {
+            CorsLayer::new()
+                .allow_origin(origins)
+                .allow_methods([
+                    Method::GET,
+                    Method::POST,
+                    Method::PATCH,
+                    Method::DELETE,
+                    Method::OPTIONS,
+                ])
+                .allow_headers([
+                    axum::http::header::CONTENT_TYPE,
+                    axum::http::header::AUTHORIZATION,
+                    axum::http::header::COOKIE,
+                    axum::http::header::HeaderName::from_static("x-csrf-token"),
+                ])
+                .allow_credentials(true)
+        }
     };
 
     public
         .merge(protected)
         .layer(cors)
-        .layer(DefaultBodyLimit::max(10 * 1024 * 1024))
+        .layer(DefaultBodyLimit::max(25 * 1024 * 1024))
         .layer(tower_http::trace::TraceLayer::new_for_http())
 }

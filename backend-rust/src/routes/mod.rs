@@ -15,3 +15,4 @@ pub mod saved_filters;
 pub mod reports;
 pub mod todos;
 pub mod certifications;
+pub mod tickets;

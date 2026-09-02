@@ -16,20 +16,6 @@ function ProjectAliasRedirect() {
   return <Navigate to={to} replace />;
 }
 
-// Rutas hijas canónicas del portafolio (reutilizadas sin duplicar)
-const projectChildRoutes = (
-  <>
-    <Route index element={<ProjectBacklog />} />
-    <Route path="summary" element={<ProjectSummary />} />
-    <Route path="calendar" element={<ProjectCalendar />} />
-    <Route path="settings" element={<ProjectSettings />} />
-    <Route path="feed" element={<Feed />} />
-    <Route path="team" element={<Members />} />
-    <Route path="solicitudes" element={<Solicitudes />} />
-    <Route path="tasks/new" element={<TaskForm />} />
-  </>
-);
-
 const PublicSite = lazy(() =>
   import("./pages/PublicSite").then((modulo) => ({ default: modulo.PublicSite }))
 );
@@ -65,6 +51,15 @@ const TaskDetail = lazy(() =>
 );
 const Sprints = lazy(() =>
   import("./pages/Portal/Sprints").then((modulo) => ({ default: modulo.Sprints }))
+);
+const Tickets = lazy(() =>
+  import("./pages/Portal/Tickets").then((modulo) => ({ default: modulo.Tickets }))
+);
+const TicketForm = lazy(() =>
+  import("./pages/Portal/TicketForm").then((modulo) => ({ default: modulo.TicketForm }))
+);
+const TicketDetail = lazy(() =>
+  import("./pages/Portal/TicketDetail").then((modulo) => ({ default: modulo.TicketDetail }))
 );
 const Feed = lazy(() =>
   import("./pages/Portal/Feed").then((modulo) => ({ default: modulo.Feed }))
@@ -134,6 +129,20 @@ const ContentAuditPage = lazy(() =>
 );
 const AdminAuditPage = lazy(() =>
   import("./pages/Portal/AdminAuditPage").then((m) => ({ default: m.AdminAuditPage }))
+);
+
+// Rutas hijas canónicas del portafolio (reutilizadas sin duplicar) — definidas DESPUÉS de los lazy para evitar ReferenceError
+const projectChildRoutes = (
+  <>
+    <Route index element={<ProjectBacklog />} />
+    <Route path="summary" element={<ProjectSummary />} />
+    <Route path="calendar" element={<ProjectCalendar />} />
+    <Route path="settings" element={<ProjectSettings />} />
+    <Route path="feed" element={<Feed />} />
+    <Route path="team" element={<Members />} />
+    <Route path="solicitudes" element={<Solicitudes />} />
+    <Route path="tasks/new" element={<TaskForm />} />
+  </>
 );
 
 function PageLoader() {
@@ -214,6 +223,11 @@ function App() {
             <Route path="projects" element={<Navigate to="/portal/portfolio" replace />} />
             <Route path="tasks/new" element={<TaskForm />} />
             <Route path="tasks/:id" element={<TaskDetail />} />
+
+            {/* Tickets — asociado a portfolio, cualquier usuario puede abrir */}
+            <Route path="tickets" element={<Tickets />} />
+            <Route path="tickets/new" element={<TicketForm />} />
+            <Route path="tickets/:id" element={<TicketDetail />} />
 
             {/* Global fallback routes */}
             <Route path="backlog" element={<Backlog />} />

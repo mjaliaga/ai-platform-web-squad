@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown, CheckSquare, Award, Shield, FileClock } from "lucide-react";
+import { Home, FolderKanban, Users, Menu, X, LogOut, ChevronDown, CheckSquare, Award, Shield, FileClock, Ticket } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { NotificationBell } from "./components/NotificationBell";
 
@@ -8,6 +8,7 @@ const links = [
   { to: "/portal", label: "Inicio", icon: Home, end: true },
   { to: "/portal/todos", label: "Mis Tareas", icon: CheckSquare },
   { to: "/portal/portfolio", label: "Portafolio", icon: FolderKanban },
+  { to: "/portal/tickets", label: "Tickets", icon: Ticket },
 ];
 
 const adminLinks = [

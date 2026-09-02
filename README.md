@@ -47,13 +47,14 @@ The following variables can be set in the root `.env` file. All values shown are
 
 | Variable | Default | Description |
 |---|---|---|
-| `JWT_SECRET` | *(random hex in compose)* | Secret key for signing JWTs. Must be overridden in production. |
+| `JWT_SECRET` | *(requerido, sin default — `openssl rand -hex 64`)* | Secret key for signing JWTs. **Requerido, sin default**. Compose falla si no está seteado. |
 | `JWT_EXPIRES_IN` | `8h` | Token expiration duration. Accepts `Xh`, `Xd`, `Xm` formats. |
-| `CORS_ORIGIN` | `http://localhost:8080` | Allowed CORS origins, comma-separated. |
-| `COOKIE_SECURE` | `false` | Set to `true` in HTTPS/production environments. |
-| `REDIS_URL` | `redis://redis:6379` | Redis connection string for distributed rate limiting. |
-| `SEED_ADMIN_EMAIL` | `manuel.aliaga@tivit.com` | Email for the auto-seeded admin account. |
-| `SEED_ADMIN_PASSWORD` | `tivit2026` | Password for the auto-seeded admin account. **Valor de ejemplo no usar en producción, generar con `openssl rand -hex 32`**. |
+| `CORS_ORIGIN` | `http://localhost:8080` | Allowed CORS origins, comma-separated. **Requerido en producción**. |
+| `COOKIE_SECURE` | `false` (dev) / `true` (prod) | Set to `true` in HTTPS/production environments. Default `true` si no se especifica. |
+| `REDIS_URL` | `redis://redis:6379` | Redis connection string. Si `REDIS_PASSWORD` está seteado, usar `redis://:${REDIS_PASSWORD}@redis:6379`. |
+| `REDIS_PASSWORD` | *(vacío dev, requerido prod)* | Contraseña Redis. Si se setea, debe reflejarse en `REDIS_URL`. |
+| `SEED_ADMIN_EMAIL` | *(vacío — opt-in)* | Email for the auto-seeded admin account. Si vacío, no se crea admin. |
+| `SEED_ADMIN_PASSWORD` | *(vacío — opt-in, mín 12 chars)* | Password for the auto-seeded admin account. **No usar `tivit2026` u otras débiles; generar con `openssl rand -base64 24`. Mín 12 caracteres y no en blocklist.** |
 | `PORT` | `8080` | Host port exposed by the frontend container. |
 | `VITE_API_URL` | `/api` | Base URL the frontend uses to reach the API. |
 

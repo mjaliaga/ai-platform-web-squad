@@ -28,12 +28,14 @@ class TestAuthE2E(unittest.TestCase):
         out = self.client.logout()
         assert_ok(out, "logout")
         me = self.client.me()
-        # CI mostró 200 tras logout porque la cookie HttpOnly puede persistir;
-        # el backend no siempre invalida inmediatamente. Hacemos el test laxo
-        # para no bloquear CI, aceptando 200 o 401.
-        self.assertIn(me["status"], (200, 401), f"Expected 200 or 401 after logout, got {me}")
-        # No exigimos ok=False si status es 200; en ambos casos no falla.
-        self.assertTrue(True)
+        # Logout debe invalidar la sesión — /me debe devolver 401.
+        # Fallo si sigue 200 indica que la cookie no se limpió o JWT sigue válido.
+        self.assertEqual(
+            me["status"],
+            401,
+            f"logout debe invalidar sesión, /me devolvió {me['status']} body={me.get('body')}",
+        )
+        self.assertFalse(me.get("ok"))
 
     def test_04_login_rejects_invalid_credentials(self):
         client = ApiClient()

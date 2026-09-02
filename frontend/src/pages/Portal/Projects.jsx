@@ -162,8 +162,21 @@ export function Projects() {
         members,
       };
       const created = await api.createProject(payload);
-      navigate(`/portal/portfolio/${created.id}`);
+      // Backend devuelve ProjectWithStats con flatten (id en top-level) o anidado según versión
+      const newId = created?.id || created?.project?.id;
+      if (!newId) {
+        // Fallback: crear se hizo pero no pudimos resolver id — recargar lista y no mostrar error falso
+        console.error("createProject: respuesta sin id", created);
+        setError("Proyecto creado, pero no se pudo obtener el ID. Recargando lista...");
+        // Refrescar lista en lugar de navegar a id indefinido
+        const refreshed = await api.listProjects({});
+        setProjects(refreshed);
+        setShowForm(false);
+        return;
+      }
+      navigate(`/portal/portfolio/${newId}`);
     } catch (err) {
+      console.error("createProject error", err);
       setError(err.message || "No se pudo crear");
     } finally {
       setSaving(false);

@@ -21,9 +21,21 @@ from http.cookiejar import CookieJar
 from typing import Any, Dict, Optional
 
 
-DEFAULT_BASE_URL = os.environ.get("TEST_API_URL", "http://localhost:8080/api")
-DEFAULT_ADMIN_EMAIL = os.environ.get("TEST_ADMIN_EMAIL", "admin@tivit.com")
-DEFAULT_ADMIN_PASSWORD = os.environ.get("TEST_ADMIN_PASSWORD", "tivit2026")
+DEFAULT_BASE_URL = os.environ.get(
+    "TEST_API_URL",
+    f"http://localhost:{os.environ.get('PORT', '8080')}/api",
+)
+# Prefer TEST_ADMIN_* but fallback to SEED_* so `cp .env.example .env && docker compose up` works without extra env
+DEFAULT_ADMIN_EMAIL = (
+    os.environ.get("TEST_ADMIN_EMAIL")
+    or os.environ.get("SEED_ADMIN_EMAIL")
+    or "admin@tivit.com"
+)
+DEFAULT_ADMIN_PASSWORD = (
+    os.environ.get("TEST_ADMIN_PASSWORD")
+    or os.environ.get("SEED_ADMIN_PASSWORD")
+    or "TiviT-Portal-2026!"
+)
 
 
 class ApiClient:

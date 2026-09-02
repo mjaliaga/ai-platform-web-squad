@@ -202,7 +202,7 @@ async fn build_project_with_stats(
     project: Project,
 ) -> Result<ProjectWithStats, Response> {
     let stats: (i64, i64) = sqlx::query_as(
-        "SELECT COUNT(*), SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) FROM tasks WHERE project_id = ?"
+        "SELECT COUNT(*), COALESCE(SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END), 0) FROM tasks WHERE project_id = ?"
     )
     .bind(&project.id)
     .fetch_one(db)
@@ -1192,14 +1192,14 @@ pub async fn get_project_progress(
     let stats: ProjectProgress = sqlx::query_as::<_, ProjectProgress>(
         "SELECT \
          COUNT(*) as total_tasks, \
-         SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done_tasks, \
-         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tasks, \
-         SUM(CASE WHEN status = 'todo' THEN 1 ELSE 0 END) as todo_tasks, \
-         SUM(CASE WHEN status = 'review' THEN 1 ELSE 0 END) as review_tasks, \
-         SUM(CASE WHEN status = 'backlog' THEN 1 ELSE 0 END) as backlog_tasks, \
+         COALESCE(SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END), 0) as done_tasks, \
+         COALESCE(SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END), 0) as in_progress_tasks, \
+         COALESCE(SUM(CASE WHEN status = 'todo' THEN 1 ELSE 0 END), 0) as todo_tasks, \
+         COALESCE(SUM(CASE WHEN status = 'review' THEN 1 ELSE 0 END), 0) as review_tasks, \
+         COALESCE(SUM(CASE WHEN status = 'backlog' THEN 1 ELSE 0 END), 0) as backlog_tasks, \
          COALESCE(SUM(estimate_hours), 0.0) as total_estimate_hours, \
          COALESCE(SUM(time_spent_hours), 0.0) as total_spent_hours, \
-         CASE WHEN COUNT(*) = 0 THEN 0.0 ELSE ROUND(100.0 * SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) / COUNT(*), 1) END as completion_pct \
+         CASE WHEN COUNT(*) = 0 THEN 0.0 ELSE ROUND(100.0 * COALESCE(SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END), 0) / COUNT(*), 1) END as completion_pct \
          FROM tasks WHERE project_id = ? AND deleted_at IS NULL"
     )
     .bind(&id)

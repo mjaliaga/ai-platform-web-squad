@@ -13,35 +13,39 @@ from .helpers import ApiClient, assert_ok, unwrap_paginated
 class TestPublicContentE2E(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.client = ApiClient()
-        # /content/collections ahora requiere auth (require_auth en backend-rust/src/content/routes.rs:775)
-        # Autenticamos para que CI no falle con 401; el endpoint sigue siendo accesible autenticado.
+        cls.auth_client = ApiClient()
         try:
-            cls.client.login()
+            cls.auth_client.login()
         except Exception:
             pass
+        # Cliente anónimo sin cookies — para validar acceso realmente público
+        cls.anon_client = ApiClient()
 
-    def test_01_collections_endpoint_returns_metadata(self):
-        # Asegurar auth por si setUpClass falló silencioso
-        if self.client._csrf_header_value() is None:
-            try:
-                self.client.login()
-            except Exception:
-                pass
-        result = self.client.get("/content/collections")
-        assert_ok(result, "list collections")
+    def test_01_collections_endpoint_requires_auth(self):
+        # /content/collections actualmente requiere auth; anónimo debe recibir 401
+        anon = self.anon_client.get("/content/collections")
+        self.assertIn(anon["status"], (401, 403), f"collections sin auth debe ser 401, got {anon}")
+        # Autenticado sí debe pasar
+        result = self.auth_client.get("/content/collections")
+        assert_ok(result, "list collections (auth)")
         body = result["body"]
         self.assertTrue(isinstance(body, (list, dict)))
 
-    def test_02_list_projects_public(self):
-        result = self.client.get("/projects/list/public")
-        assert_ok(result, "list public projects")
+    def test_02_list_projects_public_anonymous(self):
+        # Endpoint público debe funcionar sin auth
+        result = self.anon_client.get("/projects/list/public")
+        assert_ok(result, "list public projects (anon)")
         items = unwrap_paginated(result["body"])
-        # Could be empty in CI; the contract is "endpoint responds OK".
         self.assertIsInstance(items, list)
 
+    def test_02b_list_projects_public_authenticated(self):
+        # También debe funcionar autenticado
+        result = self.auth_client.get("/projects/list/public")
+        assert_ok(result, "list public projects (auth)")
+        self.assertIsInstance(unwrap_paginated(result["body"]), list)
+
     def test_03_list_projects_by_slug_returns_404_for_missing(self):
-        result = self.client.get("/projects/public/no-such-slug-here")
+        result = self.anon_client.get("/projects/public/no-such-slug-here")
         self.assertIn(result["status"], (404, 400))
 
 

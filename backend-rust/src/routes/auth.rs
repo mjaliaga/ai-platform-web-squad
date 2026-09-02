@@ -17,7 +17,10 @@ use crate::middleware::csrf::{generate_csrf_token, set_csrf_cookie};
 use crate::models::{Claims, PublicUser, User};
 use crate::pagination::PaginatedResponse;
 use crate::utils;
-use crate::validation::{error_response, internal_error, parse_duration_hours, require_admin, validate_email, validate_required};
+use crate::validation::{
+    error_response, internal_error, parse_duration_hours, require_admin, validate_email,
+    validate_password, validate_required,
+};
 use crate::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -50,14 +53,31 @@ pub async fn login(
     let ip = utils::extract_ip(&headers);
     let user_agent = utils::extract_user_agent(&headers);
 
-    let rate_key = payload.email.trim().to_lowercase();
-    if !state.rate_limiter.allow(&rate_key).await {
+    let rate_key_email = format!("login:email:{}", payload.email.trim().to_lowercase());
+    let rate_key_ip = format!("login:ip:{}", ip.clone().unwrap_or_else(|| "unknown".to_string()));
+    // Double limit: per-email + per-IP to mitigate credential-stuffing and brute-force
+    if !state.rate_limiter.allow(&rate_key_email).await {
         audit::log_login_failure(
             &state.db,
             &payload.email,
             ip.clone(),
             user_agent.clone(),
-            "rate_limited",
+            "rate_limited_email",
+        )
+        .await;
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ApiError { error: "Demasiados intentos de acceso, inténtalo más tarde".to_string() }),
+        )
+            .into_response());
+    }
+    if !state.rate_limiter.allow(&rate_key_ip).await {
+        audit::log_login_failure(
+            &state.db,
+            &payload.email,
+            ip.clone(),
+            user_agent.clone(),
+            "rate_limited_ip",
         )
         .await;
         return Err((
@@ -130,7 +150,8 @@ pub async fn login(
             .into_response());
     }
 
-    state.rate_limiter.reset(&rate_key).await;
+    state.rate_limiter.reset(&rate_key_email).await;
+    state.rate_limiter.reset(&rate_key_ip).await;
     audit::log_login_success(&state.db, &user.id, ip, user_agent).await;
 
     let expires_in_hours: i64 = parse_duration_hours(
@@ -325,7 +346,7 @@ pub async fn create_user(
 
     validate_required("name", &payload.name, 100)?;
     validate_required("email", &payload.email, 200)?;
-    validate_required("password", &payload.password, 200)?;
+    validate_password(&payload.password)?;
     validate_email(&payload.email)?;
 
     let role = payload.role.as_deref().unwrap_or("member");
@@ -479,13 +500,7 @@ pub async fn change_password(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<Response, Response> {
-    validate_required("new_password", &payload.new_password, 200)?;
-    if payload.new_password.len() < 8 {
-        return Err(error_response(
-            StatusCode::BAD_REQUEST,
-            "La nueva contraseña debe tener al menos 8 caracteres".to_string(),
-        ));
-    }
+    validate_password(&payload.new_password)?;
 
     let user: Option<User> = sqlx::query_as::<_, User>(
         "SELECT id, name, email, password_hash, role, avatar_color, created_at, active, phone, linkedin, github FROM users WHERE id = ?"

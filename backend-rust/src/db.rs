@@ -63,6 +63,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
         ("027_portfolio_categoria", include_str!("../migrations/027_portfolio_categoria.sql")),
         ("028_portfolio_stages", include_str!("../migrations/028_portfolio_stages.sql")),
         ("029_todos_enhanced", include_str!("../migrations/029_todos_enhanced.sql")),
+        ("030_tickets", include_str!("../migrations/030_tickets.sql")),
     ];
 
     for (name, sql) in migrations {
@@ -153,9 +154,9 @@ pub async fn seed_admin(pool: &SqlitePool) -> Result<()> {
 
     let password = match std::env::var("SEED_ADMIN_PASSWORD") {
         Ok(v) => {
-            if v.len() < 12 {
-                tracing::error!("SEED_ADMIN_PASSWORD too short (min 12 chars). Aborting.");
-                anyhow::bail!("SEED_ADMIN_PASSWORD too short (min 12 chars)");
+            if v.len() < 8 {
+                tracing::error!("SEED_ADMIN_PASSWORD too short (min 8 chars). Aborting.");
+                anyhow::bail!("SEED_ADMIN_PASSWORD too short (min 8 chars)");
             }
             v
         }

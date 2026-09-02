@@ -4,24 +4,40 @@
  * muestra un marcador con la indicación de cómo agregarlo.
  */
 
+const ALLOWED_EMBED_ORIGINS = [
+  "https://www.youtube-nocookie.com/embed/",
+  "https://player.vimeo.com/video/",
+  "https://drive.google.com/file/d/",
+  "https://drive.google.com/embeddedfolderview",
+];
+
+function isSafeEmbedUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  // Bloquear javascript:, data:, file: y protocolos no https
+  if (/^\s*(javascript|data|file|vbscript):/i.test(url)) return false;
+  return ALLOWED_EMBED_ORIGINS.some((prefix) => url.startsWith(prefix));
+}
+
 function urlEmbedYoutube(url) {
-  // Acepta https://youtu.be/ID, https://www.youtube.com/watch?v=ID y /embed/ID
+  if (!url || typeof url !== "string") return null;
   const porId = url.match(/(?:youtu\.be\/|[?&]v=|\/embed\/)([\w-]{11})/);
-  return porId ? `https://www.youtube-nocookie.com/embed/${porId[1]}` : url;
+  return porId ? `https://www.youtube-nocookie.com/embed/${porId[1]}` : null;
 }
 
 function urlEmbedVimeo(url) {
+  if (!url || typeof url !== "string") return null;
   const porId = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-  return porId ? `https://player.vimeo.com/video/${porId[1]}` : url;
+  return porId ? `https://player.vimeo.com/video/${porId[1]}` : null;
 }
 
 function urlEmbedDrive(url) {
+  if (!url || typeof url !== "string") return null;
   // Acepta https://drive.google.com/file/d/ID y /drive/folders/ID
   const porArchivo = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
   if (porArchivo) return `https://drive.google.com/file/d/${porArchivo[1]}/preview`;
   const porCarpeta = url.match(/drive\.google\.com\/drive\/folders\/([\w-]+)/);
   if (porCarpeta) return `https://drive.google.com/embeddedfolderview?id=${porCarpeta[1]}`;
-  return url;
+  return null;
 }
 
 export function DemoVideo({ demo, titulo }) {
@@ -63,9 +79,17 @@ export function DemoVideo({ demo, titulo }) {
   }
 
   if (demo.tipo === "drive") {
+    const driveSrc = urlEmbedDrive(demo.url);
+    if (!driveSrc || !isSafeEmbedUrl(driveSrc)) {
+      return (
+        <div className="flex aspect-video w-full items-center justify-center rounded-2xl bg-black text-white/70">
+          URL de Drive no permitida o inválida
+        </div>
+      );
+    }
     return (
       <iframe
-        src={urlEmbedDrive(demo.url)}
+        src={driveSrc}
         title={`Video demo de ${titulo}`}
         allow="autoplay; encrypted-media; picture-in-picture"
         allowFullScreen
@@ -75,6 +99,13 @@ export function DemoVideo({ demo, titulo }) {
   }
 
   const src = demo.tipo === "vimeo" ? urlEmbedVimeo(demo.url) : urlEmbedYoutube(demo.url);
+  if (!src || !isSafeEmbedUrl(src)) {
+    return (
+      <div className="flex aspect-video w-full items-center justify-center rounded-2xl bg-black text-white/70">
+        URL de video no permitida o inválida
+      </div>
+    );
+  }
 
   return (
     <iframe

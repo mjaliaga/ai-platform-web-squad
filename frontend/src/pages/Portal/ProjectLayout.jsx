@@ -33,7 +33,23 @@ export function ProjectLayout() {
       .getProject(id)
       .then((proj) => {
         setProject(proj);
-        if (proj.stage && proj.categoria && proj.stage !== proj.categoria) {
+        // Sync legacy categoria → stage solo si stage es una categoría válida (no "Backlog" genérico)
+        // "Backlog" no es una categoría válida; su forma canónica es "Backlog de Propuestas Internas/Comerciales"
+        const validCategorias = [
+          "Backlog de Propuestas Internas",
+          "Backlog de Propuestas Comerciales",
+          "Evaluación técnica",
+          "PoC",
+          "Proyecto",
+          "Producción",
+          "Cerrado",
+        ];
+        if (
+          proj.stage &&
+          proj.categoria &&
+          proj.stage !== proj.categoria &&
+          validCategorias.includes(proj.stage)
+        ) {
           api.updateProject(proj.id, { categoria: proj.stage }).catch(() => {});
         }
       })

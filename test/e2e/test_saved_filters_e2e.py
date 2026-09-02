@@ -35,10 +35,7 @@ class TestSavedFiltersE2E(unittest.TestCase):
         assert_ok(create, "create saved filter")
 
         exec_ = self.client.get(f"/saved-filters/{create['body']['id']}/execute")
-        # CI mostró 500 intermitente por JQL/backend; hacemos el assert laxo para no bloquear pipeline.
-        # Si es 500 lo consideramos pendiente, no fallo duro.
-        if not exec_.get("ok") and exec_["status"] == 500:
-            self.skipTest(f"execute saved filter returned 500 — pendiente fix JQL: {exec_}")
+        # 500 es un bug — debe fallar el test para forzar fix, no silenciar.
         assert_ok(exec_, "execute saved filter")
         self.assertIsInstance(exec_["body"], list)
 
@@ -66,9 +63,14 @@ class TestSavedFiltersE2E(unittest.TestCase):
         )
         if result.get("ok"):
             self._track(result)
-            # When executing, the backend must not crash; results may be empty.
+            # El backend debe validar ORDER BY whitelist y no crashear con 500.
             exec_ = self.client.get(f"/saved-filters/{result['body']['id']}/execute")
-            self.assertTrue(exec_.get("ok") or exec_["status"] in (400, 422, 500))  # 500 also acceptable for dangerous order_by until JQL fix
+            # Solo 200 (filtrado sanitizado) o 400/422 (rechazo) son aceptables, nunca 500.
+            self.assertTrue(
+                exec_.get("ok") or exec_["status"] in (400, 422),
+                f"ORDER BY malicioso no debe causar 500, got {exec_}",
+            )
+            self.assertNotEqual(exec_["status"], 500)
 
 
 if __name__ == "__main__":
