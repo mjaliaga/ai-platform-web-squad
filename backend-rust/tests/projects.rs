@@ -15,7 +15,8 @@ static ENV_SET: std::sync::Once = std::sync::Once::new();
 
 async fn setup() -> (axum::Router, String) {
     let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-    let upload_dir = std::env::temp_dir().join(format!("tivit_test_proj_uploads_{}", std::process::id()));
+    let upload_dir =
+        std::env::temp_dir().join(format!("tivit_test_proj_uploads_{}", std::process::id()));
     std::fs::create_dir_all(&upload_dir).ok();
 
     ENV_SET.call_once(|| {
@@ -26,11 +27,8 @@ async fn setup() -> (axum::Router, String) {
         tivit_portal_backend::middleware::csrf::disable_csrf_for_testing();
     });
 
-    let db_path = std::env::temp_dir().join(format!(
-        "tivit_test_proj_{}_{}.db",
-        std::process::id(),
-        n
-    ));
+    let db_path =
+        std::env::temp_dir().join(format!("tivit_test_proj_{}_{}.db", std::process::id(), n));
     let _ = std::fs::remove_file(&db_path);
     let _ = std::fs::remove_file(format!("{}-wal", db_path.display()));
     let _ = std::fs::remove_file(format!("{}-shm", db_path.display()));
@@ -96,7 +94,11 @@ async fn login(router: &axum::Router, email: &str, password: &str) -> String {
     format!("{}; csrf_token=test-csrf-token-1234567890", auth_cookie)
 }
 
-async fn get_json(router: &axum::Router, uri: &str, token: &str) -> (StatusCode, serde_json::Value) {
+async fn get_json(
+    router: &axum::Router,
+    uri: &str,
+    token: &str,
+) -> (StatusCode, serde_json::Value) {
     let (status, bytes) = send(
         router,
         Request::builder()
@@ -110,7 +112,12 @@ async fn get_json(router: &axum::Router, uri: &str, token: &str) -> (StatusCode,
     (status, json_bytes(&bytes))
 }
 
-async fn post_json(router: &axum::Router, uri: &str, token: &str, body: &str) -> (StatusCode, Bytes) {
+async fn post_json(
+    router: &axum::Router,
+    uri: &str,
+    token: &str,
+    body: &str,
+) -> (StatusCode, Bytes) {
     send(
         router,
         Request::builder()
@@ -124,7 +131,12 @@ async fn post_json(router: &axum::Router, uri: &str, token: &str, body: &str) ->
     .await
 }
 
-async fn patch_json(router: &axum::Router, uri: &str, token: &str, body: &str) -> (StatusCode, Bytes) {
+async fn patch_json(
+    router: &axum::Router,
+    uri: &str,
+    token: &str,
+    body: &str,
+) -> (StatusCode, Bytes) {
     send(
         router,
         Request::builder()
@@ -161,7 +173,7 @@ async fn crud_proyectos() {
     // Listar proyectos
     let (status, json) = get_json(&router, "/api/projects", &token).await;
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
-    assert!(json["items"].as_array().unwrap().len() >= 1);
+    assert!(!json["items"].as_array().unwrap().is_empty());
 
     // Obtener por id
     let (status, json) = get_json(&router, &format!("/api/projects/{id}"), &token).await;
@@ -224,7 +236,7 @@ async fn project_members() {
         &router,
         "/api/users",
         &token,
-        r#"{"name":"Member User","email":"member-proj-test@tivit.com","password":"pass123","role":"member"}"#,
+        r#"{"name":"Member User","email":"member-proj-test@tivit.com","password":"member1234","role":"member"}"#,
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "debería crear usuario miembro");
@@ -238,7 +250,12 @@ async fn project_members() {
         &format!(r#"{{"user_id":"{member_id}","role":"dev"}}"#),
     )
     .await;
-    assert!(status == StatusCode::CREATED || status == StatusCode::OK || status == StatusCode::NO_CONTENT, "debería agregar miembro");
+    assert!(
+        status == StatusCode::CREATED
+            || status == StatusCode::OK
+            || status == StatusCode::NO_CONTENT,
+        "debería agregar miembro"
+    );
     if !bytes.is_empty() {
         let member_data = json_bytes(&bytes);
         if !member_data.is_null() && member_data.get("user_id").is_some() {
@@ -251,7 +268,9 @@ async fn project_members() {
     let (status, json) = get_json(&router, &format!("/api/projects/{project_id}"), &token).await;
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
     let members = json["members"].as_array().unwrap();
-    assert!(members.iter().any(|m| m["user_id"].as_str() == Some(member_id.as_str())));
+    assert!(members
+        .iter()
+        .any(|m| m["user_id"].as_str() == Some(member_id.as_str())));
 
     // Cambiar rol del miembro
     let (status, _) = patch_json(
@@ -264,9 +283,12 @@ async fn project_members() {
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
 
     // Verificar cambio de rol
-    let (status, json) = get_json(&router, &format!("/api/projects/{project_id}"), &token).await;
+    let (_status, json) = get_json(&router, &format!("/api/projects/{project_id}"), &token).await;
     let members = json["members"].as_array().unwrap();
-    let member = members.iter().find(|m| m["user_id"].as_str() == Some(member_id.as_str())).unwrap();
+    let member = members
+        .iter()
+        .find(|m| m["user_id"].as_str() == Some(member_id.as_str()))
+        .unwrap();
     assert_eq!(member["role"], "arquitecto");
 
     // Eliminar miembro
@@ -283,9 +305,11 @@ async fn project_members() {
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
 
     // Verificar que no hay miembros
-    let (status, json) = get_json(&router, &format!("/api/projects/{project_id}"), &token).await;
+    let (_status, json) = get_json(&router, &format!("/api/projects/{project_id}"), &token).await;
     let members = json["members"].as_array().unwrap();
-    assert!(!members.iter().any(|m| m["user_id"].as_str() == Some(member_id.as_str())));
+    assert!(!members
+        .iter()
+        .any(|m| m["user_id"].as_str() == Some(member_id.as_str())));
 
     let _ = std::fs::remove_file(&db_path);
 }
@@ -323,7 +347,7 @@ async fn project_publish_reservado() {
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
 
     // Verificar publicado
-    let (status, json) = get_json(&router, &format!("/api/projects/{project_id}"), &token).await;
+    let (_status, json) = get_json(&router, &format!("/api/projects/{project_id}"), &token).await;
     assert_eq!(json["published"], 1);
 
     // Toggle reservado
@@ -337,7 +361,7 @@ async fn project_publish_reservado() {
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
 
     // Verificar reservado
-    let (status, json) = get_json(&router, &format!("/api/projects/{project_id}"), &token).await;
+    let (_status, json) = get_json(&router, &format!("/api/projects/{project_id}"), &token).await;
     assert_eq!(json["reservado"], 1);
 
     let _ = std::fs::remove_file(&db_path);
@@ -408,10 +432,15 @@ async fn sprints_full_cycle() {
     assert_eq!(json_bytes(&bytes)["name"], "Sprint 1");
 
     // Listar sprints
-    let (status, json) = get_json(&router, &format!("/api/sprints?project={project_id}"), &token).await;
+    let (status, json) = get_json(
+        &router,
+        &format!("/api/sprints?project={project_id}"),
+        &token,
+    )
+    .await;
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
     let sprints = json.as_array().unwrap();
-    assert!(sprints.len() >= 1);
+    assert!(!sprints.is_empty());
 
     // Activar sprint
     let (status, _) = post_json(
@@ -426,8 +455,13 @@ async fn sprints_full_cycle() {
     // Verificar que es el sprint activo
     let (status, json) = get_json(&router, "/api/sprints/active", &token).await;
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
-    let active_id = json.get("id").or_else(|| json.get("sprint").and_then(|s| s.get("id")));
-    assert_eq!(active_id, Some(&serde_json::Value::String(sprint_id.clone())));
+    let active_id = json
+        .get("id")
+        .or_else(|| json.get("sprint").and_then(|s| s.get("id")));
+    assert_eq!(
+        active_id,
+        Some(&serde_json::Value::String(sprint_id.clone()))
+    );
 
     // Actualizar sprint
     let (status, _) = patch_json(
@@ -476,7 +510,9 @@ async fn announcements_crud() {
         &router,
         "/api/announcements",
         &token,
-        &format!(r#"{{"title":"Anuncio Test","body":"Cuerpo del anuncio","project_id":"{project_id}"}}"#),
+        &format!(
+            r#"{{"title":"Anuncio Test","body":"Cuerpo del anuncio","project_id":"{project_id}"}}"#
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
@@ -484,10 +520,15 @@ async fn announcements_crud() {
     assert_eq!(json_bytes(&bytes)["title"], "Anuncio Test");
 
     // Listar anuncios
-    let (status, json) = get_json(&router, &format!("/api/announcements?project={project_id}"), &token).await;
+    let (status, json) = get_json(
+        &router,
+        &format!("/api/announcements?project={project_id}"),
+        &token,
+    )
+    .await;
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
     let items = json.as_array().unwrap();
-    assert!(items.len() >= 1);
+    assert!(!items.is_empty());
 
     // Actualizar anuncio (pin)
     let (status, _) = patch_json(
@@ -571,10 +612,17 @@ async fn task_labels_and_dependencies() {
     assert!(status == StatusCode::CREATED || status == StatusCode::OK);
 
     // Verificar dependencias
-    let (status, json) = get_json(&router, &format!("/api/tasks/{task_id}/dependencies"), &token).await;
+    let (status, json) = get_json(
+        &router,
+        &format!("/api/tasks/{task_id}/dependencies"),
+        &token,
+    )
+    .await;
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
     let deps = json.as_array().unwrap();
-    assert!(deps.iter().any(|d| d["id"].as_str() == Some(task2_id.as_str())));
+    assert!(deps
+        .iter()
+        .any(|d| d["id"].as_str() == Some(task2_id.as_str())));
 
     // Eliminar dependencia
     let (status, _) = send(
@@ -623,7 +671,7 @@ async fn time_tracking() {
     let (status, json) = get_json(&router, &format!("/api/tasks/{task_id}/time"), &token).await;
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
     let entries = json.as_array().unwrap();
-    assert!(entries.len() >= 1);
+    assert!(!entries.is_empty());
 
     // Verificar time_spent_hours se actualizó
     let (status, json) = get_json(&router, &format!("/api/tasks/{task_id}"), &token).await;
@@ -645,7 +693,7 @@ async fn time_tracking() {
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
 
     // Verificar que se decrementó
-    let (status, json) = get_json(&router, &format!("/api/tasks/{task_id}"), &token).await;
+    let (_status, json) = get_json(&router, &format!("/api/tasks/{task_id}"), &token).await;
     let time_spent = json["time_spent_hours"].as_f64().unwrap();
     assert!((time_spent - 0.0).abs() < 0.01);
 
@@ -682,7 +730,7 @@ async fn watchers() {
     let (status, json) = get_json(&router, &format!("/api/tasks/{task_id}/watchers"), &token).await;
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
     let watchers = json.as_array().unwrap();
-    assert!(watchers.len() >= 1);
+    assert!(!watchers.is_empty());
 
     // Quitar watcher
     let (status, _) = send(
@@ -728,10 +776,17 @@ async fn solicitudes_flow() {
     let sol_id = json_bytes(&bytes)["id"].as_str().unwrap().to_string();
 
     // Listar solicitudes del proyecto
-    let (status, json) = get_json(&router, &format!("/api/projects/{project_id}/solicitudes"), &token).await;
+    let (status, json) = get_json(
+        &router,
+        &format!("/api/projects/{project_id}/solicitudes"),
+        &token,
+    )
+    .await;
     assert!(status == StatusCode::OK || status == StatusCode::NO_CONTENT);
     let sols = json.as_array().unwrap();
-    assert!(sols.iter().any(|s| s["id"].as_str() == Some(sol_id.as_str())));
+    assert!(sols
+        .iter()
+        .any(|s| s["id"].as_str() == Some(sol_id.as_str())));
 
     // Cambiar estado a en_revision
     let (status, _) = patch_json(

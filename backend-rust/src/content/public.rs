@@ -44,7 +44,8 @@ pub async fn public_list_items(
     let sql = "SELECT id, collection, slug, data, published, created_by, updated_by, created_at, updated_at \
                FROM content_items WHERE collection = ? AND deleted_at IS NULL \
                {drafts} ORDER BY updated_at DESC LIMIT ? OFFSET ?";
-    let count_sql = "SELECT COUNT(*) FROM content_items WHERE collection = ? AND deleted_at IS NULL {drafts}";
+    let count_sql =
+        "SELECT COUNT(*) FROM content_items WHERE collection = ? AND deleted_at IS NULL {drafts}";
 
     let drafts_filter = if include_drafts {
         ""
@@ -89,28 +90,11 @@ pub async fn public_list_items(
     })))
 }
 
-async fn public_list_projects(
-    State(state): State<Arc<AppState>>,
-    headers: axum::http::HeaderMap,
-    Query(params): Query<std::collections::HashMap<String, String>>,
-) -> Result<Json<serde_json::Value>, Response> {
-    let want_drafts = params.get("published").map(|s| s == "all").unwrap_or(false);
-    if want_drafts && !is_authenticated(&headers, &state).await {
-        return Err(crate::validation::error_response(
-            StatusCode::UNAUTHORIZED,
-            "Autenticación requerida para ver borradores".to_string(),
-        ));
-    }
-    let include_drafts = want_drafts;
-    public_list_projects_inner(state, params, include_drafts).await
-}
-
 async fn public_list_projects_inner(
     state: Arc<AppState>,
     params: std::collections::HashMap<String, String>,
     include_drafts: bool,
 ) -> Result<Json<serde_json::Value>, Response> {
-
     let limit: i64 = params
         .get("limit")
         .and_then(|v| v.parse().ok())
@@ -242,7 +226,6 @@ async fn public_get_project_inner(
     slug: String,
     preview: bool,
 ) -> Result<Json<serde_json::Value>, Response> {
-
     let sql = if preview {
         "SELECT id, name, description, color, status, sector, code, po_user_id, created_at, deleted_at, \
          slug, published, reservado, tipo, version, tipo_solucion, cliente, nombre_comercial, \
@@ -278,7 +261,7 @@ async fn is_authenticated(headers: &axum::http::HeaderMap, state: &AppState) -> 
     let token = headers
         .get(axum::http::header::COOKIE)
         .and_then(|v| v.to_str().ok())
-        .and_then(|c| extract_token_from_cookie(c))
+        .and_then(extract_token_from_cookie)
         .or_else(|| {
             headers
                 .get(axum::http::header::AUTHORIZATION)
@@ -328,7 +311,13 @@ pub fn public_router(state: Arc<AppState>) -> axum::Router {
 
     axum::Router::new()
         .route("/api/public/content/:collection", get(public_list_items))
-        .route("/api/public/content/:collection/:slug", get(public_get_item))
-        .route("/api/public/content/proyectos/:slug", get(public_get_project))
+        .route(
+            "/api/public/content/:collection/:slug",
+            get(public_get_item),
+        )
+        .route(
+            "/api/public/content/proyectos/:slug",
+            get(public_get_project),
+        )
         .with_state(state)
 }

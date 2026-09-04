@@ -78,7 +78,10 @@ pub async fn list_epics(
     for b in &binds {
         q = q.bind(b);
     }
-    let epics = q.fetch_all(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let epics = q
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     if epics.is_empty() {
         return Ok(Json(vec![]));
@@ -148,10 +151,7 @@ pub async fn list_epics(
                 .owner_id
                 .as_ref()
                 .and_then(|oid| owners_map.get(oid).cloned());
-            let (task_count, done_count) = stats_map
-                .get(&epic.id)
-                .copied()
-                .unwrap_or((0, 0));
+            let (task_count, done_count) = stats_map.get(&epic.id).copied().unwrap_or((0, 0));
             EpicWithOwner {
                 epic,
                 owner,
@@ -166,7 +166,7 @@ pub async fn list_epics(
 
 pub async fn create_epic(
     State(state): State<Arc<AppState>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Json(payload): Json<CreateEpicRequest>,
 ) -> Result<(StatusCode, Json<Epic>), Response> {
     validate_required("name", &payload.name, 200)?;
@@ -174,7 +174,7 @@ pub async fn create_epic(
     let id = Uuid::new_v4().to_string();
     sqlx::query(
         "INSERT INTO epics (id, name, summary, color, owner_id, project_id, start_date, due_date) \
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&payload.name)
@@ -216,7 +216,12 @@ pub async fn get_epic(
 
     let epic = match epic {
         Some(e) => e,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Epic no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Epic no encontrado".to_string(),
+            ))
+        }
     };
 
     let owner = if let Some(ref oid) = epic.owner_id {
@@ -284,27 +289,53 @@ pub async fn update_epic(
     if let Some(status) = &payload.status {
         const STATUSES: &[&str] = &["open", "in_progress", "done"];
         if !STATUSES.contains(&status.as_str()) {
-            return Err(error_response(StatusCode::BAD_REQUEST, format!("Status inválido '{}'. Debe ser: {}", status, STATUSES.join(", "))));
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "Status inválido '{}'. Debe ser: {}",
+                    status,
+                    STATUSES.join(", ")
+                ),
+            ));
         }
         sets.push("status = ?");
         bindings.push(serde_json::json!(status));
     }
 
     if sets.is_empty() {
-        return Err(error_response(StatusCode::BAD_REQUEST, "Sin cambios".to_string()));
+        return Err(error_response(
+            StatusCode::BAD_REQUEST,
+            "Sin cambios".to_string(),
+        ));
     }
 
     let sql = format!("UPDATE epics SET {} WHERE id = ?", sets.join(", "));
     let mut q = sqlx::query(&sql);
-    if let Some(name) = &payload.name { q = q.bind(name); }
-    if let Some(summary) = &payload.summary { q = q.bind(summary); }
-    if let Some(color) = &payload.color { q = q.bind(color); }
-    if let Some(owner) = &payload.owner_id { q = q.bind(owner); }
-    if let Some(start) = &payload.start_date { q = q.bind(start); }
-    if let Some(due) = &payload.due_date { q = q.bind(due); }
-    if let Some(status) = &payload.status { q = q.bind(status); }
+    if let Some(name) = &payload.name {
+        q = q.bind(name);
+    }
+    if let Some(summary) = &payload.summary {
+        q = q.bind(summary);
+    }
+    if let Some(color) = &payload.color {
+        q = q.bind(color);
+    }
+    if let Some(owner) = &payload.owner_id {
+        q = q.bind(owner);
+    }
+    if let Some(start) = &payload.start_date {
+        q = q.bind(start);
+    }
+    if let Some(due) = &payload.due_date {
+        q = q.bind(due);
+    }
+    if let Some(status) = &payload.status {
+        q = q.bind(status);
+    }
     q = q.bind(&id);
-    q.execute(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+    q.execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let epic = sqlx::query_as::<_, Epic>(
         "SELECT id, name, summary, color, owner_id, project_id, start_date, due_date, status, created_at \
@@ -339,11 +370,14 @@ pub async fn delete_epic(
 }
 
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{delete, get, patch, post}};
+    use axum::{middleware, routing::get};
 
     axum::Router::new()
         .route("/api/epics", get(list_epics).post(create_epic))
-        .route("/api/epics/:id", get(get_epic).patch(update_epic).delete(delete_epic))
+        .route(
+            "/api/epics/:id",
+            get(get_epic).patch(update_epic).delete(delete_epic),
+        )
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth))
         .with_state(state)
 }

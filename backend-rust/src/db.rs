@@ -37,32 +37,98 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
     let migrations: &[(&str, &str)] = &[
         ("001_users", include_str!("../migrations/001_users.sql")),
         ("002_tasks", include_str!("../migrations/002_tasks.sql")),
-        ("003_comments", include_str!("../migrations/003_comments.sql")),
-        ("004_attachments", include_str!("../migrations/004_attachments.sql")),
-        ("005_activity", include_str!("../migrations/005_activity.sql")),
-        ("006_dependencies", include_str!("../migrations/006_dependencies.sql")),
+        (
+            "003_comments",
+            include_str!("../migrations/003_comments.sql"),
+        ),
+        (
+            "004_attachments",
+            include_str!("../migrations/004_attachments.sql"),
+        ),
+        (
+            "005_activity",
+            include_str!("../migrations/005_activity.sql"),
+        ),
+        (
+            "006_dependencies",
+            include_str!("../migrations/006_dependencies.sql"),
+        ),
         ("007_team", include_str!("../migrations/007_team.sql")),
-        ("008_projects", include_str!("../migrations/008_projects.sql")),
-        ("009_project_members", include_str!("../migrations/009_project_members.sql")),
-        ("010_sprint_project", include_str!("../migrations/010_sprint_project.sql")),
-        ("011_simplify_types", include_str!("../migrations/011_simplify_types.sql")),
-        ("012_project_fields", include_str!("../migrations/012_project_fields.sql")),
-        ("013_sprint_task_fields", include_str!("../migrations/013_sprint_task_fields.sql")),
-        ("014_users_phone", include_str!("../migrations/014_users_phone.sql")),
+        (
+            "008_projects",
+            include_str!("../migrations/008_projects.sql"),
+        ),
+        (
+            "009_project_members",
+            include_str!("../migrations/009_project_members.sql"),
+        ),
+        (
+            "010_sprint_project",
+            include_str!("../migrations/010_sprint_project.sql"),
+        ),
+        (
+            "011_simplify_types",
+            include_str!("../migrations/011_simplify_types.sql"),
+        ),
+        (
+            "012_project_fields",
+            include_str!("../migrations/012_project_fields.sql"),
+        ),
+        (
+            "013_sprint_task_fields",
+            include_str!("../migrations/013_sprint_task_fields.sql"),
+        ),
+        (
+            "014_users_phone",
+            include_str!("../migrations/014_users_phone.sql"),
+        ),
         ("015_indexes", include_str!("../migrations/015_indexes.sql")),
         ("016_social", include_str!("../migrations/016_social.sql")),
-        ("017_soft_deletes", include_str!("../migrations/017_soft_deletes.sql")),
-        ("018_performance_indexes", include_str!("../migrations/018_performance_indexes.sql")),
-        ("019_content_cms", include_str!("../migrations/019_content_cms.sql")),
-        ("020_unify_projects", include_str!("../migrations/020_unify_projects.sql")),
-        ("021_migrate_project_data", include_str!("../migrations/021_migrate_project_data.sql")),
-        ("022_epics_versions_story_points", include_str!("../migrations/022_epics_versions_story_points.sql")),
-        ("024_workflows_saved_filters", include_str!("../migrations/024_workflows_saved_filters.sql")),
+        (
+            "017_soft_deletes",
+            include_str!("../migrations/017_soft_deletes.sql"),
+        ),
+        (
+            "018_performance_indexes",
+            include_str!("../migrations/018_performance_indexes.sql"),
+        ),
+        (
+            "019_content_cms",
+            include_str!("../migrations/019_content_cms.sql"),
+        ),
+        (
+            "020_unify_projects",
+            include_str!("../migrations/020_unify_projects.sql"),
+        ),
+        (
+            "021_migrate_project_data",
+            include_str!("../migrations/021_migrate_project_data.sql"),
+        ),
+        (
+            "022_epics_versions_story_points",
+            include_str!("../migrations/022_epics_versions_story_points.sql"),
+        ),
+        (
+            "024_workflows_saved_filters",
+            include_str!("../migrations/024_workflows_saved_filters.sql"),
+        ),
         ("025_todos", include_str!("../migrations/025_todos.sql")),
-        ("026_certifications", include_str!("../migrations/026_certifications.sql")),
-        ("027_portfolio_categoria", include_str!("../migrations/027_portfolio_categoria.sql")),
-        ("028_portfolio_stages", include_str!("../migrations/028_portfolio_stages.sql")),
-        ("029_todos_enhanced", include_str!("../migrations/029_todos_enhanced.sql")),
+        (
+            "026_certifications",
+            include_str!("../migrations/026_certifications.sql"),
+        ),
+        (
+            "027_portfolio_categoria",
+            include_str!("../migrations/027_portfolio_categoria.sql"),
+        ),
+        (
+            "028_portfolio_stages",
+            include_str!("../migrations/028_portfolio_stages.sql"),
+        ),
+        (
+            "029_todos_enhanced",
+            include_str!("../migrations/029_todos_enhanced.sql"),
+        ),
         ("030_tickets", include_str!("../migrations/030_tickets.sql")),
     ];
 
@@ -78,7 +144,8 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
 
         // Split SQL into statements and execute each one individually
         // This allows partial migrations to succeed and be marked complete
-        let statements: Vec<&str> = sql.split(';')
+        let statements: Vec<&str> = sql
+            .split(';')
             .map(|s| s.trim())
             .filter(|s| !s.is_empty())
             .collect();
@@ -93,12 +160,23 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
                     // Ignore "duplicate column" errors (code 1) for ALTER TABLE
                     // This makes migrations idempotent
                     if err_msg.contains("duplicate column name:") {
-                        tracing::warn!("Migration {} - column already exists, skipping: {}", name, err_msg);
+                        tracing::warn!(
+                            "Migration {} - column already exists, skipping: {}",
+                            name,
+                            err_msg
+                        );
                         continue;
                     }
                     // Ignore "index already exists" errors
-                    if err_msg.contains("already exists") && (stmt.starts_with("CREATE INDEX") || stmt.starts_with("CREATE UNIQUE INDEX")) {
-                        tracing::warn!("Migration {} - index already exists, skipping: {}", name, err_msg);
+                    if err_msg.contains("already exists")
+                        && (stmt.starts_with("CREATE INDEX")
+                            || stmt.starts_with("CREATE UNIQUE INDEX"))
+                    {
+                        tracing::warn!(
+                            "Migration {} - index already exists, skipping: {}",
+                            name,
+                            err_msg
+                        );
                         continue;
                     }
                     // Other errors are fatal
@@ -129,24 +207,27 @@ pub async fn seed_admin(pool: &SqlitePool) -> Result<()> {
     let email_raw = match std::env::var("SEED_ADMIN_EMAIL") {
         Ok(v) => v,
         Err(_) => {
-            tracing::info!("SEED_ADMIN_EMAIL not set — skipping admin seed (set it to enable seeding).");
+            tracing::info!(
+                "SEED_ADMIN_EMAIL not set — skipping admin seed (set it to enable seeding)."
+            );
             return Ok(());
         }
     };
     let email = email_raw.trim().to_string();
     if email.is_empty() {
-        tracing::info!("SEED_ADMIN_EMAIL empty — skipping admin seed (set a valid email to enable seeding).");
+        tracing::info!(
+            "SEED_ADMIN_EMAIL empty — skipping admin seed (set a valid email to enable seeding)."
+        );
         return Ok(());
     }
 
     // FIX: Check existing BEFORE validating password. This allows restarts
     // to succeed even if SEED_ADMIN_PASSWORD is short/weak but user already exists,
     // and avoids creating a corrupted user with email="" when env is empty string.
-    let existing: Option<(String,)> =
-        sqlx::query_as("SELECT id FROM users WHERE email = ?")
-            .bind(&email)
-            .fetch_optional(pool)
-            .await?;
+    let existing: Option<(String,)> = sqlx::query_as("SELECT id FROM users WHERE email = ?")
+        .bind(&email)
+        .fetch_optional(pool)
+        .await?;
 
     if existing.is_some() {
         return Ok(());
@@ -170,7 +251,9 @@ pub async fn seed_admin(pool: &SqlitePool) -> Result<()> {
     // Reject weak/common passwords explicitly.
     let weak = ["tivit2026", "admin123", "password", "changeme", "12345678"];
     if weak.iter().any(|w| password.eq_ignore_ascii_case(w)) {
-        tracing::error!("SEED_ADMIN_PASSWORD is in the weak-password blocklist. Choose a stronger one.");
+        tracing::error!(
+            "SEED_ADMIN_PASSWORD is in the weak-password blocklist. Choose a stronger one."
+        );
         anyhow::bail!("SEED_ADMIN_PASSWORD is in weak blocklist");
     }
 

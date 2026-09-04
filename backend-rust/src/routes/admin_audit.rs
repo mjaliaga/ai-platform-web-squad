@@ -1,6 +1,5 @@
 use axum::{
     extract::{Extension, Query, State},
-    http::StatusCode,
     response::Response,
     Json,
 };
@@ -17,6 +16,19 @@ pub struct AuditQuery {
     pub event_type: Option<String>,
 }
 
+/// Fila del log de auditoría de seguridad (ver `list_security_audit`). Alias para CI.
+type SecurityAuditRow = (
+    String,
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    i64,
+    String,
+);
+
 pub async fn list_security_audit(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<Claims>,
@@ -25,9 +37,8 @@ pub async fn list_security_audit(
     require_admin(&claims)?;
     let limit = q.limit.unwrap_or(100).clamp(1, 500);
 
-    let rows: Vec<(String, String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, i64, String)> =
-        if let Some(ref ev) = q.event_type {
-            sqlx::query_as(
+    let rows: Vec<SecurityAuditRow> = if let Some(ref ev) = q.event_type {
+        sqlx::query_as(
                 "SELECT id, event_type, user_id, actor_id, ip_address, user_agent, details, success, created_at \
                  FROM security_audit_log WHERE event_type = ? ORDER BY created_at DESC LIMIT ?",
             )
@@ -36,8 +47,8 @@ pub async fn list_security_audit(
             .fetch_all(&state.db)
             .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?
-        } else {
-            sqlx::query_as(
+    } else {
+        sqlx::query_as(
                 "SELECT id, event_type, user_id, actor_id, ip_address, user_agent, details, success, created_at \
                  FROM security_audit_log ORDER BY created_at DESC LIMIT ?",
             )
@@ -45,23 +56,35 @@ pub async fn list_security_audit(
             .fetch_all(&state.db)
             .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?
-        };
+    };
 
     let items: Vec<serde_json::Value> = rows
         .into_iter()
-        .map(|(id, event_type, user_id, actor_id, ip_address, user_agent, details, success, created_at)| {
-            serde_json::json!({
-                "id": id,
-                "event_type": event_type,
-                "user_id": user_id,
-                "actor_id": actor_id,
-                "ip_address": ip_address,
-                "user_agent": user_agent,
-                "details": details,
-                "success": success != 0,
-                "created_at": created_at,
-            })
-        })
+        .map(
+            |(
+                id,
+                event_type,
+                user_id,
+                actor_id,
+                ip_address,
+                user_agent,
+                details,
+                success,
+                created_at,
+            )| {
+                serde_json::json!({
+                    "id": id,
+                    "event_type": event_type,
+                    "user_id": user_id,
+                    "actor_id": actor_id,
+                    "ip_address": ip_address,
+                    "user_agent": user_agent,
+                    "details": details,
+                    "success": success != 0,
+                    "created_at": created_at,
+                })
+            },
+        )
         .collect();
 
     Ok(Json(serde_json::json!({ "items": items })))
@@ -71,6 +94,9 @@ pub fn router(state: Arc<AppState>) -> axum::Router {
     use axum::routing::get;
     axum::Router::new()
         .route("/api/admin/audit/security", get(list_security_audit))
-        .route_layer(axum::middleware::from_fn_with_state(state.clone(), require_auth))
+        .route_layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            require_auth,
+        ))
         .with_state(state)
 }

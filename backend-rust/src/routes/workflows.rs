@@ -81,7 +81,7 @@ pub async fn list_workflows(
 ) -> Result<Json<Vec<Workflow>>, Response> {
     let workflows = sqlx::query_as::<_, Workflow>(
         "SELECT id, name, description, is_default, project_id, created_at \
-         FROM workflows WHERE deleted_at IS NULL ORDER BY created_at DESC"
+         FROM workflows WHERE deleted_at IS NULL ORDER BY created_at DESC",
     )
     .fetch_all(&state.db)
     .await
@@ -97,7 +97,7 @@ pub async fn get_workflow(
 ) -> Result<Json<WorkflowWithDetails>, Response> {
     let workflow = sqlx::query_as::<_, Workflow>(
         "SELECT id, name, description, is_default, project_id, created_at \
-         FROM workflows WHERE id = ? AND deleted_at IS NULL"
+         FROM workflows WHERE id = ? AND deleted_at IS NULL",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -106,12 +106,17 @@ pub async fn get_workflow(
 
     let workflow = match workflow {
         Some(w) => w,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Workflow no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Workflow no encontrado".to_string(),
+            ))
+        }
     };
 
     let statuses = sqlx::query_as::<_, WorkflowStatus>(
         "SELECT id, workflow_id, name, category, color, position, created_at \
-         FROM workflow_statuses WHERE workflow_id = ? ORDER BY position"
+         FROM workflow_statuses WHERE workflow_id = ? ORDER BY position",
     )
     .bind(&id)
     .fetch_all(&state.db)
@@ -120,14 +125,18 @@ pub async fn get_workflow(
 
     let transitions = sqlx::query_as::<_, WorkflowTransition>(
         "SELECT id, workflow_id, name, from_status_id, to_status_id, requires_role, created_at \
-         FROM workflow_transitions WHERE workflow_id = ?"
+         FROM workflow_transitions WHERE workflow_id = ?",
     )
     .bind(&id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    Ok(Json(WorkflowWithDetails { workflow, statuses, transitions }))
+    Ok(Json(WorkflowWithDetails {
+        workflow,
+        statuses,
+        transitions,
+    }))
 }
 
 pub async fn create_workflow(
@@ -138,16 +147,14 @@ pub async fn create_workflow(
     validate_required("name", &payload.name, 100)?;
 
     let id = Uuid::new_v4().to_string();
-    sqlx::query(
-        "INSERT INTO workflows (id, name, description, project_id) VALUES (?, ?, ?, ?)"
-    )
-    .bind(&id)
-    .bind(&payload.name)
-    .bind(&payload.description)
-    .bind(&payload.project_id)
-    .execute(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    sqlx::query("INSERT INTO workflows (id, name, description, project_id) VALUES (?, ?, ?, ?)")
+        .bind(&id)
+        .bind(&payload.name)
+        .bind(&payload.description)
+        .bind(&payload.project_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let workflow = sqlx::query_as::<_, Workflow>(
         "SELECT id, name, description, is_default, project_id, created_at FROM workflows WHERE id = ?"
@@ -174,7 +181,7 @@ pub async fn add_status(
 
     sqlx::query(
         "INSERT INTO workflow_statuses (id, workflow_id, name, category, color, position) \
-         VALUES (?, ?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&workflow_id)
@@ -188,7 +195,7 @@ pub async fn add_status(
 
     let status = sqlx::query_as::<_, WorkflowStatus>(
         "SELECT id, workflow_id, name, category, color, position, created_at \
-         FROM workflow_statuses WHERE id = ?"
+         FROM workflow_statuses WHERE id = ?",
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -225,7 +232,7 @@ pub async fn add_transition(
 
     let transition = sqlx::query_as::<_, WorkflowTransition>(
         "SELECT id, workflow_id, name, from_status_id, to_status_id, requires_role, created_at \
-         FROM workflow_transitions WHERE id = ?"
+         FROM workflow_transitions WHERE id = ?",
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -240,21 +247,29 @@ pub async fn delete_workflow(
     Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, Response> {
-    sqlx::query("UPDATE workflows SET deleted_at = datetime('now') WHERE id = ? AND is_default = 0")
-        .bind(&id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    sqlx::query(
+        "UPDATE workflows SET deleted_at = datetime('now') WHERE id = ? AND is_default = 0",
+    )
+    .bind(&id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{delete, get, post}};
+    use axum::{
+        middleware,
+        routing::{get, post},
+    };
 
     axum::Router::new()
         .route("/api/workflows", get(list_workflows).post(create_workflow))
-        .route("/api/workflows/:id", get(get_workflow).delete(delete_workflow))
+        .route(
+            "/api/workflows/:id",
+            get(get_workflow).delete(delete_workflow),
+        )
         .route("/api/workflows/:id/statuses", post(add_status))
         .route("/api/workflows/:id/transitions", post(add_transition))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth))

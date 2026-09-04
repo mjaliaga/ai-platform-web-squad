@@ -30,7 +30,9 @@ pub struct CreateSprintRequest {
 }
 
 fn goals_to_json(goals: &Option<Vec<String>>) -> Option<String> {
-    goals.as_ref().map(|g| serde_json::to_string(g).unwrap_or_else(|_| "[]".to_string()))
+    goals
+        .as_ref()
+        .map(|g| serde_json::to_string(g).unwrap_or_else(|_| "[]".to_string()))
 }
 
 /// Fetch stats for a single sprint. Used by single-sprint endpoints;
@@ -44,7 +46,7 @@ async fn sprint_stats(
                 COALESCE(SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END), 0), \
                 COALESCE(SUM(estimate_hours), 0.0), \
                 COALESCE(SUM(time_spent_hours), 0.0) \
-         FROM tasks WHERE sprint_id = ?"
+         FROM tasks WHERE sprint_id = ?",
     )
     .bind(sprint_id)
     .fetch_one(db)
@@ -69,17 +71,28 @@ pub async fn list_sprints(
 ) -> Result<Json<Vec<SprintWithStats>>, Response> {
     if let Some(pid) = params.get("project") {
         if claims.role != "admin" {
-            let member: Option<(String,)> = sqlx::query_as("SELECT user_id FROM project_members WHERE project_id = ? AND user_id = ?").bind(pid).bind(&claims.sub).fetch_optional(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+            let member: Option<(String,)> = sqlx::query_as(
+                "SELECT user_id FROM project_members WHERE project_id = ? AND user_id = ?",
+            )
+            .bind(pid)
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
             if member.is_none() {
                 let assigned: Option<(String,)> = sqlx::query_as("SELECT id FROM tasks WHERE project_id = ? AND assignee_id = ? AND deleted_at IS NULL LIMIT 1").bind(pid).bind(&claims.sub).fetch_optional(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
-                if assigned.is_none() { return Err(error_response(StatusCode::FORBIDDEN, "No tienes acceso a este proyecto".to_string())); }
+                if assigned.is_none() {
+                    return Err(error_response(
+                        StatusCode::FORBIDDEN,
+                        "No tienes acceso a este proyecto".to_string(),
+                    ));
+                }
             }
         }
     }
     // FIX-024: SQLite does NOT support NULLS LAST. Use a CASE-based sort
     // to keep NULL start_dates at the end of the DESC ordering.
-    let order_clause =
-        "ORDER BY (start_date IS NULL) ASC, start_date DESC, created_at DESC";
+    let order_clause = "ORDER BY (start_date IS NULL) ASC, start_date DESC, created_at DESC";
 
     let (sql, binds): (String, Vec<String>) = if let Some(pid) = params.get("project") {
         (
@@ -144,10 +157,8 @@ pub async fn list_sprints(
     let result: Vec<SprintWithStats> = sprints
         .into_iter()
         .map(|s| {
-            let (total_tasks, done_tasks, total_estimate, total_spent) = stats_map
-                .get(&s.id)
-                .copied()
-                .unwrap_or((0, 0, 0.0, 0.0));
+            let (total_tasks, done_tasks, total_estimate, total_spent) =
+                stats_map.get(&s.id).copied().unwrap_or((0, 0, 0.0, 0.0));
             SprintWithStats {
                 sprint: s,
                 total_tasks,
@@ -178,7 +189,8 @@ pub async fn get_active_sprint(
         None => return Ok(Json(None)),
     };
 
-    let (total_tasks, done_tasks, total_estimate, total_spent) = sprint_stats(&state.db, &s.id).await?;
+    let (total_tasks, done_tasks, total_estimate, total_spent) =
+        sprint_stats(&state.db, &s.id).await?;
 
     Ok(Json(Some(SprintWithStats {
         sprint: s,
@@ -233,12 +245,14 @@ pub async fn activate_sprint(
     Path(id): Path<String>,
 ) -> Result<Json<Sprint>, Response> {
     sqlx::query("UPDATE sprints SET is_active = 0")
-        .execute(&state.db).await
+        .execute(&state.db)
+        .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     sqlx::query("UPDATE sprints SET is_active = 1 WHERE id = ?")
         .bind(&id)
-        .execute(&state.db).await
+        .execute(&state.db)
+        .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let sprint: Sprint = sqlx::query_as::<_, Sprint>(
@@ -266,7 +280,8 @@ pub async fn get_sprint(
     .map_err(|e| internal_error(&format!("db error: {e}")))?
     .ok_or_else(|| error_response(StatusCode::NOT_FOUND, "sprint not found".to_string()))?;
 
-    let (total_tasks, done_tasks, total_estimate, total_spent) = sprint_stats(&state.db, &sprint.id).await?;
+    let (total_tasks, done_tasks, total_estimate, total_spent) =
+        sprint_stats(&state.db, &sprint.id).await?;
 
     Ok(Json(SprintWithStats {
         sprint,
@@ -302,44 +317,68 @@ pub async fn update_sprint(
     validate_dates(&payload.start_date, &payload.end_date)?;
 
     if let Some(v) = &payload.name {
-        sqlx::query("UPDATE sprints SET name = ? WHERE id = ?").bind(v).bind(&id)
-            .execute(&state.db).await
+        sqlx::query("UPDATE sprints SET name = ? WHERE id = ?")
+            .bind(v)
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.goals {
         let json = serde_json::to_string(v).unwrap_or_else(|_| "[]".to_string());
-        sqlx::query("UPDATE sprints SET goal = ? WHERE id = ?").bind(json).bind(&id)
-            .execute(&state.db).await
+        sqlx::query("UPDATE sprints SET goal = ? WHERE id = ?")
+            .bind(json)
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.start_date {
-        sqlx::query("UPDATE sprints SET start_date = ? WHERE id = ?").bind(v).bind(&id)
-            .execute(&state.db).await
+        sqlx::query("UPDATE sprints SET start_date = ? WHERE id = ?")
+            .bind(v)
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.end_date {
-        sqlx::query("UPDATE sprints SET end_date = ? WHERE id = ?").bind(v).bind(&id)
-            .execute(&state.db).await
+        sqlx::query("UPDATE sprints SET end_date = ? WHERE id = ?")
+            .bind(v)
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.project_id {
-        sqlx::query("UPDATE sprints SET project_id = ? WHERE id = ?").bind(v.as_deref()).bind(&id)
-            .execute(&state.db).await
+        sqlx::query("UPDATE sprints SET project_id = ? WHERE id = ?")
+            .bind(v.as_deref())
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.risks {
-        sqlx::query("UPDATE sprints SET risks = ? WHERE id = ?").bind(v).bind(&id)
-            .execute(&state.db).await
+        sqlx::query("UPDATE sprints SET risks = ? WHERE id = ?")
+            .bind(v)
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.team_dependencies {
-        sqlx::query("UPDATE sprints SET team_dependencies = ? WHERE id = ?").bind(v).bind(&id)
-            .execute(&state.db).await
+        sqlx::query("UPDATE sprints SET team_dependencies = ? WHERE id = ?")
+            .bind(v)
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.third_party_dependencies {
-        sqlx::query("UPDATE sprints SET third_party_dependencies = ? WHERE id = ?").bind(v).bind(&id)
-            .execute(&state.db).await
+        sqlx::query("UPDATE sprints SET third_party_dependencies = ? WHERE id = ?")
+            .bind(v)
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
 
@@ -363,12 +402,14 @@ pub async fn delete_sprint(
 
     sqlx::query("UPDATE tasks SET sprint_id = NULL WHERE sprint_id = ?")
         .bind(&id)
-        .execute(&state.db).await
+        .execute(&state.db)
+        .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     sqlx::query("DELETE FROM sprints WHERE id = ?")
         .bind(&id)
-        .execute(&state.db).await
+        .execute(&state.db)
+        .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -386,7 +427,10 @@ pub async fn assign_tasks_to_sprint(
     Json(payload): Json<AssignTasksRequest>,
 ) -> Result<StatusCode, Response> {
     if !sprint_exists(&state.db, &id).await? {
-        return Err(error_response(StatusCode::NOT_FOUND, "Sprint no encontrado".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Sprint no encontrado".to_string(),
+        ));
     }
     for tid in &payload.task_ids {
         if !crate::routes::tasks::task_exists(&state.db, tid).await? {
@@ -446,9 +490,15 @@ pub async fn get_sprint_board(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let sprint_with_stats = match sprint {
-        None => return Ok(Json(SprintBoardResponse { sprint: None, columns: vec![] })),
+        None => {
+            return Ok(Json(SprintBoardResponse {
+                sprint: None,
+                columns: vec![],
+            }))
+        }
         Some(s) => {
-            let (total_tasks, done_tasks, total_estimate, total_spent) = sprint_stats(&state.db, &s.id).await?;
+            let (total_tasks, done_tasks, total_estimate, total_spent) =
+                sprint_stats(&state.db, &s.id).await?;
 
             SprintWithStats {
                 sprint: s,
@@ -488,7 +538,8 @@ pub async fn get_sprint_board(
 
     let all_details = crate::routes::tasks::batch_load_task_details(&state.db, all_tasks).await?;
 
-    let mut by_status: std::collections::HashMap<String, Vec<crate::models::TaskWithDetails>> = std::collections::HashMap::new();
+    let mut by_status: std::collections::HashMap<String, Vec<crate::models::TaskWithDetails>> =
+        std::collections::HashMap::new();
     for d in all_details {
         by_status.entry(d.task.status.clone()).or_default().push(d);
     }
@@ -511,12 +562,18 @@ pub async fn get_sprint_board(
 
 #[allow(dead_code)]
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{get, post}};
+    use axum::{
+        middleware,
+        routing::{get, post},
+    };
 
     axum::Router::new()
         .route("/api/sprints", get(list_sprints).post(create_sprint))
         .route("/api/sprints/active", get(get_active_sprint))
-        .route("/api/sprints/:id", get(get_sprint).patch(update_sprint).delete(delete_sprint))
+        .route(
+            "/api/sprints/:id",
+            get(get_sprint).patch(update_sprint).delete(delete_sprint),
+        )
         .route("/api/sprints/:id/board", get(get_sprint_board))
         .route("/api/sprints/:id/activate", post(activate_sprint))
         .route("/api/sprints/:id/tasks", post(assign_tasks_to_sprint))

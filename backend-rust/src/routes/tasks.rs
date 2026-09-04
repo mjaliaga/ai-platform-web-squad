@@ -12,9 +12,9 @@ use uuid::Uuid;
 
 use crate::middleware::auth::require_auth;
 use crate::models::{
-    ActivityLog, ActivityWithUser, AssigneeCount, Attachment,
-    AttachmentWithUploader, Claims, Comment, CommentWithAuthor, DashboardStats,
-    PriorityCount, PublicUser, StatusCount, Task, TaskWithDetails, User,
+    ActivityLog, ActivityWithUser, AssigneeCount, Attachment, AttachmentWithUploader, Claims,
+    Comment, CommentWithAuthor, DashboardStats, PriorityCount, PublicUser, StatusCount, Task,
+    TaskWithDetails, User,
 };
 use crate::validation::{
     error_response, internal_error, require_admin, validate_enum, validate_hours,
@@ -130,9 +130,10 @@ pub async fn list_tasks(
         q = q.bind(p);
     }
     q = q.bind(limit).bind(offset);
-    let tasks = q.fetch_all(&state.db).await.map_err(|e| {
-        internal_error(&format!("db error: {e}"))
-    })?;
+    let tasks = q
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let result = batch_load_task_details(&state.db, tasks).await?;
 
@@ -212,9 +213,15 @@ pub struct CreateTaskRequest {
     pub resolution: Option<String>,
 }
 
-fn default_type() -> String { "tarea".to_string() }
-fn default_priority() -> String { "medium".to_string() }
-fn default_status() -> String { "backlog".to_string() }
+fn default_type() -> String {
+    "tarea".to_string()
+}
+fn default_priority() -> String {
+    "medium".to_string()
+}
+fn default_status() -> String {
+    "backlog".to_string()
+}
 
 pub async fn create_task(
     State(state): State<Arc<AppState>>,
@@ -268,7 +275,11 @@ pub async fn create_task(
 
     let id = Uuid::new_v4().to_string();
 
-    let mut conn = state.db.acquire().await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let mut conn = state
+        .db
+        .acquire()
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
     sqlx::query("BEGIN IMMEDIATE")
         .execute(&mut *conn)
         .await
@@ -314,7 +325,7 @@ pub async fn create_task(
         .bind(&payload.due_date)
         .bind(payload.deliverable.as_deref().unwrap_or(""))
         .bind(max_pos.0 + 1)
-        .bind(&payload.story_points)
+        .bind(payload.story_points)
         .bind(&payload.resolution)
         .execute(&mut *conn)
         .await
@@ -345,7 +356,17 @@ pub async fn create_task(
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    log_activity(&state.db, &id, &claims.sub, "created", None, None, None, None).await?;
+    log_activity(
+        &state.db,
+        &id,
+        &claims.sub,
+        "created",
+        None,
+        None,
+        None,
+        None,
+    )
+    .await?;
 
     let task: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
@@ -396,10 +417,8 @@ pub async fn update_task(
     if let Some(v) = &payload.priority {
         validate_enum("priority", v, PRIORITIES)?;
     }
-    if let Some(v) = &payload.estimate_hours {
-        if let Some(hours) = *v {
-            validate_hours(hours)?;
-        }
+    if let Some(Some(hours)) = &payload.estimate_hours {
+        validate_hours(*hours)?;
     }
 
     let existing: Task = sqlx::query_as::<_, Task>(
@@ -416,34 +435,88 @@ pub async fn update_task(
 
     if let Some(v) = &payload.title {
         if v != &existing.title {
-            log_activity(&state.db, &id, &claims.sub, "updated", Some("title"), Some(&existing.title), Some(v), None).await?;
+            log_activity(
+                &state.db,
+                &id,
+                &claims.sub,
+                "updated",
+                Some("title"),
+                Some(&existing.title),
+                Some(v),
+                None,
+            )
+            .await?;
             sqlx::query("UPDATE tasks SET title = ?, updated_at = datetime('now') WHERE id = ?")
-                .bind(v).bind(&id).execute(&state.db).await
+                .bind(v)
+                .bind(&id)
+                .execute(&state.db)
+                .await
                 .map_err(|e| internal_error(&format!("db error: {e}")))?;
         }
     }
     if let Some(v) = &payload.description {
         let old = existing.description.clone().unwrap_or_default();
         if v != &old {
-            log_activity(&state.db, &id, &claims.sub, "updated", Some("description"), Some(&old), Some(v), None).await?;
-            sqlx::query("UPDATE tasks SET description = ?, updated_at = datetime('now') WHERE id = ?")
-                .bind(v).bind(&id).execute(&state.db).await
-                .map_err(|e| internal_error(&format!("db error: {e}")))?;
+            log_activity(
+                &state.db,
+                &id,
+                &claims.sub,
+                "updated",
+                Some("description"),
+                Some(&old),
+                Some(v),
+                None,
+            )
+            .await?;
+            sqlx::query(
+                "UPDATE tasks SET description = ?, updated_at = datetime('now') WHERE id = ?",
+            )
+            .bind(v)
+            .bind(&id)
+            .execute(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
         }
     }
     if let Some(v) = &payload.r#type {
         if v != &existing.task_type {
-            log_activity(&state.db, &id, &claims.sub, "updated", Some("type"), Some(&existing.task_type), Some(v), None).await?;
+            log_activity(
+                &state.db,
+                &id,
+                &claims.sub,
+                "updated",
+                Some("type"),
+                Some(&existing.task_type),
+                Some(v),
+                None,
+            )
+            .await?;
             sqlx::query("UPDATE tasks SET type = ?, updated_at = datetime('now') WHERE id = ?")
-                .bind(v).bind(&id).execute(&state.db).await
+                .bind(v)
+                .bind(&id)
+                .execute(&state.db)
+                .await
                 .map_err(|e| internal_error(&format!("db error: {e}")))?;
         }
     }
     if let Some(v) = &payload.priority {
         if v != &existing.priority {
-            log_activity(&state.db, &id, &claims.sub, "updated", Some("priority"), Some(&existing.priority), Some(v), None).await?;
+            log_activity(
+                &state.db,
+                &id,
+                &claims.sub,
+                "updated",
+                Some("priority"),
+                Some(&existing.priority),
+                Some(v),
+                None,
+            )
+            .await?;
             sqlx::query("UPDATE tasks SET priority = ?, updated_at = datetime('now') WHERE id = ?")
-                .bind(v).bind(&id).execute(&state.db).await
+                .bind(v)
+                .bind(&id)
+                .execute(&state.db)
+                .await
                 .map_err(|e| internal_error(&format!("db error: {e}")))?;
         }
     }
@@ -451,24 +524,46 @@ pub async fn update_task(
         let new_val = v.as_deref();
         let old_val = existing.assignee_id.as_deref();
         if new_val != old_val {
-            let new_user = if let Some(uid) = new_val { get_user_name(&state.db, uid).await.ok() } else { None };
-            let old_user = if let Some(uid) = old_val { get_user_name(&state.db, uid).await.ok() } else { None };
-            log_activity(&state.db, &id, &claims.sub, "assigned", Some("assignee"), old_user.as_deref(), new_user.as_deref(), None).await?;
-            sqlx::query("UPDATE tasks SET assignee_id = ?, updated_at = datetime('now') WHERE id = ?")
-                .bind(new_val).bind(&id).execute(&state.db).await
-                .map_err(|e| internal_error(&format!("db error: {e}")))?;
+            let new_user = if let Some(uid) = new_val {
+                get_user_name(&state.db, uid).await.ok()
+            } else {
+                None
+            };
+            let old_user = if let Some(uid) = old_val {
+                get_user_name(&state.db, uid).await.ok()
+            } else {
+                None
+            };
+            log_activity(
+                &state.db,
+                &id,
+                &claims.sub,
+                "assigned",
+                Some("assignee"),
+                old_user.as_deref(),
+                new_user.as_deref(),
+                None,
+            )
+            .await?;
+            sqlx::query(
+                "UPDATE tasks SET assignee_id = ?, updated_at = datetime('now') WHERE id = ?",
+            )
+            .bind(new_val)
+            .bind(&id)
+            .execute(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
             if let Some(new_uid) = new_val {
                 if new_uid != claims.sub {
-                    let actor_name: Option<String> = sqlx::query_as::<_, (String,)>(
-                        "SELECT name FROM users WHERE id = ?"
-                    )
-                    .bind(&claims.sub)
-                    .fetch_optional(&state.db)
-                    .await
-                    .ok()
-                    .flatten()
-                    .map(|(n,)| n);
+                    let actor_name: Option<String> =
+                        sqlx::query_as::<_, (String,)>("SELECT name FROM users WHERE id = ?")
+                            .bind(&claims.sub)
+                            .fetch_optional(&state.db)
+                            .await
+                            .ok()
+                            .flatten()
+                            .map(|(n,)| n);
 
                     let _ = crate::routes::notifications::create_notification(
                         &state.db,
@@ -476,64 +571,104 @@ pub async fn update_task(
                         "assigned",
                         Some(&id),
                         Some(&claims.sub),
-                        &format!("{} te asignó la tarea {}", actor_name.unwrap_or_default(), existing.code),
-                    ).await;
+                        &format!(
+                            "{} te asignó la tarea {}",
+                            actor_name.unwrap_or_default(),
+                            existing.code
+                        ),
+                    )
+                    .await;
                 }
             }
         }
     }
     if let Some(v) = &payload.parent_id {
         sqlx::query("UPDATE tasks SET parent_id = ?, updated_at = datetime('now') WHERE id = ?")
-            .bind(v.as_deref()).bind(&id).execute(&state.db).await
+            .bind(v.as_deref())
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.epic_id {
         sqlx::query("UPDATE tasks SET epic_id = ?, updated_at = datetime('now') WHERE id = ?")
-            .bind(v.as_deref()).bind(&id).execute(&state.db).await
+            .bind(v.as_deref())
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.sprint_id {
         sqlx::query("UPDATE tasks SET sprint_id = ?, updated_at = datetime('now') WHERE id = ?")
-            .bind(v.as_deref()).bind(&id).execute(&state.db).await
+            .bind(v.as_deref())
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.project_id {
         sqlx::query("UPDATE tasks SET project_id = ?, updated_at = datetime('now') WHERE id = ?")
-            .bind(v.as_deref()).bind(&id).execute(&state.db).await
+            .bind(v.as_deref())
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.estimate_hours {
-        sqlx::query("UPDATE tasks SET estimate_hours = ?, updated_at = datetime('now') WHERE id = ?")
-            .bind(*v).bind(&id).execute(&state.db).await
-            .map_err(|e| internal_error(&format!("db error: {e}")))?;
+        sqlx::query(
+            "UPDATE tasks SET estimate_hours = ?, updated_at = datetime('now') WHERE id = ?",
+        )
+        .bind(*v)
+        .bind(&id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.due_date {
         sqlx::query("UPDATE tasks SET due_date = ?, updated_at = datetime('now') WHERE id = ?")
-            .bind(v.as_deref()).bind(&id).execute(&state.db).await
+            .bind(v.as_deref())
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.deliverable {
         sqlx::query("UPDATE tasks SET deliverable = ?, updated_at = datetime('now') WHERE id = ?")
-            .bind(v).bind(&id).execute(&state.db).await
+            .bind(v)
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(labels) = &payload.labels {
-        sqlx::query("DELETE FROM task_labels WHERE task_id = ?").bind(&id).execute(&state.db).await
+        sqlx::query("DELETE FROM task_labels WHERE task_id = ?")
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
         for label in labels {
             sqlx::query("INSERT OR IGNORE INTO task_labels (task_id, label) VALUES (?, ?)")
-                .bind(&id).bind(label).execute(&state.db).await
+                .bind(&id)
+                .bind(label)
+                .execute(&state.db)
+                .await
                 .map_err(|e| internal_error(&format!("db error: {e}")))?;
         }
     }
     if let Some(v) = &payload.story_points {
         sqlx::query("UPDATE tasks SET story_points = ?, updated_at = datetime('now') WHERE id = ?")
-            .bind(v).bind(&id).execute(&state.db).await
+            .bind(v)
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
     if let Some(v) = &payload.resolution {
         sqlx::query("UPDATE tasks SET resolution = ?, updated_at = datetime('now') WHERE id = ?")
-            .bind(v).bind(&id).execute(&state.db).await
+            .bind(v)
+            .bind(&id)
+            .execute(&state.db)
+            .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
     }
 
@@ -588,16 +723,28 @@ pub async fn update_task_status(
     let new_position = payload.position.unwrap_or(existing.position);
 
     if payload.status != existing.status {
-        log_activity(&state.db, &id, &claims.sub, "moved", Some("status"), Some(&existing.status), Some(&payload.status), payload.justification.as_deref()).await?;
+        log_activity(
+            &state.db,
+            &id,
+            &claims.sub,
+            "moved",
+            Some("status"),
+            Some(&existing.status),
+            Some(&payload.status),
+            payload.justification.as_deref(),
+        )
+        .await?;
     }
 
-    sqlx::query("UPDATE tasks SET status = ?, position = ?, updated_at = datetime('now') WHERE id = ?")
-        .bind(&payload.status)
-        .bind(new_position)
-        .bind(&id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    sqlx::query(
+        "UPDATE tasks SET status = ?, position = ?, updated_at = datetime('now') WHERE id = ?",
+    )
+    .bind(&payload.status)
+    .bind(new_position)
+    .bind(&id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let task: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
@@ -621,13 +768,12 @@ pub async fn delete_task(
 ) -> Result<StatusCode, Response> {
     require_admin(&claims)?;
 
-    let existing: Option<(String,)> = sqlx::query_as(
-        "SELECT id FROM tasks WHERE id = ? AND deleted_at IS NULL"
-    )
-    .bind(&id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let existing: Option<(String,)> =
+        sqlx::query_as("SELECT id FROM tasks WHERE id = ? AND deleted_at IS NULL")
+            .bind(&id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
     if existing.is_none() {
         return Err(error_response(
             StatusCode::NOT_FOUND,
@@ -636,9 +782,11 @@ pub async fn delete_task(
     }
 
     let now_ts = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    let mut tx = state.db.begin().await.map_err(|e| {
-        internal_error(&format!("db error: {e}"))
-    })?;
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     sqlx::query("UPDATE tasks SET deleted_at = ? WHERE id = ?")
         .bind(&now_ts)
@@ -675,9 +823,9 @@ pub async fn delete_task(
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    tx.commit().await.map_err(|e| {
-        internal_error(&format!("db error: {e}"))
-    })?;
+    tx.commit()
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     log_activity(
         &state.db,
@@ -802,13 +950,27 @@ pub async fn get_backlog(
         "deleted_at IS NULL".to_string(),
     ];
     let mut binds: Vec<String> = Vec::new();
-    if mine { where_parts.push("assignee_id = ?".to_string()); binds.push(claims.sub.clone()); }
-    if let Some(pid) = project { where_parts.push("project_id = ?".to_string()); binds.push(pid.to_string()); }
+    if mine {
+        where_parts.push("assignee_id = ?".to_string());
+        binds.push(claims.sub.clone());
+    }
+    if let Some(pid) = project {
+        where_parts.push("project_id = ?".to_string());
+        binds.push(pid.to_string());
+    }
 
-    let sql = format!("SELECT {} FROM tasks WHERE {} ORDER BY position ASC, created_at DESC", base_cols, where_parts.join(" AND "));
+    let sql = format!(
+        "SELECT {} FROM tasks WHERE {} ORDER BY position ASC, created_at DESC",
+        base_cols,
+        where_parts.join(" AND ")
+    );
     let mut q = sqlx::query_as::<_, Task>(&sql);
-    for b in &binds { q = q.bind(b); }
-    let rows: Vec<Task> = q.fetch_all(&state.db).await
+    for b in &binds {
+        q = q.bind(b);
+    }
+    let rows: Vec<Task> = q
+        .fetch_all(&state.db)
+        .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let details = batch_load_task_details(&state.db, rows).await?;
@@ -828,7 +990,7 @@ pub async fn list_comments(
 ) -> Result<Json<Vec<CommentWithAuthor>>, Response> {
     let comments: Vec<Comment> = sqlx::query_as::<_, Comment>(
         "SELECT id, task_id, author_id, body, created_at, updated_at \
-         FROM comments WHERE task_id = ? ORDER BY created_at ASC"
+         FROM comments WHERE task_id = ? ORDER BY created_at ASC",
     )
     .bind(&task_id)
     .fetch_all(&state.db)
@@ -868,12 +1030,18 @@ pub async fn list_comments(
 
     let mut result = Vec::with_capacity(comments.len());
     for c in comments {
-        let author = users
-            .get(&c.author_id)
-            .cloned()
-            .ok_or_else(|| error_response(StatusCode::INTERNAL_SERVER_ERROR, "Autor no encontrado".to_string()))?;
+        let author = users.get(&c.author_id).cloned().ok_or_else(|| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Autor no encontrado".to_string(),
+            )
+        })?;
         let mentions = mentions_by_comment.remove(&c.id).unwrap_or_default();
-        result.push(CommentWithAuthor { comment: c, author, mentions });
+        result.push(CommentWithAuthor {
+            comment: c,
+            author,
+            mentions,
+        });
     }
 
     Ok(Json(result))
@@ -887,21 +1055,22 @@ pub async fn create_comment(
 ) -> Result<(StatusCode, Json<CommentWithAuthor>), Response> {
     validate_required("body", &payload.body, 5000)?;
     if !task_exists(&state.db, &task_id).await? {
-        return Err(error_response(StatusCode::NOT_FOUND, "Tarea no encontrada".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Tarea no encontrada".to_string(),
+        ));
     }
 
     let id = Uuid::new_v4().to_string();
 
-    sqlx::query(
-        "INSERT INTO comments (id, task_id, author_id, body) VALUES (?, ?, ?, ?)"
-    )
-    .bind(&id)
-    .bind(&task_id)
-    .bind(&claims.sub)
-    .bind(&payload.body)
-    .execute(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    sqlx::query("INSERT INTO comments (id, task_id, author_id, body) VALUES (?, ?, ?, ?)")
+        .bind(&id)
+        .bind(&task_id)
+        .bind(&claims.sub)
+        .bind(&payload.body)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let mentions = extract_mentions(&payload.body);
     for username in &mentions {
@@ -916,12 +1085,14 @@ pub async fn create_comment(
 
         if let Some(u) = user {
             if u.id != claims.sub {
-                sqlx::query("INSERT OR IGNORE INTO comment_mentions (comment_id, user_id) VALUES (?, ?)")
-                    .bind(&id)
-                    .bind(&u.id)
-                    .execute(&state.db)
-                    .await
-                    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+                sqlx::query(
+                    "INSERT OR IGNORE INTO comment_mentions (comment_id, user_id) VALUES (?, ?)",
+                )
+                .bind(&id)
+                .bind(&u.id)
+                .execute(&state.db)
+                .await
+                .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
                 let _ = crate::routes::notifications::create_notification(
                     &state.db,
@@ -930,20 +1101,30 @@ pub async fn create_comment(
                     Some(&task_id),
                     Some(&claims.sub),
                     &format!("{} te mencionó en un comentario", claims.email),
-                ).await;
+                )
+                .await;
             }
         }
     }
 
-    log_activity(&state.db, &task_id, &claims.sub, "commented", None, None, None, None).await?;
-
-    let task_info: Option<(String, Option<String>)> = sqlx::query_as(
-        "SELECT code, assignee_id FROM tasks WHERE id = ?"
+    log_activity(
+        &state.db,
+        &task_id,
+        &claims.sub,
+        "commented",
+        None,
+        None,
+        None,
+        None,
     )
-    .bind(&task_id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    .await?;
+
+    let task_info: Option<(String, Option<String>)> =
+        sqlx::query_as("SELECT code, assignee_id FROM tasks WHERE id = ?")
+            .bind(&task_id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     if let Some((code, Some(assignee_id))) = task_info {
         if assignee_id != claims.sub {
@@ -954,12 +1135,13 @@ pub async fn create_comment(
                 Some(&task_id),
                 Some(&claims.sub),
                 &format!("{} comentó en la tarea {}", claims.email, code),
-            ).await;
+            )
+            .await;
         }
     }
 
     let comment: Comment = sqlx::query_as::<_, Comment>(
-        "SELECT id, task_id, author_id, body, created_at, updated_at FROM comments WHERE id = ?"
+        "SELECT id, task_id, author_id, body, created_at, updated_at FROM comments WHERE id = ?",
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -974,11 +1156,14 @@ pub async fn create_comment(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    Ok((StatusCode::CREATED, Json(CommentWithAuthor {
-        comment,
-        author: author.into(),
-        mentions: vec![],
-    })))
+    Ok((
+        StatusCode::CREATED,
+        Json(CommentWithAuthor {
+            comment,
+            author: author.into(),
+            mentions: vec![],
+        }),
+    ))
 }
 
 #[derive(Debug, Deserialize)]
@@ -1004,10 +1189,18 @@ pub async fn edit_comment(
 
     let comment = match comment {
         Some(c) => c,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Comentario no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Comentario no encontrado".to_string(),
+            ))
+        }
     };
     if comment.author_id != claims.sub {
-        return Err(error_response(StatusCode::FORBIDDEN, "Solo puedes editar tus propios comentarios".to_string()));
+        return Err(error_response(
+            StatusCode::FORBIDDEN,
+            "Solo puedes editar tus propios comentarios".to_string(),
+        ));
     }
 
     sqlx::query("UPDATE comments SET body = ?, updated_at = datetime('now') WHERE id = ?")
@@ -1018,7 +1211,7 @@ pub async fn edit_comment(
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let updated: Comment = sqlx::query_as::<_, Comment>(
-        "SELECT id, task_id, author_id, body, created_at, updated_at FROM comments WHERE id = ?"
+        "SELECT id, task_id, author_id, body, created_at, updated_at FROM comments WHERE id = ?",
     )
     .bind(&comment_id)
     .fetch_one(&state.db)
@@ -1056,10 +1249,18 @@ pub async fn delete_comment(
 
     let comment = match comment {
         Some(c) => c,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Comentario no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Comentario no encontrado".to_string(),
+            ))
+        }
     };
     if comment.author_id != claims.sub && claims.role != "admin" {
-        return Err(error_response(StatusCode::FORBIDDEN, "No tienes permiso para eliminar este comentario".to_string()));
+        return Err(error_response(
+            StatusCode::FORBIDDEN,
+            "No tienes permiso para eliminar este comentario".to_string(),
+        ));
     }
 
     sqlx::query("DELETE FROM comment_mentions WHERE comment_id = ?")
@@ -1097,7 +1298,10 @@ pub async fn list_activity(
     let mut result = Vec::with_capacity(activities.len());
     for a in activities {
         if let Some(user) = users.get(&a.user_id) {
-            result.push(ActivityWithUser { activity: a, user: user.clone() });
+            result.push(ActivityWithUser {
+                activity: a,
+                user: user.clone(),
+            });
         }
     }
 
@@ -1124,7 +1328,10 @@ pub async fn list_attachments(
     let mut result = Vec::with_capacity(attachments.len());
     for a in attachments {
         if let Some(uploader) = users.get(&a.uploader_id) {
-            result.push(AttachmentWithUploader { attachment: a, uploader: uploader.clone() });
+            result.push(AttachmentWithUploader {
+                attachment: a,
+                uploader: uploader.clone(),
+            });
         }
     }
 
@@ -1141,7 +1348,10 @@ pub async fn upload_attachment(
     std::fs::create_dir_all(&upload_dir).ok();
 
     if !task_exists(&state.db, &task_id).await? {
-        return Err(error_response(StatusCode::NOT_FOUND, "Tarea no encontrada".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Tarea no encontrada".to_string(),
+        ));
     }
 
     let field = multipart
@@ -1150,10 +1360,7 @@ pub async fn upload_attachment(
         .map_err(|e| error_response(StatusCode::BAD_REQUEST, format!("multipart error: {e}")))?
         .ok_or_else(|| error_response(StatusCode::BAD_REQUEST, "no file provided".to_string()))?;
 
-    let filename = field
-        .file_name()
-        .unwrap_or("upload")
-        .to_string();
+    let filename = field.file_name().unwrap_or("upload").to_string();
     let mime_type = field.content_type().map(|m| m.to_string());
     let data = field
         .bytes()
@@ -1161,12 +1368,18 @@ pub async fn upload_attachment(
         .map_err(|e| error_response(StatusCode::BAD_REQUEST, format!("read error: {e}")))?;
 
     if data.is_empty() {
-        return Err(error_response(StatusCode::BAD_REQUEST, "El archivo está vacío".to_string()));
+        return Err(error_response(
+            StatusCode::BAD_REQUEST,
+            "El archivo está vacío".to_string(),
+        ));
     }
     if data.len() > MAX_UPLOAD_BYTES {
         return Err(error_response(
             StatusCode::PAYLOAD_TOO_LARGE,
-            format!("El archivo supera el límite de {} MB", MAX_UPLOAD_BYTES / (1024 * 1024)),
+            format!(
+                "El archivo supera el límite de {} MB",
+                MAX_UPLOAD_BYTES / (1024 * 1024)
+            ),
         ));
     }
 
@@ -1194,7 +1407,17 @@ pub async fn upload_attachment(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    log_activity(&state.db, &task_id, &claims.sub, "attached", None, None, Some(&filename), None).await?;
+    log_activity(
+        &state.db,
+        &task_id,
+        &claims.sub,
+        "attached",
+        None,
+        None,
+        Some(&filename),
+        None,
+    )
+    .await?;
 
     let attachment: Attachment = sqlx::query_as::<_, Attachment>(
         "SELECT id, task_id, uploader_id, filename, stored_path, mime_type, size_bytes, created_at \
@@ -1213,7 +1436,13 @@ pub async fn upload_attachment(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    Ok((StatusCode::CREATED, Json(AttachmentWithUploader { attachment, uploader: uploader.into() })))
+    Ok((
+        StatusCode::CREATED,
+        Json(AttachmentWithUploader {
+            attachment,
+            uploader: uploader.into(),
+        }),
+    ))
 }
 
 #[derive(Debug, Deserialize)]
@@ -1248,7 +1477,10 @@ pub async fn toggle_subtask(
     Json(payload): Json<ToggleSubtaskRequest>,
 ) -> Result<Json<TaskWithDetails>, Response> {
     if !task_exists(&state.db, &id).await? {
-        return Err(error_response(StatusCode::NOT_FOUND, "Tarea no encontrada".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Tarea no encontrada".to_string(),
+        ));
     }
 
     let new_status = if payload.completed { "done" } else { "todo" };
@@ -1259,7 +1491,17 @@ pub async fn toggle_subtask(
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    log_activity(&state.db, &id, &claims.sub, "toggled", Some("completed"), None, Some(if payload.completed { "true" } else { "false" }), None).await?;
+    log_activity(
+        &state.db,
+        &id,
+        &claims.sub,
+        "toggled",
+        Some("completed"),
+        None,
+        Some(if payload.completed { "true" } else { "false" }),
+        None,
+    )
+    .await?;
 
     let task: Task = sqlx::query_as::<_, Task>(
         "SELECT id, code, title, description, type as task_type, status, priority, \
@@ -1281,27 +1523,29 @@ pub async fn get_dashboard(
     Extension(_claims): Extension<Claims>,
 ) -> Result<Json<DashboardStats>, Response> {
     let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM tasks")
-        .fetch_one(&state.db).await
+        .fetch_one(&state.db)
+        .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let by_status: Vec<StatusCount> = sqlx::query_as(
-        "SELECT status, COUNT(*) as count FROM tasks GROUP BY status"
-    )
-    .fetch_all(&state.db).await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let by_status: Vec<StatusCount> =
+        sqlx::query_as("SELECT status, COUNT(*) as count FROM tasks GROUP BY status")
+            .fetch_all(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let by_priority: Vec<PriorityCount> = sqlx::query_as(
-        "SELECT priority, COUNT(*) as count FROM tasks GROUP BY priority"
-    )
-    .fetch_all(&state.db).await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let by_priority: Vec<PriorityCount> =
+        sqlx::query_as("SELECT priority, COUNT(*) as count FROM tasks GROUP BY priority")
+            .fetch_all(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let by_assignee: Vec<AssigneeCount> = sqlx::query_as(
         "SELECT u.id as assignee_id, u.name as assignee_name, COUNT(t.id) as count \
          FROM users u LEFT JOIN tasks t ON t.assignee_id = u.id \
-         GROUP BY u.id ORDER BY count DESC"
+         GROUP BY u.id ORDER BY count DESC",
     )
-    .fetch_all(&state.db).await
+    .fetch_all(&state.db)
+    .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let upcoming_due: Vec<Task> = sqlx::query_as::<_, Task>(
@@ -1328,7 +1572,10 @@ pub async fn get_dashboard(
     let mut activity_with_users = Vec::with_capacity(recent_activity.len());
     for a in recent_activity {
         if let Some(u) = activity_users.get(&a.user_id) {
-            activity_with_users.push(ActivityWithUser { activity: a, user: u.clone() });
+            activity_with_users.push(ActivityWithUser {
+                activity: a,
+                user: u.clone(),
+            });
         }
     }
 
@@ -1350,30 +1597,34 @@ pub async fn get_dashboard_me(
 
     let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM tasks WHERE assignee_id = ?")
         .bind(uid)
-        .fetch_one(&state.db).await
+        .fetch_one(&state.db)
+        .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let by_status: Vec<StatusCount> = sqlx::query_as(
-        "SELECT status, COUNT(*) as count FROM tasks WHERE assignee_id = ? GROUP BY status"
+        "SELECT status, COUNT(*) as count FROM tasks WHERE assignee_id = ? GROUP BY status",
     )
     .bind(uid)
-    .fetch_all(&state.db).await
+    .fetch_all(&state.db)
+    .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let by_priority: Vec<PriorityCount> = sqlx::query_as(
-        "SELECT priority, COUNT(*) as count FROM tasks WHERE assignee_id = ? GROUP BY priority"
+        "SELECT priority, COUNT(*) as count FROM tasks WHERE assignee_id = ? GROUP BY priority",
     )
     .bind(uid)
-    .fetch_all(&state.db).await
+    .fetch_all(&state.db)
+    .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let by_assignee: Vec<AssigneeCount> = sqlx::query_as(
         "SELECT u.id as assignee_id, u.name as assignee_name, COUNT(t.id) as count \
          FROM users u LEFT JOIN tasks t ON t.assignee_id = u.id \
-         WHERE u.id = ? GROUP BY u.id"
+         WHERE u.id = ? GROUP BY u.id",
     )
     .bind(uid)
-    .fetch_all(&state.db).await
+    .fetch_all(&state.db)
+    .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let upcoming_due: Vec<Task> = sqlx::query_as::<_, Task>(
@@ -1404,7 +1655,10 @@ pub async fn get_dashboard_me(
     let mut activity_with_users = Vec::with_capacity(recent_activity.len());
     for a in recent_activity {
         if let Some(u) = activity_users.get(&a.user_id) {
-            activity_with_users.push(ActivityWithUser { activity: a, user: u.clone() });
+            activity_with_users.push(ActivityWithUser {
+                activity: a,
+                user: u.clone(),
+            });
         }
     }
 
@@ -1426,9 +1680,15 @@ pub async fn load_task_details(db: &SqlitePool, task: Task) -> Result<TaskWithDe
     ids.push(&task.reporter_id);
 
     let users = batch_users(db, &ids).await;
-    let assignee = task.assignee_id.as_ref().and_then(|aid| users.get(aid).cloned());
+    let assignee = task
+        .assignee_id
+        .as_ref()
+        .and_then(|aid| users.get(aid).cloned());
     let reporter = users.get(&task.reporter_id).cloned().ok_or_else(|| {
-        error_response(StatusCode::INTERNAL_SERVER_ERROR, "Reporter no encontrado".to_string())
+        error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Reporter no encontrado".to_string(),
+        )
     })?;
 
     let labels: Vec<(String,)> = sqlx::query_as("SELECT label FROM task_labels WHERE task_id = ?")
@@ -1555,15 +1815,12 @@ pub async fn batch_load_task_details(
             .assignee_id
             .as_ref()
             .and_then(|aid| users.get(aid).cloned());
-        let reporter = users
-            .get(&task.reporter_id)
-            .cloned()
-            .ok_or_else(|| {
-                error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Reporter no encontrado".to_string(),
-                )
-            })?;
+        let reporter = users.get(&task.reporter_id).cloned().ok_or_else(|| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Reporter no encontrado".to_string(),
+            )
+        })?;
         let labels = labels_by_task.remove(&task.id).unwrap_or_default();
         let (subtask_count, completed_subtask_count) =
             subtasks_by_task.get(&task.id).copied().unwrap_or((0, 0));
@@ -1609,7 +1866,10 @@ pub async fn batch_users(db: &SqlitePool, ids: &[&str]) -> HashMap<String, Publi
     }
 
     match q.fetch_all(db).await {
-        Ok(users) => users.into_iter().map(|u| (u.id.clone(), u.into())).collect(),
+        Ok(users) => users
+            .into_iter()
+            .map(|u| (u.id.clone(), u.into()))
+            .collect(),
         Err(_) => HashMap::new(),
     }
 }
@@ -1624,11 +1884,12 @@ pub async fn task_exists(db: &SqlitePool, id: &str) -> Result<bool, Response> {
 }
 
 pub async fn epic_exists(db: &SqlitePool, id: &str) -> Result<bool, Response> {
-    let row: Option<(String,)> = sqlx::query_as("SELECT id FROM epics WHERE id = ? AND deleted_at IS NULL")
-        .bind(id)
-        .fetch_optional(db)
-        .await
-        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT id FROM epics WHERE id = ? AND deleted_at IS NULL")
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
     Ok(row.is_some())
 }
 
@@ -1666,7 +1927,12 @@ pub async fn download_attachment(
 
     let attachment = match attachment {
         Some(a) => a,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Adjunto no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Adjunto no encontrado".to_string(),
+            ))
+        }
     };
 
     let data = tokio::fs::read(&attachment.stored_path)
@@ -1680,7 +1946,13 @@ pub async fn download_attachment(
     let ascii_name: String = attachment
         .filename
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     let disposition = format!(
         "attachment; filename=\"{}\"; filename*=UTF-8''{}",
@@ -1712,6 +1984,8 @@ fn urlencode(input: &str) -> String {
     out
 }
 
+// CI: helper de actividad con campos fijos del dominio; se permite el lint.
+#[allow(clippy::too_many_arguments)]
 pub async fn log_activity_pub(
     db: &SqlitePool,
     task_id: &str,
@@ -1722,9 +1996,14 @@ pub async fn log_activity_pub(
     new_value: Option<&str>,
     metadata: Option<&str>,
 ) -> Result<(), Response> {
-    log_activity(db, task_id, user_id, action, field, old_value, new_value, metadata).await
+    log_activity(
+        db, task_id, user_id, action, field, old_value, new_value, metadata,
+    )
+    .await
 }
 
+// CI: ver nota en `log_activity_pub`.
+#[allow(clippy::too_many_arguments)]
 async fn log_activity(
     db: &SqlitePool,
     task_id: &str,
@@ -1786,7 +2065,13 @@ fn extract_mentions(body: &str) -> Vec<String> {
 
 fn sanitize_filename(name: &str) -> String {
     name.chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -1799,12 +2084,24 @@ pub fn router(state: Arc<AppState>) -> axum::Router {
 
     axum::Router::new()
         .route("/api/tasks", get(list_tasks).post(create_task))
-        .route("/api/tasks/:id", get(get_task).delete(delete_task).patch(update_task))
+        .route(
+            "/api/tasks/:id",
+            get(get_task).delete(delete_task).patch(update_task),
+        )
         .route("/api/tasks/:id/status", patch(update_task_status))
-        .route("/api/tasks/:id/comments", get(list_comments).post(create_comment))
-        .route("/api/tasks/:id/comments/:comment_id", patch(edit_comment).delete(delete_comment))
+        .route(
+            "/api/tasks/:id/comments",
+            get(list_comments).post(create_comment),
+        )
+        .route(
+            "/api/tasks/:id/comments/:comment_id",
+            patch(edit_comment).delete(delete_comment),
+        )
         .route("/api/tasks/:id/activity", get(list_activity))
-        .route("/api/tasks/:id/attachments", get(list_attachments).post(upload_attachment))
+        .route(
+            "/api/tasks/:id/attachments",
+            get(list_attachments).post(upload_attachment),
+        )
         .route("/api/tasks/:id/subtasks", get(list_subtasks))
         .route("/api/subtasks/:id/toggle", patch(toggle_subtask))
         .route("/api/attachments/:id", get(download_attachment))

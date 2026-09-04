@@ -4,19 +4,19 @@ use axum::{
     response::Response,
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::email::notify_ticket;
 use crate::middleware::auth::require_auth;
 use crate::models::{
-    Claims, PublicUser, Ticket, TicketActivity, TicketActivityWithUser, TicketComment, TicketCommentWithAuthor,
-    TicketLevelConfig, TicketLevelConfigWithUser, TicketWithDetails,
+    Claims, PublicUser, Ticket, TicketActivity, TicketActivityWithUser, TicketComment,
+    TicketCommentWithAuthor, TicketLevelConfig, TicketLevelConfigWithUser, TicketWithDetails,
 };
 use crate::validation::{
-    error_response, internal_error, require_admin, validate_enum, validate_required, PRIORITIES, TICKET_CATEGORIES,
-    TICKET_STATUSES,
+    error_response, internal_error, require_admin, validate_enum, validate_required, PRIORITIES,
+    TICKET_CATEGORIES, TICKET_STATUSES,
 };
 use crate::AppState;
 
@@ -24,16 +24,15 @@ use crate::AppState;
 // Primero busca en ticket_level_config, si no existe hace fallback por email
 async fn get_assignee_for_level(db: &sqlx::SqlitePool, level: i64) -> Option<String> {
     // 1. Buscar en config
-    if let Ok(Some((user_id,))) = sqlx::query_as::<_, (String,)>(
-        "SELECT user_id FROM ticket_level_config WHERE level = ?"
-    )
-    .bind(level)
-    .fetch_optional(db)
-    .await
+    if let Ok(Some((user_id,))) =
+        sqlx::query_as::<_, (String,)>("SELECT user_id FROM ticket_level_config WHERE level = ?")
+            .bind(level)
+            .fetch_optional(db)
+            .await
     {
         // Verificar que el usuario aún existe y activo
         if let Ok(Some((_,))) = sqlx::query_as::<_, (String,)>(
-            "SELECT id FROM users WHERE id = ? AND deleted_at IS NULL AND active = 1"
+            "SELECT id FROM users WHERE id = ? AND deleted_at IS NULL AND active = 1",
         )
         .bind(&user_id)
         .fetch_optional(db)
@@ -55,7 +54,7 @@ async fn get_assignee_for_level(db: &sqlx::SqlitePool, level: i64) -> Option<Str
     };
     // Buscar por email exacto
     if let Ok(Some((id,))) = sqlx::query_as::<_, (String,)>(
-        "SELECT id FROM users WHERE email = ? AND deleted_at IS NULL"
+        "SELECT id FROM users WHERE email = ? AND deleted_at IS NULL",
     )
     .bind(fallback_email)
     .fetch_optional(db)
@@ -65,7 +64,7 @@ async fn get_assignee_for_level(db: &sqlx::SqlitePool, level: i64) -> Option<Str
     }
     // Buscar por nombre like
     if let Ok(Some((id,))) = sqlx::query_as::<_, (String,)>(
-        "SELECT id FROM users WHERE name LIKE ? AND deleted_at IS NULL LIMIT 1"
+        "SELECT id FROM users WHERE name LIKE ? AND deleted_at IS NULL LIMIT 1",
     )
     .bind(format!("%{}%", fallback_name))
     .fetch_optional(db)
@@ -76,6 +75,8 @@ async fn get_assignee_for_level(db: &sqlx::SqlitePool, level: i64) -> Option<Str
     None
 }
 
+// CI: helper de actividad con campos fijos del dominio; se permite el lint.
+#[allow(clippy::too_many_arguments)]
 async fn log_ticket_activity(
     db: &sqlx::SqlitePool,
     ticket_id: &str,
@@ -104,7 +105,10 @@ async fn log_ticket_activity(
     .await;
 }
 
-async fn batch_users(db: &sqlx::SqlitePool, ids: &[&str]) -> std::collections::HashMap<String, PublicUser> {
+async fn batch_users(
+    db: &sqlx::SqlitePool,
+    ids: &[&str],
+) -> std::collections::HashMap<String, PublicUser> {
     use std::collections::HashMap;
     if ids.is_empty() {
         return HashMap::new();
@@ -120,7 +124,10 @@ async fn batch_users(db: &sqlx::SqlitePool, ids: &[&str]) -> std::collections::H
         q = q.bind(id);
     }
     if let Ok(users) = q.fetch_all(db).await {
-        users.into_iter().map(|u| (u.id.clone(), u.into())).collect()
+        users
+            .into_iter()
+            .map(|u| (u.id.clone(), u.into()))
+            .collect()
     } else {
         HashMap::new()
     }
@@ -130,13 +137,12 @@ async fn build_ticket_with_details(
     db: &sqlx::SqlitePool,
     ticket: Ticket,
 ) -> Result<TicketWithDetails, Response> {
-    let project: Option<(String, String)> = sqlx::query_as(
-        "SELECT name, code FROM projects WHERE id = ?"
-    )
-    .bind(&ticket.project_id)
-    .fetch_optional(db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let project: Option<(String, String)> =
+        sqlx::query_as("SELECT name, code FROM projects WHERE id = ?")
+            .bind(&ticket.project_id)
+            .fetch_optional(db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let (project_name, project_code) = project.unzip();
 
@@ -145,8 +151,14 @@ async fn build_ticket_with_details(
         ids.push(a);
     }
     let users = batch_users(db, &ids).await;
-    let reporter = users.get(&ticket.reporter_id).cloned().ok_or_else(|| internal_error("reporter not found"))?;
-    let assignee = ticket.assignee_id.as_ref().and_then(|id| users.get(id).cloned());
+    let reporter = users
+        .get(&ticket.reporter_id)
+        .cloned()
+        .ok_or_else(|| internal_error("reporter not found"))?;
+    let assignee = ticket
+        .assignee_id
+        .as_ref()
+        .and_then(|id| users.get(id).cloned());
 
     Ok(TicketWithDetails {
         ticket,
@@ -189,7 +201,10 @@ pub async fn list_tickets(
     }
     if let Some(l) = params.level {
         if !crate::validation::TICKET_LEVELS.contains(&l) {
-            return Err(error_response(StatusCode::BAD_REQUEST, "Nivel inválido: debe ser 1 o 2".to_string()));
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                "Nivel inválido: debe ser 1 o 2".to_string(),
+            ));
         }
     }
 
@@ -251,7 +266,10 @@ pub async fn list_tickets(
     for b in &binds {
         q = q.bind(b);
     }
-    let total: (i64,) = q.fetch_one(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let total: (i64,) = q
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     // Rows
     let sql = format!("SELECT t.id, t.code, t.title, t.description, t.status, t.priority, t.level, t.category, t.project_id, t.reporter_id, t.assignee_id, t.due_date, t.resolution, t.created_at, t.updated_at, t.closed_at, t.deleted_at FROM tickets t WHERE {} ORDER BY t.created_at DESC LIMIT ? OFFSET ?", where_sql);
@@ -260,7 +278,10 @@ pub async fn list_tickets(
         q = q.bind(b);
     }
     q = q.bind(limit).bind(offset);
-    let rows = q.fetch_all(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let rows = q
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let mut items = Vec::with_capacity(rows.len());
     for t in rows {
@@ -290,7 +311,12 @@ pub async fn get_ticket(
 
     let ticket = match ticket {
         Some(t) => t,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Ticket no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Ticket no encontrado".to_string(),
+            ))
+        }
     };
 
     // Access check: reporter, assignee, or admin
@@ -298,8 +324,15 @@ pub async fn get_ticket(
     let l1 = get_assignee_for_level(&state.db, 1).await;
     let l2 = get_assignee_for_level(&state.db, 2).await;
     let is_level_user = l1.as_deref() == Some(&claims.sub) || l2.as_deref() == Some(&claims.sub);
-    if !is_admin && !is_level_user && ticket.reporter_id != claims.sub && ticket.assignee_id.as_deref() != Some(&claims.sub) {
-        return Err(error_response(StatusCode::FORBIDDEN, "No tienes acceso a este ticket".to_string()));
+    if !is_admin
+        && !is_level_user
+        && ticket.reporter_id != claims.sub
+        && ticket.assignee_id.as_deref() != Some(&claims.sub)
+    {
+        return Err(error_response(
+            StatusCode::FORBIDDEN,
+            "No tienes acceso a este ticket".to_string(),
+        ));
     }
 
     Ok(Json(build_ticket_with_details(&state.db, ticket).await?))
@@ -324,7 +357,10 @@ pub async fn create_ticket(
     validate_required("title", &payload.title, 200)?;
     if let Some(ref d) = payload.description {
         if d.chars().count() > 5000 {
-            return Err(error_response(StatusCode::BAD_REQUEST, "description supera 5000 caracteres".to_string()));
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                "description supera 5000 caracteres".to_string(),
+            ));
         }
     }
     let priority = payload.priority.as_deref().unwrap_or("medium");
@@ -334,11 +370,14 @@ pub async fn create_ticket(
     }
     let level = payload.level.unwrap_or(1);
     if !crate::validation::TICKET_LEVELS.contains(&level) {
-        return Err(error_response(StatusCode::BAD_REQUEST, "Nivel inválido: debe ser 1 o 2".to_string()));
+        return Err(error_response(
+            StatusCode::BAD_REQUEST,
+            "Nivel inválido: debe ser 1 o 2".to_string(),
+        ));
     }
     // Validar proyecto existe y activo
     let project: Option<(String, String)> = sqlx::query_as(
-        "SELECT id, name FROM projects WHERE id = ? AND deleted_at IS NULL AND status = 'active'"
+        "SELECT id, name FROM projects WHERE id = ? AND deleted_at IS NULL AND status = 'active'",
     )
     .bind(&payload.project_id)
     .fetch_optional(&state.db)
@@ -346,19 +385,28 @@ pub async fn create_ticket(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
     let (project_id, project_name) = match project {
         Some((id, name)) => (id, name),
-        None => return Err(error_response(StatusCode::BAD_REQUEST, "Proyecto no encontrado o inactivo".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                "Proyecto no encontrado o inactivo".to_string(),
+            ))
+        }
     };
 
     // Determinar assignee según nivel configurado
     let assignee_id = get_assignee_for_level(&state.db, level).await;
 
     // Generar code TKT-XXXX
-    let max_code: Option<(String,)> = sqlx::query_as("SELECT code FROM tickets ORDER BY code DESC LIMIT 1")
-        .fetch_optional(&state.db)
-        .await
-        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let max_code: Option<(String,)> =
+        sqlx::query_as("SELECT code FROM tickets ORDER BY code DESC LIMIT 1")
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
     let next_num = if let Some((code,)) = max_code {
-        code.strip_prefix("TKT-").and_then(|n| n.parse::<i32>().ok()).unwrap_or(0) + 1
+        code.strip_prefix("TKT-")
+            .and_then(|n| n.parse::<i32>().ok())
+            .unwrap_or(0)
+            + 1
     } else {
         1
     };
@@ -386,7 +434,17 @@ pub async fn create_ticket(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    log_ticket_activity(&state.db, &id, &claims.sub, "created", None, None, None, None).await;
+    log_ticket_activity(
+        &state.db,
+        &id,
+        &claims.sub,
+        "created",
+        None,
+        None,
+        None,
+        None,
+    )
+    .await;
 
     let ticket: Ticket = sqlx::query_as::<_, Ticket>(
         "SELECT id, code, title, description, status, priority, level, category, project_id, reporter_id, assignee_id, due_date, resolution, created_at, updated_at, closed_at, deleted_at FROM tickets WHERE id = ?"
@@ -406,7 +464,18 @@ pub async fn create_ticket(
         let db_clone = state.db.clone();
         let reporter = claims.sub.clone();
         tokio::spawn(async move {
-            notify_ticket(&db_clone, &assignee, &reporter, &id, &code_clone, &title, &proj_name, level, "created").await;
+            notify_ticket(
+                &db_clone,
+                &assignee,
+                &reporter,
+                &id,
+                &code_clone,
+                &title,
+                &proj_name,
+                level,
+                "created",
+            )
+            .await;
         });
     }
 
@@ -439,13 +508,24 @@ pub async fn update_ticket(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
     let existing = match existing {
         Some(t) => t,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Ticket no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Ticket no encontrado".to_string(),
+            ))
+        }
     };
 
     // Solo reporter, assignee o admin puede editar
     let is_admin = claims.role == "admin";
-    if !is_admin && existing.reporter_id != claims.sub && existing.assignee_id.as_deref() != Some(&claims.sub) {
-        return Err(error_response(StatusCode::FORBIDDEN, "No tienes permisos para editar este ticket".to_string()));
+    if !is_admin
+        && existing.reporter_id != claims.sub
+        && existing.assignee_id.as_deref() != Some(&claims.sub)
+    {
+        return Err(error_response(
+            StatusCode::FORBIDDEN,
+            "No tienes permisos para editar este ticket".to_string(),
+        ));
     }
 
     if let Some(ref title) = payload.title {
@@ -459,17 +539,24 @@ pub async fn update_ticket(
     }
     if let Some(l) = payload.level {
         if !crate::validation::TICKET_LEVELS.contains(&l) {
-            return Err(error_response(StatusCode::BAD_REQUEST, "Nivel inválido".to_string()));
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                "Nivel inválido".to_string(),
+            ));
         }
     }
     if let Some(ref pid) = payload.project_id {
-        let exists: Option<(String,)> = sqlx::query_as("SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL")
-            .bind(pid)
-            .fetch_optional(&state.db)
-            .await
-            .map_err(|e| internal_error(&format!("db error: {e}")))?;
+        let exists: Option<(String,)> =
+            sqlx::query_as("SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL")
+                .bind(pid)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|e| internal_error(&format!("db error: {e}")))?;
         if exists.is_none() {
-            return Err(error_response(StatusCode::BAD_REQUEST, "Proyecto no encontrado".to_string()));
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                "Proyecto no encontrado".to_string(),
+            ));
         }
     }
 
@@ -522,15 +609,21 @@ pub async fn update_ticket(
 
     // Si hubo cambio de nivel, también actualizar assignee
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    let mut sql = format!("UPDATE tickets SET {} , updated_at = ? WHERE id = ?", sets.join(", "));
+    let mut sql = format!(
+        "UPDATE tickets SET {} , updated_at = ? WHERE id = ?",
+        sets.join(", ")
+    );
     if sets.is_empty() {
-        sql = "UPDATE tickets SET updated_at = ?, level = ?, assignee_id = ? WHERE id = ?".to_string();
-        let mut q = sqlx::query(&sql)
+        sql = "UPDATE tickets SET updated_at = ?, level = ?, assignee_id = ? WHERE id = ?"
+            .to_string();
+        let q = sqlx::query(&sql)
             .bind(&now)
             .bind(new_level)
             .bind(&new_assignee)
             .bind(&id);
-        q.execute(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+        q.execute(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
     } else {
         // Construir query con assignee si level cambió
         if level_changed {
@@ -541,46 +634,71 @@ pub async fn update_ticket(
             // Reconstruir sets sin el último y manejar aparte
             // Simplificar: hacer dos queries o usar sqlx con Option
             // Vamos a hacer update separado para level/assignee
-            let sql_main = format!("UPDATE tickets SET {} , updated_at = ? WHERE id = ?", sets[..sets.len()-2].join(", "));
+            let sql_main = format!(
+                "UPDATE tickets SET {} , updated_at = ? WHERE id = ?",
+                sets[..sets.len() - 2].join(", ")
+            );
             let mut q = sqlx::query(&sql_main);
-            for b in &binds[..binds.len()-2] {
+            for b in &binds[..binds.len() - 2] {
                 q = q.bind(b);
             }
             q = q.bind(&now).bind(&id);
-            q.execute(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
-            // Ahora level y assignee
-            sqlx::query("UPDATE tickets SET level = ?, assignee_id = ?, updated_at = ? WHERE id = ?")
-                .bind(new_level)
-                .bind(&new_assignee)
-                .bind(&now)
-                .bind(&id)
-                .execute(&state.db)
+            q.execute(&state.db)
                 .await
                 .map_err(|e| internal_error(&format!("db error: {e}")))?;
+            // Ahora level y assignee
+            sqlx::query(
+                "UPDATE tickets SET level = ?, assignee_id = ?, updated_at = ? WHERE id = ?",
+            )
+            .bind(new_level)
+            .bind(&new_assignee)
+            .bind(&now)
+            .bind(&id)
+            .execute(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
         } else {
-            let sql = format!("UPDATE tickets SET {} , updated_at = ? WHERE id = ?", sets.join(", "));
+            let sql = format!(
+                "UPDATE tickets SET {} , updated_at = ? WHERE id = ?",
+                sets.join(", ")
+            );
             let mut q = sqlx::query(&sql);
             for b in &binds {
                 q = q.bind(b);
             }
             q = q.bind(&now).bind(&id);
-            q.execute(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+            q.execute(&state.db)
+                .await
+                .map_err(|e| internal_error(&format!("db error: {e}")))?;
         }
     }
 
     if level_changed {
-        log_ticket_activity(&state.db, &id, &claims.sub, "level_changed", Some("level"), Some(&existing.level.to_string()), Some(&new_level.to_string()), None).await;
+        log_ticket_activity(
+            &state.db,
+            &id,
+            &claims.sub,
+            "level_changed",
+            Some("level"),
+            Some(&existing.level.to_string()),
+            Some(&new_level.to_string()),
+            None,
+        )
+        .await;
         if let Some(assignee) = new_assignee.clone() {
             // Notificar nuevo assignee
             let ticket_code = existing.code.clone();
             let title = existing.title.clone();
             // Necesitamos project name
-            let proj_name: Option<(String,)> = sqlx::query_as("SELECT name FROM projects WHERE id = ?")
-                .bind(&existing.project_id)
-                .fetch_optional(&state.db)
-                .await
-                .map_err(|e| internal_error(&format!("db error: {e}")))?;
-            let proj_name = proj_name.map(|(n,)| n).unwrap_or_else(|| "Proyecto".to_string());
+            let proj_name: Option<(String,)> =
+                sqlx::query_as("SELECT name FROM projects WHERE id = ?")
+                    .bind(&existing.project_id)
+                    .fetch_optional(&state.db)
+                    .await
+                    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+            let proj_name = proj_name
+                .map(|(n,)| n)
+                .unwrap_or_else(|| "Proyecto".to_string());
             let db_clone = state.db.clone();
             let reporter = existing.reporter_id.clone();
             let ticket_id = id.clone();
@@ -588,7 +706,18 @@ pub async fn update_ticket(
             let title_clone = title.clone();
             let assignee_owned = assignee.clone();
             tokio::spawn(async move {
-                notify_ticket(&db_clone, &assignee_owned, &reporter, &ticket_id, &code_clone, &title_clone, &proj_name, new_level, "escalated").await;
+                notify_ticket(
+                    &db_clone,
+                    &assignee_owned,
+                    &reporter,
+                    &ticket_id,
+                    &code_clone,
+                    &title_clone,
+                    &proj_name,
+                    new_level,
+                    "escalated",
+                )
+                .await;
             });
         }
     }
@@ -627,13 +756,24 @@ pub async fn update_ticket_status(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
     let existing = match existing {
         Some(t) => t,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Ticket no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Ticket no encontrado".to_string(),
+            ))
+        }
     };
 
     // Permiso: assignee, reporter, o admin puede cambiar status
     let is_admin = claims.role == "admin";
-    if !is_admin && existing.assignee_id.as_deref() != Some(&claims.sub) && existing.reporter_id != claims.sub {
-        return Err(error_response(StatusCode::FORBIDDEN, "No tienes permisos para cambiar el estado".to_string()));
+    if !is_admin
+        && existing.assignee_id.as_deref() != Some(&claims.sub)
+        && existing.reporter_id != claims.sub
+    {
+        return Err(error_response(
+            StatusCode::FORBIDDEN,
+            "No tienes permisos para cambiar el estado".to_string(),
+        ));
     }
 
     // Validar transición simple: no permitir volver de cerrado a abierto sin admin?
@@ -642,7 +782,10 @@ pub async fn update_ticket_status(
         // Permitir solo si ya estaba resuelto o es assignee?
         // Simplificar: solo admin o reporter puede cerrar desde resuelto
         if existing.status != "resuelto" {
-            return Err(error_response(StatusCode::BAD_REQUEST, "Solo se puede cerrar un ticket resuelto".to_string()));
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                "Solo se puede cerrar un ticket resuelto".to_string(),
+            ));
         }
     }
 
@@ -653,17 +796,29 @@ pub async fn update_ticket_status(
         None
     };
 
-    sqlx::query("UPDATE tickets SET status = ?, resolution = ?, updated_at = ?, closed_at = ? WHERE id = ?")
-        .bind(&payload.status)
-        .bind(&payload.resolution)
-        .bind(&now)
-        .bind(&closed_at)
-        .bind(&id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    sqlx::query(
+        "UPDATE tickets SET status = ?, resolution = ?, updated_at = ?, closed_at = ? WHERE id = ?",
+    )
+    .bind(&payload.status)
+    .bind(&payload.resolution)
+    .bind(&now)
+    .bind(&closed_at)
+    .bind(&id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    log_ticket_activity(&state.db, &id, &claims.sub, "status_changed", Some("status"), Some(&existing.status), Some(&payload.status), payload.resolution.as_deref()).await;
+    log_ticket_activity(
+        &state.db,
+        &id,
+        &claims.sub,
+        "status_changed",
+        Some("status"),
+        Some(&existing.status),
+        Some(&payload.status),
+        payload.resolution.as_deref(),
+    )
+    .await;
 
     // Notificar
     if let Some(assignee) = existing.assignee_id.clone() {
@@ -673,7 +828,9 @@ pub async fn update_ticket_status(
             .fetch_optional(&state.db)
             .await
             .map_err(|e| internal_error(&format!("db error: {e}")))?;
-        let proj_name = proj_name.map(|(n,)| n).unwrap_or_else(|| "Proyecto".to_string());
+        let proj_name = proj_name
+            .map(|(n,)| n)
+            .unwrap_or_else(|| "Proyecto".to_string());
         let db_clone = state.db.clone();
         let ticket_id = id.clone();
         let code = existing.code.clone();
@@ -690,14 +847,36 @@ pub async fn update_ticket_status(
             let ticket_id2 = ticket_id.clone();
             let assignee2 = assignee.clone();
             tokio::spawn(async move {
-                notify_ticket(&db2, &assignee2, &reporter2, &ticket_id2, &code2, &title2, &proj2, level, "status_changed").await;
+                notify_ticket(
+                    &db2,
+                    &assignee2,
+                    &reporter2,
+                    &ticket_id2,
+                    &code2,
+                    &title2,
+                    &proj2,
+                    level,
+                    "status_changed",
+                )
+                .await;
             });
         }
         // Notificar reporter si no es assignee ni quien hizo cambio
         if reporter != claims.sub && reporter != assignee {
             let db3 = db_clone.clone();
             tokio::spawn(async move {
-                notify_ticket(&db3, &reporter, &claims.sub, &ticket_id, &code, &title, &proj_name, level, "status_changed").await;
+                notify_ticket(
+                    &db3,
+                    &reporter,
+                    &claims.sub,
+                    &ticket_id,
+                    &code,
+                    &title,
+                    &proj_name,
+                    level,
+                    "status_changed",
+                )
+                .await;
             });
         }
     }
@@ -727,11 +906,19 @@ pub async fn delete_ticket(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
     let existing = match existing {
         Some(t) => t,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Ticket no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Ticket no encontrado".to_string(),
+            ))
+        }
     };
     // Solo admin o reporter puede borrar (soft delete)
     if claims.role != "admin" && existing.reporter_id != claims.sub {
-        return Err(error_response(StatusCode::FORBIDDEN, "Solo el reportero o admin puede eliminar".to_string()));
+        return Err(error_response(
+            StatusCode::FORBIDDEN,
+            "Solo el reportero o admin puede eliminar".to_string(),
+        ));
     }
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
     sqlx::query("UPDATE tickets SET deleted_at = ?, updated_at = ? WHERE id = ?")
@@ -742,7 +929,17 @@ pub async fn delete_ticket(
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    log_ticket_activity(&state.db, &id, &claims.sub, "deleted", None, None, None, None).await;
+    log_ticket_activity(
+        &state.db,
+        &id,
+        &claims.sub,
+        "deleted",
+        None,
+        None,
+        None,
+        None,
+    )
+    .await;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -764,16 +961,27 @@ pub async fn list_ticket_activity(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
     let ticket = match ticket {
         Some(t) => t,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Ticket no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Ticket no encontrado".to_string(),
+            ))
+        }
     };
     let is_admin = claims.role == "admin";
-    if !is_admin && ticket.reporter_id != claims.sub && ticket.assignee_id.as_deref() != Some(&claims.sub) {
+    if !is_admin
+        && ticket.reporter_id != claims.sub
+        && ticket.assignee_id.as_deref() != Some(&claims.sub)
+    {
         // Permitir a nivel users ver? Si es nivel 1/2, ver todo?
         let l1 = get_assignee_for_level(&state.db, 1).await;
         let l2 = get_assignee_for_level(&state.db, 2).await;
         let is_level = l1.as_deref() == Some(&claims.sub) || l2.as_deref() == Some(&claims.sub);
         if !is_level {
-            return Err(error_response(StatusCode::FORBIDDEN, "No tienes acceso".to_string()));
+            return Err(error_response(
+                StatusCode::FORBIDDEN,
+                "No tienes acceso".to_string(),
+            ));
         }
     }
 
@@ -790,7 +998,10 @@ pub async fn list_ticket_activity(
     let mut result = Vec::with_capacity(activities.len());
     for a in activities {
         if let Some(u) = users.get(&a.user_id) {
-            result.push(TicketActivityWithUser { activity: a, user: u.clone() });
+            result.push(TicketActivityWithUser {
+                activity: a,
+                user: u.clone(),
+            });
         }
     }
     Ok(Json(result))
@@ -815,15 +1026,26 @@ pub async fn list_ticket_comments(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
     let ticket = match ticket {
         Some(t) => t,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Ticket no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Ticket no encontrado".to_string(),
+            ))
+        }
     };
     let is_admin = claims.role == "admin";
-    if !is_admin && ticket.reporter_id != claims.sub && ticket.assignee_id.as_deref() != Some(&claims.sub) {
+    if !is_admin
+        && ticket.reporter_id != claims.sub
+        && ticket.assignee_id.as_deref() != Some(&claims.sub)
+    {
         let l1 = get_assignee_for_level(&state.db, 1).await;
         let l2 = get_assignee_for_level(&state.db, 2).await;
         let is_level = l1.as_deref() == Some(&claims.sub) || l2.as_deref() == Some(&claims.sub);
         if !is_level {
-            return Err(error_response(StatusCode::FORBIDDEN, "No tienes acceso".to_string()));
+            return Err(error_response(
+                StatusCode::FORBIDDEN,
+                "No tienes acceso".to_string(),
+            ));
         }
     }
 
@@ -840,7 +1062,10 @@ pub async fn list_ticket_comments(
     let mut result = Vec::with_capacity(comments.len());
     for c in comments {
         if let Some(u) = users.get(&c.author_id) {
-            result.push(TicketCommentWithAuthor { comment: c, author: u.clone() });
+            result.push(TicketCommentWithAuthor {
+                comment: c,
+                author: u.clone(),
+            });
         }
     }
     Ok(Json(result))
@@ -862,16 +1087,27 @@ pub async fn create_ticket_comment(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
     let ticket = match ticket {
         Some(t) => t,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Ticket no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Ticket no encontrado".to_string(),
+            ))
+        }
     };
     // Cualquiera con acceso al ticket puede comentar
     let is_admin = claims.role == "admin";
-    if !is_admin && ticket.reporter_id != claims.sub && ticket.assignee_id.as_deref() != Some(&claims.sub) {
+    if !is_admin
+        && ticket.reporter_id != claims.sub
+        && ticket.assignee_id.as_deref() != Some(&claims.sub)
+    {
         let l1 = get_assignee_for_level(&state.db, 1).await;
         let l2 = get_assignee_for_level(&state.db, 2).await;
         let is_level = l1.as_deref() == Some(&claims.sub) || l2.as_deref() == Some(&claims.sub);
         if !is_level {
-            return Err(error_response(StatusCode::FORBIDDEN, "No tienes acceso".to_string()));
+            return Err(error_response(
+                StatusCode::FORBIDDEN,
+                "No tienes acceso".to_string(),
+            ));
         }
     }
 
@@ -890,7 +1126,17 @@ pub async fn create_ticket_comment(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    log_ticket_activity(&state.db, &id, &claims.sub, "commented", None, None, None, Some(&payload.body)).await;
+    log_ticket_activity(
+        &state.db,
+        &id,
+        &claims.sub,
+        "commented",
+        None,
+        None,
+        None,
+        Some(&payload.body),
+    )
+    .await;
 
     // Notificar al otro participante
     let other = if ticket.reporter_id == claims.sub {
@@ -906,7 +1152,11 @@ pub async fn create_ticket_comment(
                 "ticket_comment",
                 Some(&id),
                 Some(&claims.sub),
-                &format!("Nuevo comentario en {}: {}", ticket.code, payload.body.chars().take(80).collect::<String>()),
+                &format!(
+                    "Nuevo comentario en {}: {}",
+                    ticket.code,
+                    payload.body.chars().take(80).collect::<String>()
+                ),
             )
             .await;
         }
@@ -921,9 +1171,15 @@ pub async fn create_ticket_comment(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let users = batch_users(&state.db, &[comment.author_id.as_str()]).await;
-    let author = users.get(&comment.author_id).cloned().ok_or_else(|| internal_error("author not found"))?;
+    let author = users
+        .get(&comment.author_id)
+        .cloned()
+        .ok_or_else(|| internal_error("author not found"))?;
 
-    Ok((StatusCode::CREATED, Json(TicketCommentWithAuthor { comment, author })))
+    Ok((
+        StatusCode::CREATED,
+        Json(TicketCommentWithAuthor { comment, author }),
+    ))
 }
 
 // Config de niveles
@@ -933,7 +1189,7 @@ pub async fn get_ticket_config(
     Extension(_claims): Extension<Claims>,
 ) -> Result<Json<Vec<TicketLevelConfigWithUser>>, Response> {
     let configs: Vec<TicketLevelConfig> = sqlx::query_as::<_, TicketLevelConfig>(
-        "SELECT level, user_id, updated_by, updated_at FROM ticket_level_config ORDER BY level ASC"
+        "SELECT level, user_id, updated_by, updated_at FROM ticket_level_config ORDER BY level ASC",
     )
     .fetch_all(&state.db)
     .await
@@ -999,7 +1255,10 @@ pub async fn update_ticket_config(
 ) -> Result<Json<TicketLevelConfigWithUser>, Response> {
     require_admin(&claims)?;
     if !crate::validation::TICKET_LEVELS.contains(&payload.level) {
-        return Err(error_response(StatusCode::BAD_REQUEST, "Nivel debe ser 1 o 2".to_string()));
+        return Err(error_response(
+            StatusCode::BAD_REQUEST,
+            "Nivel debe ser 1 o 2".to_string(),
+        ));
     }
     // Validar usuario existe
     let user: Option<crate::models::User> = sqlx::query_as::<_, crate::models::User>(
@@ -1011,7 +1270,12 @@ pub async fn update_ticket_config(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
     let user = match user {
         Some(u) => u,
-        None => return Err(error_response(StatusCode::BAD_REQUEST, "Usuario no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                "Usuario no encontrado".to_string(),
+            ))
+        }
     };
 
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
@@ -1039,16 +1303,25 @@ pub async fn update_ticket_config(
 pub fn router(state: Arc<AppState>) -> axum::Router {
     use axum::{
         middleware,
-        routing::{delete, get, patch, post},
+        routing::{get, patch},
     };
 
     axum::Router::new()
         .route("/api/tickets", get(list_tickets).post(create_ticket))
-        .route("/api/tickets/config", get(get_ticket_config).post(update_ticket_config))
-        .route("/api/tickets/:id", get(get_ticket).patch(update_ticket).delete(delete_ticket))
+        .route(
+            "/api/tickets/config",
+            get(get_ticket_config).post(update_ticket_config),
+        )
+        .route(
+            "/api/tickets/:id",
+            get(get_ticket).patch(update_ticket).delete(delete_ticket),
+        )
         .route("/api/tickets/:id/status", patch(update_ticket_status))
         .route("/api/tickets/:id/activity", get(list_ticket_activity))
-        .route("/api/tickets/:id/comments", get(list_ticket_comments).post(create_ticket_comment))
+        .route(
+            "/api/tickets/:id/comments",
+            get(list_ticket_comments).post(create_ticket_comment),
+        )
         .layer(middleware::from_fn_with_state(state.clone(), require_auth))
         .with_state(state)
 }

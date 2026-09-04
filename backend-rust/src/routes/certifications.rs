@@ -54,7 +54,7 @@ pub async fn list_certifications(
          u.name as user_name, u.email as user_email \
          FROM certifications c \
          JOIN users u ON c.user_id = u.id \
-         ORDER BY c.issue_date ASC"
+         ORDER BY c.issue_date ASC",
     )
     .fetch_all(&state.db)
     .await
@@ -89,7 +89,7 @@ pub async fn create_certification(
     validate_required("issue_date", &payload.issue_date, 50)?;
 
     let user = sqlx::query_as::<_, (String, String, String)>(
-        "SELECT id, name, email FROM users WHERE id = ?"
+        "SELECT id, name, email FROM users WHERE id = ?",
     )
     .bind(&payload.user_id)
     .fetch_optional(&state.db)
@@ -148,7 +148,10 @@ pub async fn delete_certification(
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     if result.rows_affected() == 0 {
-        return Err(error_response(StatusCode::NOT_FOUND, "Certificación no encontrada".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Certificación no encontrada".to_string(),
+        ));
     }
 
     Ok(StatusCode::NO_CONTENT)
@@ -157,11 +160,14 @@ pub async fn delete_certification(
 pub fn router(state: Arc<AppState>) -> axum::Router {
     use axum::{
         middleware,
-        routing::{delete, get, post},
+        routing::{delete, get},
     };
 
     axum::Router::new()
-        .route("/api/certifications", get(list_certifications).post(create_certification))
+        .route(
+            "/api/certifications",
+            get(list_certifications).post(create_certification),
+        )
         .route("/api/certifications/:id", delete(delete_certification))
         .layer(middleware::from_fn_with_state(state.clone(), require_auth))
         .with_state(state)

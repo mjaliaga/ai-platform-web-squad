@@ -5,7 +5,13 @@ use axum::Json;
 use crate::models::Claims;
 
 pub const STATUSES: &[&str] = &["backlog", "todo", "in_progress", "review", "done"];
-pub const SOLICITUD_STATUSES: &[&str] = &["pendiente", "en_revision", "aprobada", "rechazada", "resuelta"];
+pub const SOLICITUD_STATUSES: &[&str] = &[
+    "pendiente",
+    "en_revision",
+    "aprobada",
+    "rechazada",
+    "resuelta",
+];
 pub const PRIORITIES: &[&str] = &["low", "medium", "high", "urgent"];
 pub const TYPES: &[&str] = &["tarea", "bug", "solicitud"];
 pub const MAX_UPLOAD_BYTES: usize = 10 * 1024 * 1024;
@@ -25,14 +31,20 @@ pub fn error_response(status: StatusCode, msg: String) -> Response {
 
 pub fn internal_error(context: &str) -> Response {
     tracing::error!("{context}");
-    err(StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string())
+    err(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "Error interno del servidor".to_string(),
+    )
 }
 
 pub fn require_admin(claims: &Claims) -> Result<(), Response> {
     if claims.role == "admin" {
         Ok(())
     } else {
-        Err(err(StatusCode::FORBIDDEN, "No tienes permisos de administrador".to_string()))
+        Err(err(
+            StatusCode::FORBIDDEN,
+            "No tienes permisos de administrador".to_string(),
+        ))
     }
 }
 
@@ -81,10 +93,16 @@ pub fn validate_required(field: &str, value: &str, max_len: usize) -> Result<(),
 pub fn validate_email(email: &str) -> Result<(), Response> {
     let trimmed = email.trim();
     if trimmed.is_empty() {
-        return Err(err(StatusCode::BAD_REQUEST, "Email no puede estar vacío".to_string()));
+        return Err(err(
+            StatusCode::BAD_REQUEST,
+            "Email no puede estar vacío".to_string(),
+        ));
     }
     if trimmed.len() > 254 {
-        return Err(err(StatusCode::BAD_REQUEST, "Email demasiado largo".to_string()));
+        return Err(err(
+            StatusCode::BAD_REQUEST,
+            "Email demasiado largo".to_string(),
+        ));
     }
     let parts: Vec<&str> = trimmed.split('@').collect();
     if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
@@ -145,7 +163,11 @@ pub fn validate_password(password: &str) -> Result<(), Response> {
 pub fn parse_duration_hours(input: &str, default: i64) -> i64 {
     let s = input.trim().to_lowercase();
     if let Some(n) = s.strip_suffix('h') {
-        n.trim().parse::<i64>().ok().filter(|v| *v > 0).unwrap_or(default)
+        n.trim()
+            .parse::<i64>()
+            .ok()
+            .filter(|v| *v > 0)
+            .unwrap_or(default)
     } else if let Some(n) = s.strip_suffix('d') {
         n.trim()
             .parse::<i64>()

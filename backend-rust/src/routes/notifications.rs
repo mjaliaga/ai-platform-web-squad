@@ -31,7 +31,7 @@ pub async fn list_notifications(
         .max(0);
 
     let total: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND deleted_at IS NULL"
+        "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND deleted_at IS NULL",
     )
     .bind(&claims.sub)
     .fetch_one(&state.db)
@@ -50,13 +50,19 @@ pub async fn list_notifications(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let actor_ids: Vec<&str> = notifs.iter().filter_map(|n| n.actor_id.as_deref()).collect();
+    let actor_ids: Vec<&str> = notifs
+        .iter()
+        .filter_map(|n| n.actor_id.as_deref())
+        .collect();
     let actors = crate::routes::tasks::batch_users(&state.db, &actor_ids).await;
 
     let mut items = Vec::with_capacity(notifs.len());
     for n in notifs {
         let actor = n.actor_id.as_ref().and_then(|aid| actors.get(aid).cloned());
-        items.push(NotificationWithActor { notification: n, actor });
+        items.push(NotificationWithActor {
+            notification: n,
+            actor,
+        });
     }
 
     Ok(Json(PaginatedResponse {
@@ -110,7 +116,7 @@ pub async fn create_notification(
     let id = Uuid::new_v4().to_string();
     sqlx::query(
         "INSERT INTO notifications (id, user_id, type, task_id, actor_id, message) \
-         VALUES (?, ?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(user_id)
@@ -125,7 +131,10 @@ pub async fn create_notification(
 
 #[allow(dead_code)]
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{get, post}};
+    use axum::{
+        middleware,
+        routing::{get, post},
+    };
 
     axum::Router::new()
         .route("/api/notifications", get(list_notifications))

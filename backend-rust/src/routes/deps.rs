@@ -18,7 +18,7 @@ pub async fn list_dependencies(
 ) -> Result<Json<Vec<DependencyRef>>, Response> {
     let rows: Vec<(String, String, String, String, String)> = sqlx::query_as(
         "SELECT t.id, t.code, t.title, t.status, t.type FROM task_dependencies d \
-         JOIN tasks t ON t.id = d.depends_on_id WHERE d.task_id = ?"
+         JOIN tasks t ON t.id = d.depends_on_id WHERE d.task_id = ?",
     )
     .bind(&task_id)
     .fetch_all(&state.db)
@@ -46,7 +46,7 @@ pub async fn list_blocking(
 ) -> Result<Json<Vec<DependencyRef>>, Response> {
     let rows: Vec<(String, String, String, String, String)> = sqlx::query_as(
         "SELECT t.id, t.code, t.title, t.status, t.type FROM task_dependencies d \
-         JOIN tasks t ON t.id = d.task_id WHERE d.depends_on_id = ?"
+         JOIN tasks t ON t.id = d.task_id WHERE d.depends_on_id = ?",
     )
     .bind(&task_id)
     .fetch_all(&state.db)
@@ -86,10 +86,16 @@ pub async fn add_dependency(
     }
 
     if !crate::routes::tasks::task_exists(&state.db, &task_id).await? {
-        return Err(error_response(StatusCode::NOT_FOUND, "Tarea no encontrada".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Tarea no encontrada".to_string(),
+        ));
     }
     if !crate::routes::tasks::task_exists(&state.db, &payload.depends_on_id).await? {
-        return Err(error_response(StatusCode::NOT_FOUND, "La tarea dependiente no existe".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "La tarea dependiente no existe".to_string(),
+        ));
     }
 
     sqlx::query("INSERT OR IGNORE INTO task_dependencies (task_id, depends_on_id) VALUES (?, ?)")
@@ -157,7 +163,7 @@ pub async fn search_tasks_for_dep(
     let rows: Vec<(String, String, String, String, String)> = sqlx::query_as(
         "SELECT id, code, title, status, type FROM tasks \
          WHERE (title LIKE ? OR code LIKE ?) AND id != ? \
-         ORDER BY code DESC LIMIT 20"
+         ORDER BY code DESC LIMIT 20",
     )
     .bind(&pattern)
     .bind(&pattern)
@@ -182,12 +188,21 @@ pub async fn search_tasks_for_dep(
 
 #[allow(dead_code)]
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{delete, get}};
+    use axum::{
+        middleware,
+        routing::{delete, get},
+    };
 
     axum::Router::new()
-        .route("/api/tasks/:id/dependencies", get(list_dependencies).post(add_dependency))
+        .route(
+            "/api/tasks/:id/dependencies",
+            get(list_dependencies).post(add_dependency),
+        )
         .route("/api/tasks/:id/blocking", get(list_blocking))
-        .route("/api/tasks/:id/dependencies/:depends_on_id", delete(remove_dependency))
+        .route(
+            "/api/tasks/:id/dependencies/:depends_on_id",
+            delete(remove_dependency),
+        )
         .route("/api/tasks/search", get(search_tasks_for_dep))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth))
         .with_state(state)

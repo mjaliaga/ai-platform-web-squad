@@ -54,7 +54,10 @@ pub async fn login(
     let user_agent = utils::extract_user_agent(&headers);
 
     let rate_key_email = format!("login:email:{}", payload.email.trim().to_lowercase());
-    let rate_key_ip = format!("login:ip:{}", ip.clone().unwrap_or_else(|| "unknown".to_string()));
+    let rate_key_ip = format!(
+        "login:ip:{}",
+        ip.clone().unwrap_or_else(|| "unknown".to_string())
+    );
     // Double limit: per-email + per-IP to mitigate credential-stuffing and brute-force
     if !state.rate_limiter.allow(&rate_key_email).await {
         audit::log_login_failure(
@@ -67,7 +70,9 @@ pub async fn login(
         .await;
         return Err((
             StatusCode::TOO_MANY_REQUESTS,
-            Json(ApiError { error: "Demasiados intentos de acceso, inténtalo más tarde".to_string() }),
+            Json(ApiError {
+                error: "Demasiados intentos de acceso, inténtalo más tarde".to_string(),
+            }),
         )
             .into_response());
     }
@@ -82,7 +87,9 @@ pub async fn login(
         .await;
         return Err((
             StatusCode::TOO_MANY_REQUESTS,
-            Json(ApiError { error: "Demasiados intentos de acceso, inténtalo más tarde".to_string() }),
+            Json(ApiError {
+                error: "Demasiados intentos de acceso, inténtalo más tarde".to_string(),
+            }),
         )
             .into_response());
     }
@@ -108,7 +115,9 @@ pub async fn login(
             .await;
             return Err((
                 StatusCode::UNAUTHORIZED,
-                Json(ApiError { error: "credenciales inválidas".to_string() }),
+                Json(ApiError {
+                    error: "credenciales inválidas".to_string(),
+                }),
             )
                 .into_response());
         }
@@ -125,14 +134,15 @@ pub async fn login(
         .await;
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiError { error: "Tu cuenta está desactivada. Contacta a un administrador.".to_string() }),
+            Json(ApiError {
+                error: "Tu cuenta está desactivada. Contacta a un administrador.".to_string(),
+            }),
         )
             .into_response());
     }
 
-    let valid = verify(&payload.password, &user.password_hash).map_err(|e| {
-        internal_error(&format!("bcrypt error: {e}"))
-    })?;
+    let valid = verify(&payload.password, &user.password_hash)
+        .map_err(|e| internal_error(&format!("bcrypt error: {e}")))?;
 
     if !valid {
         audit::log_login_failure(
@@ -145,7 +155,9 @@ pub async fn login(
         .await;
         return Err((
             StatusCode::UNAUTHORIZED,
-            Json(ApiError { error: "credenciales inválidas".to_string() }),
+            Json(ApiError {
+                error: "credenciales inválidas".to_string(),
+            }),
         )
             .into_response());
     }
@@ -233,12 +245,28 @@ pub async fn logout(
         .max_age(cookie::time::Duration::seconds(0))
         .build();
 
+    // FIX CI E2E (logout no invalidaba sesión): el array con dos tuplas `SET_COOKIE`
+    // colapsaba a un solo header (last-wins) y el `tivit_token` nunca se limpiaba.
+    // Se construye el HeaderMap con `append` para enviar ambos `Set-Cookie`.
+    let mut headers = axum::http::HeaderMap::new();
+    headers.append(
+        axum::http::header::SET_COOKIE,
+        cookie
+            .to_string()
+            .parse()
+            .unwrap_or_else(|_| axum::http::HeaderValue::from_static("tivit_token=; Max-Age=0")),
+    );
+    headers.append(
+        axum::http::header::SET_COOKIE,
+        csrf_cookie
+            .to_string()
+            .parse()
+            .unwrap_or_else(|_| axum::http::HeaderValue::from_static("csrf_token=; Max-Age=0")),
+    );
+
     (
         StatusCode::OK,
-        [
-            (axum::http::header::SET_COOKIE, cookie.to_string()),
-            (axum::http::header::SET_COOKIE, csrf_cookie.to_string()),
-        ],
+        headers,
         Json(serde_json::json!({ "ok": true })),
     )
 }
@@ -268,7 +296,9 @@ pub async fn me(
         }
         None => Err((
             StatusCode::NOT_FOUND,
-            Json(ApiError { error: "user not found".to_string() }),
+            Json(ApiError {
+                error: "user not found".to_string(),
+            }),
         )
             .into_response()),
     }
@@ -294,12 +324,10 @@ pub async fn list_users(
         .unwrap_or(0)
         .max(0);
 
-    let total: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL"
-    )
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL")
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let users: Vec<User> = sqlx::query_as::<_, User>(
         "SELECT id, name, email, password_hash, role, avatar_color, created_at, active, phone, linkedin, github \
@@ -330,10 +358,11 @@ pub struct CreateUserRequest {
 
 fn avatar_palette(key: &str) -> String {
     const COLORS: [&str; 8] = [
-        "#dc2626", "#2563eb", "#16a34a", "#9333ea",
-        "#ea580c", "#0891b2", "#db2777", "#65a30d",
+        "#dc2626", "#2563eb", "#16a34a", "#9333ea", "#ea580c", "#0891b2", "#db2777", "#65a30d",
     ];
-    let hash: u32 = key.bytes().fold(0u32, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u32));
+    let hash: u32 = key
+        .bytes()
+        .fold(0u32, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u32));
     COLORS[(hash as usize) % COLORS.len()].to_string()
 }
 
@@ -376,7 +405,7 @@ pub async fn create_user(
 
     sqlx::query(
         "INSERT INTO users (id, name, email, password_hash, role, avatar_color) \
-         VALUES (?, ?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&payload.name)
@@ -457,10 +486,7 @@ pub async fn update_profile(
     }
 
     if !sets.is_empty() {
-        let sql = format!(
-            "UPDATE users SET {} WHERE id = ?",
-            sets.join(", ")
-        );
+        let sql = format!("UPDATE users SET {} WHERE id = ?", sets.join(", "));
         let mut q = sqlx::query(&sql);
         for b in &bindings {
             q = q.bind(b);
@@ -483,7 +509,9 @@ pub async fn update_profile(
         Some(u) => Ok(Json(u.into())),
         None => Err((
             StatusCode::NOT_FOUND,
-            Json(ApiError { error: "user not found".to_string() }),
+            Json(ApiError {
+                error: "user not found".to_string(),
+            }),
         )
             .into_response()),
     }
@@ -515,7 +543,9 @@ pub async fn change_password(
         None => {
             return Err((
                 StatusCode::NOT_FOUND,
-                Json(ApiError { error: "user not found".to_string() }),
+                Json(ApiError {
+                    error: "user not found".to_string(),
+                }),
             )
                 .into_response());
         }
@@ -580,12 +610,11 @@ pub async fn update_user(
         }
     }
 
-    let existing: Option<(String,)> =
-        sqlx::query_as("SELECT id FROM users WHERE id = ?")
-            .bind(&id)
-            .fetch_optional(&state.db)
-            .await
-            .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let existing: Option<(String,)> = sqlx::query_as("SELECT id FROM users WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
     if existing.is_none() {
         return Err(error_response(
             StatusCode::NOT_FOUND,
@@ -660,7 +689,9 @@ pub async fn update_user(
         Some(u) => Ok(Json(u.into())),
         None => Err((
             StatusCode::NOT_FOUND,
-            Json(ApiError { error: "user not found".to_string() }),
+            Json(ApiError {
+                error: "user not found".to_string(),
+            }),
         )
             .into_response()),
     }
@@ -680,13 +711,12 @@ pub async fn delete_user(
         ));
     }
 
-    let existing: Option<(String,)> = sqlx::query_as(
-        "SELECT id FROM users WHERE id = ? AND deleted_at IS NULL"
-    )
-        .bind(&id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let existing: Option<(String,)> =
+        sqlx::query_as("SELECT id FROM users WHERE id = ? AND deleted_at IS NULL")
+            .bind(&id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
     if existing.is_none() {
         return Err(error_response(
             StatusCode::NOT_FOUND,
@@ -696,9 +726,11 @@ pub async fn delete_user(
 
     let now_ts = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-    let mut tx = state.db.begin().await.map_err(|e| {
-        internal_error(&format!("db error: {e}"))
-    })?;
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     sqlx::query("UPDATE tasks SET assignee_id = NULL WHERE assignee_id = ?")
         .bind(&id)
@@ -746,9 +778,9 @@ pub async fn delete_user(
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    tx.commit().await.map_err(|e| {
-        internal_error(&format!("db error: {e}"))
-    })?;
+    tx.commit()
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     audit::log_user_deactivated(&state.db, &claims, &id).await;
 
@@ -796,27 +828,30 @@ pub async fn get_user_stats(
 
     let user = match user_row {
         Some(u) => u,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Usuario no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Usuario no encontrado".to_string(),
+            ))
+        }
     };
 
     let task_counts: Vec<StatusCount> = sqlx::query_as(
-        "SELECT status, COUNT(*) as count FROM tasks WHERE assignee_id = ? GROUP BY status"
+        "SELECT status, COUNT(*) as count FROM tasks WHERE assignee_id = ? GROUP BY status",
     )
     .bind(&user_id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let total_tasks: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM tasks WHERE assignee_id = ?"
-    )
-    .bind(&user_id)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let total_tasks: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM tasks WHERE assignee_id = ?")
+        .bind(&user_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let totals: (Option<f64>, Option<f64>) = sqlx::query_as(
-        "SELECT SUM(estimate_hours), SUM(time_spent_hours) FROM tasks WHERE assignee_id = ?"
+        "SELECT SUM(estimate_hours), SUM(time_spent_hours) FROM tasks WHERE assignee_id = ?",
     )
     .bind(&user_id)
     .fetch_one(&state.db)
@@ -864,7 +899,10 @@ pub async fn get_user_stats(
     let mut recent_activity = Vec::with_capacity(activity.len());
     for a in activity {
         if let Some(u) = activity_users.get(&a.user_id) {
-            recent_activity.push(crate::models::ActivityWithUser { activity: a, user: u.clone() });
+            recent_activity.push(crate::models::ActivityWithUser {
+                activity: a,
+                user: u.clone(),
+            });
         }
     }
 

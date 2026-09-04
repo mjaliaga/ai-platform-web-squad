@@ -10,16 +10,11 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 use uuid::Uuid;
 
+use super::schemas;
 use crate::middleware::auth::require_auth;
 use crate::models::{Claims, CollectionInfo, ContentItem, ContentItemOut, FieldDef, PublicUser};
-use super::schemas;
 use crate::validation::{error_response, internal_error, require_admin, require_admin_or_editor};
 use crate::AppState;
-
-// Ya no hay colecciones de solo lectura: todas son editables desde el portal
-// (el acceso se controla por rol, no por colección). La colección "proyectos"
-// vive en la tabla projects y se gestiona en /portal/portfolio.
-const READ_ONLY_COLLECTIONS: &[&str] = &[];
 
 fn require_mutable(_collection: &str) -> Result<(), Response> {
     Ok(())
@@ -68,7 +63,7 @@ pub async fn list_collections(
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-        let info = collection_info(*ruta, &fields, counts.0, counts.1, counts.2);
+        let info = collection_info(ruta, &fields, counts.0, counts.1, counts.2);
         result.push(info);
     }
 
@@ -180,8 +175,16 @@ pub async fn list_items(
     }
 
     if let Some(pub_) = q.published {
-        sql.push_str(if pub_ { " AND published = 1" } else { " AND published = 0" });
-        count_sql.push_str(if pub_ { " AND published = 1" } else { " AND published = 0" });
+        sql.push_str(if pub_ {
+            " AND published = 1"
+        } else {
+            " AND published = 0"
+        });
+        count_sql.push_str(if pub_ {
+            " AND published = 1"
+        } else {
+            " AND published = 0"
+        });
     }
 
     let sort = q.sort.as_deref().unwrap_or("updated_desc");
@@ -216,8 +219,14 @@ pub async fn list_items(
     let items: Vec<ContentItemOut> = rows
         .into_iter()
         .map(|row| {
-            let creator = row.created_by.as_ref().and_then(|id| users.get(id).cloned());
-            let updater = row.updated_by.as_ref().and_then(|id| users.get(id).cloned());
+            let creator = row
+                .created_by
+                .as_ref()
+                .and_then(|id| users.get(id).cloned());
+            let updater = row
+                .updated_by
+                .as_ref()
+                .and_then(|id| users.get(id).cloned());
             let mut out: ContentItemOut = row.into();
             out.creator = creator;
             out.updater = updater;
@@ -261,9 +270,15 @@ pub async fn get_item(
         }
     };
 
-    let users = batch_users_for_content(&state.db, &[row.clone()]).await;
-    let creator = row.created_by.as_ref().and_then(|id| users.get(id).cloned());
-    let updater = row.updated_by.as_ref().and_then(|id| users.get(id).cloned());
+    let users = batch_users_for_content(&state.db, std::slice::from_ref(&row)).await;
+    let creator = row
+        .created_by
+        .as_ref()
+        .and_then(|id| users.get(id).cloned());
+    let updater = row
+        .updated_by
+        .as_ref()
+        .and_then(|id| users.get(id).cloned());
     let mut out: ContentItemOut = row.into();
     out.creator = creator;
     out.updater = updater;
@@ -291,13 +306,14 @@ pub async fn create_item(
         .map_err(|e| error_response(StatusCode::BAD_REQUEST, e))?;
 
     // Validar slug único
-    let existing: Option<(String,)> =
-        sqlx::query_as("SELECT id FROM content_items WHERE collection = ? AND slug = ? AND deleted_at IS NULL")
-            .bind(&collection)
-            .bind(&payload.slug)
-            .fetch_optional(&state.db)
-            .await
-            .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let existing: Option<(String,)> = sqlx::query_as(
+        "SELECT id FROM content_items WHERE collection = ? AND slug = ? AND deleted_at IS NULL",
+    )
+    .bind(&collection)
+    .bind(&payload.slug)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| internal_error(&format!("db error: {e}")))?;
     if existing.is_some() {
         return Err(error_response(
             StatusCode::CONFLICT,
@@ -320,7 +336,10 @@ pub async fn create_item(
             if code_exists.is_some() {
                 return Err(error_response(
                     StatusCode::CONFLICT,
-                    format!("Ya existe un item con el código '{}' en la colección '{}'", codigo, collection),
+                    format!(
+                        "Ya existe un item con el código '{}' en la colección '{}'",
+                        codigo, collection
+                    ),
                 ));
             }
         }
@@ -347,7 +366,16 @@ pub async fn create_item(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    audit_content(&state.db, Some(&id), &collection, Some(&payload.slug), "created", &claims, None).await;
+    audit_content(
+        &state.db,
+        Some(&id),
+        &collection,
+        Some(&payload.slug),
+        "created",
+        &claims,
+        None,
+    )
+    .await;
 
     let row: ContentItem = sqlx::query_as::<_, ContentItem>(
         "SELECT id, collection, slug, data, published, created_by, updated_by, created_at, updated_at \
@@ -358,9 +386,15 @@ pub async fn create_item(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let users = batch_users_for_content(&state.db, &[row.clone()]).await;
-    let creator = row.created_by.as_ref().and_then(|id| users.get(id).cloned());
-    let updater = row.updated_by.as_ref().and_then(|id| users.get(id).cloned());
+    let users = batch_users_for_content(&state.db, std::slice::from_ref(&row)).await;
+    let creator = row
+        .created_by
+        .as_ref()
+        .and_then(|id| users.get(id).cloned());
+    let updater = row
+        .updated_by
+        .as_ref()
+        .and_then(|id| users.get(id).cloned());
     let mut out: ContentItemOut = row.into();
     out.creator = creator;
     out.updater = updater;
@@ -416,7 +450,10 @@ pub async fn update_item(
             if code_exists.is_some() {
                 return Err(error_response(
                     StatusCode::CONFLICT,
-                    format!("Ya existe otro item con el código '{}' en la colección '{}'", codigo, collection),
+                    format!(
+                        "Ya existe otro item con el código '{}' en la colección '{}'",
+                        codigo, collection
+                    ),
                 ));
             }
         }
@@ -491,7 +528,10 @@ pub async fn set_published(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     if result.rows_affected() == 0 {
-        return Err(error_response(StatusCode::NOT_FOUND, "Item no encontrado".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Item no encontrado".to_string(),
+        ));
     }
 
     audit_content(
@@ -499,7 +539,11 @@ pub async fn set_published(
         None,
         &collection,
         Some(&slug),
-        if payload.published { "published" } else { "unpublished" },
+        if payload.published {
+            "published"
+        } else {
+            "unpublished"
+        },
         &claims,
         None,
     )
@@ -529,10 +573,22 @@ pub async fn delete_item(
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     if result.rows_affected() == 0 {
-        return Err(error_response(StatusCode::NOT_FOUND, "Item no encontrado".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Item no encontrado".to_string(),
+        ));
     }
 
-    audit_content(&state.db, None, &collection, Some(&slug), "deleted", &claims, None).await;
+    audit_content(
+        &state.db,
+        None,
+        &collection,
+        Some(&slug),
+        "deleted",
+        &claims,
+        None,
+    )
+    .await;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -558,7 +614,12 @@ pub async fn duplicate_item(
 
     let row = match row {
         Some(r) => r,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Item no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Item no encontrado".to_string(),
+            ))
+        }
     };
 
     // Generar slug único
@@ -600,7 +661,16 @@ pub async fn duplicate_item(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    audit_content(&state.db, Some(&new_id), &collection, Some(&final_slug), "duplicated", &claims, Some(&format!("from={}", slug))).await;
+    audit_content(
+        &state.db,
+        Some(&new_id),
+        &collection,
+        Some(&final_slug),
+        "duplicated",
+        &claims,
+        Some(&format!("from={}", slug)),
+    )
+    .await;
 
     get_item(
         State(state),
@@ -616,6 +686,19 @@ pub async fn duplicate_item(
     .map(|json| (StatusCode::CREATED, json))
 }
 
+/// Fila de auditoría de contenido (ver `list_audit`). Alias para el lint `type_complexity` de CI.
+type ContentAuditRow = (
+    String,
+    Option<String>,
+    String,
+    Option<String>,
+    String,
+    Option<String>,
+    Option<String>,
+    String,
+    Option<String>,
+);
+
 pub async fn list_audit(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<Claims>,
@@ -629,7 +712,7 @@ pub async fn list_audit(
         .unwrap_or(100)
         .clamp(1, 500);
 
-    let rows: Vec<(String, Option<String>, String, Option<String>, String, Option<String>, Option<String>, String, Option<String>)> = if collection.is_empty() {
+    let rows: Vec<ContentAuditRow> = if collection.is_empty() {
         sqlx::query_as(
             "SELECT a.id, a.content_id, a.collection, a.slug, a.action, a.actor_id, a.details, a.created_at, u.name \
              FROM content_audit a LEFT JOIN users u ON u.id = a.actor_id \
@@ -653,19 +736,21 @@ pub async fn list_audit(
 
     let items: Vec<serde_json::Value> = rows
         .into_iter()
-        .map(|(id, content_id, coll, slug, action, actor_id, details, created_at, actor_name)| {
-            serde_json::json!({
-                "id": id,
-                "content_id": content_id,
-                "collection": coll,
-                "slug": slug,
-                "action": action,
-                "actor_id": actor_id,
-                "actor_name": actor_name,
-                "details": details,
-                "created_at": created_at,
-            })
-        })
+        .map(
+            |(id, content_id, coll, slug, action, actor_id, details, created_at, actor_name)| {
+                serde_json::json!({
+                    "id": id,
+                    "content_id": content_id,
+                    "collection": coll,
+                    "slug": slug,
+                    "action": action,
+                    "actor_id": actor_id,
+                    "actor_name": actor_name,
+                    "details": details,
+                    "created_at": created_at,
+                })
+            },
+        )
         .collect();
 
     Ok(Json(serde_json::json!({ "items": items })))
@@ -675,8 +760,12 @@ pub async fn get_schema(
     Path(collection): Path<String>,
     Extension(_claims): Extension<Claims>,
 ) -> Result<Json<Vec<FieldDef>>, Response> {
-    let fields = schemas::schema_for(&collection)
-        .ok_or_else(|| error_response(StatusCode::NOT_FOUND, format!("Colección '{}' no encontrada", collection)))?;
+    let fields = schemas::schema_for(&collection).ok_or_else(|| {
+        error_response(
+            StatusCode::NOT_FOUND,
+            format!("Colección '{}' no encontrada", collection),
+        )
+    })?;
     Ok(Json(fields))
 }
 
@@ -724,10 +813,7 @@ async fn batch_users_for_content(
     for id in &ids {
         q = q.bind(id);
     }
-    let users: Vec<crate::models::User> = q
-        .fetch_all(db)
-        .await
-        .unwrap_or_default();
+    let users: Vec<crate::models::User> = q.fetch_all(db).await.unwrap_or_default();
 
     users
         .into_iter()
@@ -773,16 +859,25 @@ async fn audit_content(
 
 #[allow(dead_code)]
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{delete, get, patch, post}};
+    use axum::{
+        middleware,
+        routing::{get, post},
+    };
 
     axum::Router::new()
         .route("/api/content/collections", get(list_collections))
         .route("/api/content/audit", get(list_audit))
         .route("/api/content/schemas/:collection", get(get_schema))
-        .route("/api/content/:collection", get(list_items).post(create_item))
+        .route(
+            "/api/content/:collection",
+            get(list_items).post(create_item),
+        )
         .route(
             "/api/content/:collection/:slug",
-            get(get_item).patch(update_item).put(update_item).delete(delete_item),
+            get(get_item)
+                .patch(update_item)
+                .put(update_item)
+                .delete(delete_item),
         )
         .route(
             "/api/content/:collection/:slug/publish",

@@ -62,17 +62,31 @@ pub struct ParseError {
 }
 
 const SUPPORTED_FIELDS: &[&str] = &[
-    "status", "assignee", "reporter", "priority", "type", "project",
-    "epic", "sprint", "label", "created", "updated", "due",
-    "story_points", "resolution",
+    "status",
+    "assignee",
+    "reporter",
+    "priority",
+    "type",
+    "project",
+    "epic",
+    "sprint",
+    "label",
+    "created",
+    "updated",
+    "due",
+    "story_points",
+    "resolution",
 ];
-
-const SPECIAL_FUNCTIONS: &[&str] = &["currentUser", "currentuser()", "now", "today"];
 
 pub fn parse_jql(query: &str) -> Result<ParsedQuery, ParseError> {
     let query = query.trim();
     if query.is_empty() {
-        return Ok(ParsedQuery { conditions: vec![], order_by: None, order_dir: None, limit: None });
+        return Ok(ParsedQuery {
+            conditions: vec![],
+            order_by: None,
+            order_dir: None,
+            limit: None,
+        });
     }
 
     let mut conditions = Vec::new();
@@ -91,9 +105,13 @@ pub fn parse_jql(query: &str) -> Result<ParsedQuery, ParseError> {
 
         if let Some(space_idx) = order_str.find(' ') {
             let field = order_str[..space_idx].trim().to_string();
-            let dir = order_str[space_idx+1..].trim().to_uppercase();
+            let dir = order_str[space_idx + 1..].trim().to_uppercase();
             order_by = Some(field);
-            order_dir = Some(if dir.starts_with("DESC") { "DESC".to_string() } else { "ASC".to_string() });
+            order_dir = Some(if dir.starts_with("DESC") {
+                "DESC".to_string()
+            } else {
+                "ASC".to_string()
+            });
         } else {
             order_by = Some(order_str);
             order_dir = Some("ASC".to_string());
@@ -118,7 +136,12 @@ pub fn parse_jql(query: &str) -> Result<ParsedQuery, ParseError> {
         conditions.push(cond);
     }
 
-    Ok(ParsedQuery { conditions, order_by, order_dir, limit })
+    Ok(ParsedQuery {
+        conditions,
+        order_by,
+        order_dir,
+        limit,
+    })
 }
 
 fn find_keyword(s: &str, keyword: &str) -> Option<usize> {
@@ -140,11 +163,12 @@ fn split_logical(s: &str) -> Vec<&str> {
         } else if !in_string {
             // Check for AND as whole word
             if (c == b'A' || c == b'a') && i + 3 <= bytes.len() {
-                let prev_is_space = i == 0 || bytes[i-1] == b' ';
-                let next_is_space = i+3 == bytes.len() || bytes[i+3] == b' ';
-                if prev_is_space && next_is_space
-                    && (bytes[i+1] == b'N' || bytes[i+1] == b'n')
-                    && (bytes[i+2] == b'D' || bytes[i+2] == b'd')
+                let prev_is_space = i == 0 || bytes[i - 1] == b' ';
+                let next_is_space = i + 3 == bytes.len() || bytes[i + 3] == b' ';
+                if prev_is_space
+                    && next_is_space
+                    && (bytes[i + 1] == b'N' || bytes[i + 1] == b'n')
+                    && (bytes[i + 2] == b'D' || bytes[i + 2] == b'd')
                 {
                     parts.push(&s[last..i]);
                     last = i + 3;
@@ -154,10 +178,9 @@ fn split_logical(s: &str) -> Vec<&str> {
             }
             // Check for OR as whole word
             if (c == b'O' || c == b'o') && i + 2 <= bytes.len() {
-                let prev_is_space = i == 0 || bytes[i-1] == b' ';
-                let next_is_space = i+2 == bytes.len() || bytes[i+2] == b' ';
-                if prev_is_space && next_is_space
-                    && (bytes[i+1] == b'R' || bytes[i+1] == b'r')
+                let prev_is_space = i == 0 || bytes[i - 1] == b' ';
+                let next_is_space = i + 2 == bytes.len() || bytes[i + 2] == b' ';
+                if prev_is_space && next_is_space && (bytes[i + 1] == b'R' || bytes[i + 1] == b'r')
                 {
                     parts.push(&s[last..i]);
                     last = i + 2;
@@ -175,11 +198,24 @@ fn split_logical(s: &str) -> Vec<&str> {
 fn parse_condition(s: &str) -> Result<Condition, ParseError> {
     let s = s.trim();
     if s.is_empty() {
-        return Err(ParseError { message: "Empty condition".to_string(), position: 0 });
+        return Err(ParseError {
+            message: "Empty condition".to_string(),
+            position: 0,
+        });
     }
 
     // Find operator position
-    let ops = ["!=", ">=", "<=", "=", ">", "<", " NOT IN ", " IN ", " CONTAINS "];
+    let ops = [
+        "!=",
+        ">=",
+        "<=",
+        "=",
+        ">",
+        "<",
+        " NOT IN ",
+        " IN ",
+        " CONTAINS ",
+    ];
     let mut op_pos = None;
     let mut op_matched_len = 0;
     let mut op_str = "";
@@ -222,12 +258,21 @@ fn parse_condition(s: &str) -> Result<Condition, ParseError> {
         "IN" => Operator::In,
         "NOT IN" => Operator::NotIn,
         "CONTAINS" => Operator::Contains,
-        _ => return Err(ParseError { message: format!("Unknown operator: '{}'", op_str), position: op_pos }),
+        _ => {
+            return Err(ParseError {
+                message: format!("Unknown operator: '{}'", op_str),
+                position: op_pos,
+            })
+        }
     };
 
     let value = parse_value(raw_value)?;
 
-    Ok(Condition { field, operator, value })
+    Ok(Condition {
+        field,
+        operator,
+        value,
+    })
 }
 
 fn parse_value(s: &str) -> Result<JqlValue, ParseError> {
@@ -244,14 +289,15 @@ fn parse_value(s: &str) -> Result<JqlValue, ParseError> {
 
     // String in quotes
     if (s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')) {
-        let inner = &s[1..s.len()-1];
+        let inner = &s[1..s.len() - 1];
         return Ok(JqlValue::String(inner.to_string()));
     }
 
     // List in parentheses
     if s.starts_with('(') && s.ends_with(')') {
-        let inner = &s[1..s.len()-1];
-        let items: Vec<String> = inner.split(',')
+        let inner = &s[1..s.len() - 1];
+        let items: Vec<String> = inner
+            .split(',')
             .map(|x| x.trim().trim_matches('"').trim_matches('\'').to_string())
             .filter(|x| !x.is_empty())
             .collect();

@@ -15,20 +15,10 @@ use std::path::Path;
 use std::str::FromStr;
 use uuid::Uuid;
 
-#[derive(serde::Deserialize, Debug, Clone)]
-struct StaticItem {
-    slug: String,
-    #[serde(default)]
-    #[serde(rename = "coleccion")]
-    _coleccion: Option<String>,
-    #[serde(flatten)]
-    extra: serde_json::Value,
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite://data/portal.db".to_string());
+    let database_url =
+        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://data/portal.db".to_string());
 
     let force = std::env::args().any(|a| a == "--force");
 
@@ -54,8 +44,8 @@ async fn main() -> Result<()> {
 
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-    let data_dir = std::env::var("SEED_DATA_DIR")
-        .unwrap_or_else(|_| "../frontend/src/data".to_string());
+    let data_dir =
+        std::env::var("SEED_DATA_DIR").unwrap_or_else(|_| "../frontend/src/data".to_string());
 
     let items_json = format!("{}/items.json", data_dir);
     let casos_exito = format!("{}/casosExito.js", data_dir);
@@ -88,10 +78,10 @@ async fn seed_json_file(
         return Ok(0);
     }
 
-    let content = std::fs::read_to_string(path)
-        .with_context(|| format!("leyendo {}", path.display()))?;
-    let items: Vec<serde_json::Value> = serde_json::from_str(&content)
-        .with_context(|| format!("parseando {}", path.display()))?;
+    let content =
+        std::fs::read_to_string(path).with_context(|| format!("leyendo {}", path.display()))?;
+    let items: Vec<serde_json::Value> =
+        serde_json::from_str(&content).with_context(|| format!("parseando {}", path.display()))?;
 
     let mut count = 0;
     for item in items {
@@ -127,10 +117,10 @@ async fn seed_json_file_projects(
         println!("  ⚠ Archivo no encontrado: {}", path.display());
         return Ok(0);
     }
-    let content = std::fs::read_to_string(path)
-        .with_context(|| format!("leyendo {}", path.display()))?;
-    let items: Vec<serde_json::Value> = serde_json::from_str(&content)
-        .with_context(|| format!("parseando {}", path.display()))?;
+    let content =
+        std::fs::read_to_string(path).with_context(|| format!("leyendo {}", path.display()))?;
+    let items: Vec<serde_json::Value> =
+        serde_json::from_str(&content).with_context(|| format!("parseando {}", path.display()))?;
     let mut count = 0;
     for item in items {
         let slug = match item.get("slug").and_then(|v| v.as_str()) {
@@ -143,28 +133,99 @@ async fn seed_json_file_projects(
         }
         // Extraer campos para tabla `projects`
         let codigo = item.get("codigo").and_then(|v| v.as_str()).unwrap_or("");
-        let nombre_comercial = item.get("nombreComercial").and_then(|v| v.as_str()).unwrap_or(&slug);
-        let descripcion = item.get("descripcion").and_then(|v| v.as_str()).unwrap_or("");
-        let descripcion_larga = item.get("descripcionLarga").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let tipo = item.get("tipo").and_then(|v| v.as_str()).unwrap_or("Interno");
-        let version = item.get("version").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let tipo_solucion = item.get("tipoSolucion").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let cliente = item.get("cliente").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let estado = item.get("estado").and_then(|v| v.as_str()).unwrap_or("Operativo");
-        let reservado = item.get("reservado").and_then(|v| v.as_bool()).unwrap_or(false) as i64;
-        let video_placeholder = item.get("videoPlaceholder").and_then(|v| v.as_bool()).unwrap_or(false) as i64;
-        let equipo = serde_json::to_string(item.get("equipo").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
-        let stack = serde_json::to_string(item.get("stack").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
-        let problemas = serde_json::to_string(item.get("problemas").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
-        let que_hicimos = serde_json::to_string(item.get("queHicimos").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
-        let resultados = serde_json::to_string(item.get("resultados").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
-        let highlights = serde_json::to_string(item.get("highlights").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
-        let galeria = serde_json::to_string(item.get("galeria").unwrap_or(&serde_json::Value::Array(vec![]))).unwrap_or("[]".into());
-        let video_promocional = item.get("videoPromocional").map(|v| serde_json::to_string(v).unwrap_or("null".into()));
-        let video_tecnico = item.get("videoTecnico").map(|v| serde_json::to_string(v).unwrap_or("null".into()));
-        let documento_drive = item.get("documentoDrive").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let documentacion = item.get("documentacion").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let url_proyecto = item.get("urlProyecto").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let nombre_comercial = item
+            .get("nombreComercial")
+            .and_then(|v| v.as_str())
+            .unwrap_or(&slug);
+        let descripcion = item
+            .get("descripcion")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let descripcion_larga = item
+            .get("descripcionLarga")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let tipo = item
+            .get("tipo")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Interno");
+        let version = item
+            .get("version")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let tipo_solucion = item
+            .get("tipoSolucion")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let cliente = item
+            .get("cliente")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let estado = item
+            .get("estado")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Operativo");
+        let reservado = item
+            .get("reservado")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false) as i64;
+        let video_placeholder = item
+            .get("videoPlaceholder")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false) as i64;
+        let equipo = serde_json::to_string(
+            item.get("equipo")
+                .unwrap_or(&serde_json::Value::Array(vec![])),
+        )
+        .unwrap_or("[]".into());
+        let stack = serde_json::to_string(
+            item.get("stack")
+                .unwrap_or(&serde_json::Value::Array(vec![])),
+        )
+        .unwrap_or("[]".into());
+        let problemas = serde_json::to_string(
+            item.get("problemas")
+                .unwrap_or(&serde_json::Value::Array(vec![])),
+        )
+        .unwrap_or("[]".into());
+        let que_hicimos = serde_json::to_string(
+            item.get("queHicimos")
+                .unwrap_or(&serde_json::Value::Array(vec![])),
+        )
+        .unwrap_or("[]".into());
+        let resultados = serde_json::to_string(
+            item.get("resultados")
+                .unwrap_or(&serde_json::Value::Array(vec![])),
+        )
+        .unwrap_or("[]".into());
+        let highlights = serde_json::to_string(
+            item.get("highlights")
+                .unwrap_or(&serde_json::Value::Array(vec![])),
+        )
+        .unwrap_or("[]".into());
+        let galeria = serde_json::to_string(
+            item.get("galeria")
+                .unwrap_or(&serde_json::Value::Array(vec![])),
+        )
+        .unwrap_or("[]".into());
+        let video_promocional = item
+            .get("videoPromocional")
+            .map(|v| serde_json::to_string(v).unwrap_or("null".into()));
+        let video_tecnico = item
+            .get("videoTecnico")
+            .map(|v| serde_json::to_string(v).unwrap_or("null".into()));
+        let documento_drive = item
+            .get("documentoDrive")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let documentacion = item
+            .get("documentacion")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let url_proyecto = item
+            .get("urlProyecto")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         let existing: Option<(String, String, i64, String)> = sqlx::query_as("SELECT id, stage, published, status FROM projects WHERE slug = ? AND deleted_at IS NULL")
             .bind(&slug)
@@ -173,7 +234,10 @@ async fn seed_json_file_projects(
         if let Some((existing_id, existing_stage, existing_published, existing_status)) = existing {
             if force {
                 // Respetar vaciado manual: si el usuario dejó stage en blanco o archived/published=0, no sobreescribir (todo en 0)
-                if existing_stage.is_empty() || existing_published == 0 || existing_status == "archived" {
+                if existing_stage.is_empty()
+                    || existing_published == 0
+                    || existing_status == "archived"
+                {
                     // No actualizar, mantener en blanco para que siga en 0
                     continue;
                 }
@@ -230,8 +294,8 @@ async fn seed_js_module(
         return Ok(0);
     }
 
-    let content = std::fs::read_to_string(path)
-        .with_context(|| format!("leyendo {}", path.display()))?;
+    let content =
+        std::fs::read_to_string(path).with_context(|| format!("leyendo {}", path.display()))?;
 
     let var_name = match collection {
         "casos-de-exito" => "casosExito",
@@ -300,49 +364,6 @@ async fn seed_js_module(
     Ok(count)
 }
 
-fn extract_js_array(text: &str, var_name: &str) -> String {
-    // Buscar específicamente `export const <var_name> = [` o `const <var_name> = [`
-    let patterns = [
-        format!("export const {} = [", var_name),
-        format!("const {} = [", var_name),
-    ];
-
-    let mut start_pos = None;
-    for pat in &patterns {
-        if let Some(idx) = text.find(pat.as_str()) {
-            start_pos = Some(idx + pat.len() - 1);
-            break;
-        }
-    }
-    let start = match start_pos {
-        Some(s) => s,
-        None => {
-            // Fallback: primer `[`
-            text.find('[').unwrap_or(0)
-        }
-    };
-
-    let chars: Vec<char> = text[start..].chars().collect();
-    let mut depth = 0;
-    let mut end = chars.len();
-    for (i, &c) in chars.iter().enumerate() {
-        if c == '[' {
-            depth += 1;
-        } else if c == ']' {
-            depth -= 1;
-            if depth == 0 {
-                end = i + 1;
-                break;
-            }
-        }
-    }
-    let raw: String = chars[..end].iter().collect();
-    let inlined = inline_constants_simple(&raw);
-    js_object_to_json(&inlined)
-}
-
-/// Inlinea constantes `const NAME = value;` que aparecen dentro del archivo.
-/// Esto permite que `IND_EXTENDEDAS` se reemplace por su valor literal.
 fn inline_constants_simple(text: &str) -> String {
     let mut out = text.to_string();
 
@@ -352,7 +373,7 @@ fn inline_constants_simple(text: &str) -> String {
     let mut constants: Vec<(String, String)> = Vec::new();
 
     while i < chars.len() {
-        if i + 6 <= chars.len() && chars[i..i+6].iter().collect::<String>() == "const " {
+        if i + 6 <= chars.len() && chars[i..i + 6].iter().collect::<String>() == "const " {
             let name_start = i + 6;
             let mut name_end = name_start;
             while name_end < chars.len() {
@@ -393,21 +414,33 @@ fn inline_constants_simple(text: &str) -> String {
                         while j < chars.len() && (chars[j].is_ascii_digit() || chars[j] == '.') {
                             j += 1;
                         }
-                    } else if chars[j..].starts_with(&['n','u','l','l']) || chars[j..].starts_with(&['t','r','u','e']) || chars[j..].starts_with(&['f','a','l','s','e']) {
-                        let kw: String = chars[j..j+5.min(chars.len()-j)].iter().collect();
-                        if kw.starts_with("null") { j += 4; }
-                        else if kw.starts_with("true") { j += 4; }
-                        else if kw.starts_with("false") { j += 5; }
+                    } else if chars[j..].starts_with(&['n', 'u', 'l', 'l'])
+                        || chars[j..].starts_with(&['t', 'r', 'u', 'e'])
+                        || chars[j..].starts_with(&['f', 'a', 'l', 's', 'e'])
+                    {
+                        let kw: String = chars[j..j + 5.min(chars.len() - j)].iter().collect();
+                        if kw.starts_with("null") || kw.starts_with("true") {
+                            j += 4;
+                        } else if kw.starts_with("false") {
+                            j += 5;
+                        }
                     } else if c == '[' {
                         let mut depth = 1;
                         j += 1;
                         while j < chars.len() && depth > 0 {
-                            if chars[j] == '[' { depth += 1; }
-                            else if chars[j] == ']' { depth -= 1; }
-                            if depth == 0 { break; }
+                            if chars[j] == '[' {
+                                depth += 1;
+                            } else if chars[j] == ']' {
+                                depth -= 1;
+                            }
+                            if depth == 0 {
+                                break;
+                            }
                             j += 1;
                         }
-                        if j < chars.len() { j += 1; }
+                        if j < chars.len() {
+                            j += 1;
+                        }
                     }
 
                     let value: String = chars[value_start..j].iter().collect();
@@ -446,10 +479,10 @@ fn inline_constants_simple(text: &str) -> String {
             }
             // No reemplazar si va seguido de `=` (es la declaración `const NAME = ...`)
             // No reemplazar si va seguido de `:` (es una clave de objeto)
-            let after_ok = after_pos >= out_chars.len()
-                || !(out_chars[k] == '=' || out_chars[k] == ':');
+            let after_ok =
+                after_pos >= out_chars.len() || !(out_chars[k] == '=' || out_chars[k] == ':');
 
-            result.extend(out_chars[j..j+p].iter());
+            result.extend(out_chars[j..j + p].iter());
             if before_ok && after_ok {
                 result.push_str(value);
             } else {
@@ -578,13 +611,35 @@ fn js_object_to_json(text: &str) -> String {
                 if ch == '\\' && i + 1 < chars.len() {
                     let next = chars[i + 1];
                     match next {
-                        'n' => { out.push_str("\\n"); i += 2; }
-                        't' => { out.push_str("\\t"); i += 2; }
-                        'r' => { out.push_str("\\r"); i += 2; }
-                        '\\' => { out.push_str("\\\\"); i += 2; }
-                        '`' => { out.push('`'); i += 2; }
-                        '$' => { out.push('$'); i += 2; }
-                        _ => { out.push(ch); out.push(next); i += 2; }
+                        'n' => {
+                            out.push_str("\\n");
+                            i += 2;
+                        }
+                        't' => {
+                            out.push_str("\\t");
+                            i += 2;
+                        }
+                        'r' => {
+                            out.push_str("\\r");
+                            i += 2;
+                        }
+                        '\\' => {
+                            out.push_str("\\\\");
+                            i += 2;
+                        }
+                        '`' => {
+                            out.push('`');
+                            i += 2;
+                        }
+                        '$' => {
+                            out.push('$');
+                            i += 2;
+                        }
+                        _ => {
+                            out.push(ch);
+                            out.push(next);
+                            i += 2;
+                        }
                     }
                     continue;
                 }
@@ -751,13 +806,12 @@ async fn upsert(
     let data_str = serde_json::to_string(item)?;
     let id = Uuid::new_v4().to_string();
 
-    let existing: Option<(String,)> = sqlx::query_as(
-        "SELECT id FROM content_items WHERE collection = ? AND slug = ?",
-    )
-    .bind(collection)
-    .bind(slug)
-    .fetch_optional(pool)
-    .await?;
+    let existing: Option<(String,)> =
+        sqlx::query_as("SELECT id FROM content_items WHERE collection = ? AND slug = ?")
+            .bind(collection)
+            .bind(slug)
+            .fetch_optional(pool)
+            .await?;
 
     if let Some((existing_id,)) = existing {
         if force {

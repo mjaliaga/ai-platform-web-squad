@@ -98,7 +98,8 @@ impl InMemoryRateLimiter {
             }
             // Si aún grande, truncar a 8k más recientes (evitar DoS memoria)
             if map.len() > 10_000 {
-                let keys_to_remove: Vec<String> = map.keys().take(map.len() - 8000).cloned().collect();
+                let keys_to_remove: Vec<String> =
+                    map.keys().take(map.len() - 8000).cloned().collect();
                 for k in keys_to_remove {
                     map.remove(&k);
                 }

@@ -33,7 +33,7 @@ pub async fn list_time_entries(
 ) -> Result<Json<Vec<TimeEntryWithUser>>, Response> {
     let entries = sqlx::query_as::<_, crate::models::TimeEntry>(
         "SELECT id, task_id, user_id, hours, description, logged_at, created_at \
-         FROM time_entries WHERE task_id = ? ORDER BY logged_at DESC, created_at DESC"
+         FROM time_entries WHERE task_id = ? ORDER BY logged_at DESC, created_at DESC",
     )
     .bind(&task_id)
     .fetch_all(&state.db)
@@ -63,17 +63,20 @@ pub async fn log_time(
 ) -> Result<(StatusCode, Json<TimeEntryWithUser>), Response> {
     validate_hours(payload.hours)?;
     if !crate::routes::tasks::task_exists(&state.db, &task_id).await? {
-        return Err(error_response(StatusCode::NOT_FOUND, "Tarea no encontrada".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Tarea no encontrada".to_string(),
+        ));
     }
 
     let id = Uuid::new_v4().to_string();
-    let logged_at = payload.logged_at.unwrap_or_else(|| {
-        chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
-    });
+    let logged_at = payload
+        .logged_at
+        .unwrap_or_else(|| chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
     sqlx::query(
         "INSERT INTO time_entries (id, task_id, user_id, hours, description, logged_at) \
-         VALUES (?, ?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&task_id)
@@ -106,7 +109,7 @@ pub async fn log_time(
 
     let entry = sqlx::query_as::<_, crate::models::TimeEntry>(
         "SELECT id, task_id, user_id, hours, description, logged_at, created_at \
-         FROM time_entries WHERE id = ?"
+         FROM time_entries WHERE id = ?",
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -121,10 +124,13 @@ pub async fn log_time(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    Ok((StatusCode::CREATED, Json(TimeEntryWithUser {
-        entry,
-        user: user.into(),
-    })))
+    Ok((
+        StatusCode::CREATED,
+        Json(TimeEntryWithUser {
+            entry,
+            user: user.into(),
+        }),
+    ))
 }
 
 pub async fn delete_time_entry(
@@ -134,7 +140,7 @@ pub async fn delete_time_entry(
 ) -> Result<StatusCode, Response> {
     let entry: Option<crate::models::TimeEntry> = sqlx::query_as::<_, crate::models::TimeEntry>(
         "SELECT id, task_id, user_id, hours, description, logged_at, created_at \
-         FROM time_entries WHERE id = ?"
+         FROM time_entries WHERE id = ?",
     )
     .bind(&entry_id)
     .fetch_optional(&state.db)
@@ -143,7 +149,12 @@ pub async fn delete_time_entry(
 
     let entry = match entry {
         Some(e) => e,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Registro de tiempo no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Registro de tiempo no encontrado".to_string(),
+            ))
+        }
     };
     if entry.task_id != task_id {
         return Err(error_response(
@@ -176,7 +187,7 @@ pub async fn edit_time_entry(
 ) -> Result<Json<TimeEntryWithUser>, Response> {
     let entry: Option<crate::models::TimeEntry> = sqlx::query_as::<_, crate::models::TimeEntry>(
         "SELECT id, task_id, user_id, hours, description, logged_at, created_at \
-         FROM time_entries WHERE id = ?"
+         FROM time_entries WHERE id = ?",
     )
     .bind(&entry_id)
     .fetch_optional(&state.db)
@@ -185,7 +196,12 @@ pub async fn edit_time_entry(
 
     let entry = match entry {
         Some(e) => e,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Registro de tiempo no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Registro de tiempo no encontrado".to_string(),
+            ))
+        }
     };
     if entry.task_id != task_id {
         return Err(error_response(
@@ -206,15 +222,13 @@ pub async fn edit_time_entry(
 
     let hours_diff = new_hours - entry.hours;
 
-    sqlx::query(
-        "UPDATE time_entries SET hours = ?, description = ? WHERE id = ?"
-    )
-    .bind(new_hours)
-    .bind(new_description)
-    .bind(&entry_id)
-    .execute(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    sqlx::query("UPDATE time_entries SET hours = ?, description = ? WHERE id = ?")
+        .bind(new_hours)
+        .bind(new_description)
+        .bind(&entry_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     if (hours_diff).abs() > f64::EPSILON {
         sqlx::query(
@@ -229,7 +243,7 @@ pub async fn edit_time_entry(
 
     let updated = sqlx::query_as::<_, crate::models::TimeEntry>(
         "SELECT id, task_id, user_id, hours, description, logged_at, created_at \
-         FROM time_entries WHERE id = ?"
+         FROM time_entries WHERE id = ?",
     )
     .bind(&entry_id)
     .fetch_one(&state.db)
@@ -252,11 +266,17 @@ pub async fn edit_time_entry(
 
 #[allow(dead_code)]
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{delete, get}};
+    use axum::{
+        middleware,
+        routing::{delete, get},
+    };
 
     axum::Router::new()
         .route("/api/tasks/:id/time", get(list_time_entries).post(log_time))
-        .route("/api/tasks/:id/time/:entry_id", delete(delete_time_entry).patch(edit_time_entry))
+        .route(
+            "/api/tasks/:id/time/:entry_id",
+            delete(delete_time_entry).patch(edit_time_entry),
+        )
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth))
         .with_state(state)
 }

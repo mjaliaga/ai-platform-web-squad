@@ -28,14 +28,14 @@ pub async fn csrf_protect(
         return Ok(next.run(req).await);
     }
     // Read-only methods don't need CSRF.
-    if matches!(req.method(), &Method::GET | &Method::HEAD | &Method::OPTIONS) {
+    if matches!(
+        req.method(),
+        &Method::GET | &Method::HEAD | &Method::OPTIONS
+    ) {
         return Ok(next.run(req).await);
     }
 
-    let header_token = req
-        .headers()
-        .get(CSRF_HEADER)
-        .and_then(|v| v.to_str().ok());
+    let header_token = req.headers().get(CSRF_HEADER).and_then(|v| v.to_str().ok());
 
     let cookie_token = req
         .headers()

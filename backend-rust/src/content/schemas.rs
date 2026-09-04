@@ -114,21 +114,12 @@ pub fn schema_for(ruta: &str) -> Option<Vec<FieldDef>> {
 /// (migración 020) para que siga visible en el CMS/Edición y no desaparezca
 /// del portal tras el rebuild. `list_collections` lo cuenta desde `projects`.
 pub fn all_collections() -> &'static [&'static str] {
-    &[
-        "casos-de-exito",
-        "laboratorio",
-        "poc",
-        "almaviva",
-        "xms",
-    ]
+    &["casos-de-exito", "laboratorio", "poc", "almaviva", "xms"]
 }
 
 /// Valida un valor JSON contra el schema declarativo de una colección.
 /// Devuelve `Err(mensaje)` si hay errores.
-pub fn validate_data(
-    ruta: &str,
-    data: &serde_json::Value,
-) -> Result<(), String> {
+pub fn validate_data(ruta: &str, data: &serde_json::Value) -> Result<(), String> {
     let fields = match schema_for(ruta) {
         Some(f) => f,
         None => return Err(format!("Colección '{}' no soportada", ruta)),
@@ -212,9 +203,15 @@ fn proyectos_schema() -> Vec<FieldDef> {
         opt("En evaluación", "En evaluación"),
         opt("Operativo", "Operativo"),
         opt("Operativo / En evolución", "Operativo / En evolución"),
-        opt("Operativo / Demostración funcional", "Operativo / Demostración funcional"),
+        opt(
+            "Operativo / Demostración funcional",
+            "Operativo / Demostración funcional",
+        ),
         opt("Implementado en Producción", "Implementado en Producción"),
-        opt("Implementado en Pre-Producción", "Implementado en Pre-Producción"),
+        opt(
+            "Implementado en Pre-Producción",
+            "Implementado en Pre-Producción",
+        ),
         opt("Video Demo", "Video Demo"),
         opt("En Producción", "En Producción"),
         opt("Pausado", "Pausado"),
@@ -253,8 +250,20 @@ fn proyectos_schema() -> Vec<FieldDef> {
     ];
 
     vec![
-        field("slug", "Slug (URL)", "slug", true, Some("Identificador único para la URL. Solo minúsculas, números y guiones.")),
-        field("codigo", "Código", "text", false, Some("Código interno, ej. PRJ-009")),
+        field(
+            "slug",
+            "Slug (URL)",
+            "slug",
+            true,
+            Some("Identificador único para la URL. Solo minúsculas, números y guiones."),
+        ),
+        field(
+            "codigo",
+            "Código",
+            "text",
+            false,
+            Some("Código interno, ej. PRJ-009"),
+        ),
         field("nombreComercial", "Nombre comercial", "text", true, None),
         field("nombreProyecto", "Nombre del proyecto", "text", false, None),
         select_field("tipo", "Tipo", tipo_opts, true, None),
@@ -263,21 +272,49 @@ fn proyectos_schema() -> Vec<FieldDef> {
         field("tipoSolucion", "Tipo de solución", "text", false, None),
         field("cliente", "Cliente", "text", false, None),
         field("descripcion", "Descripción corta", "textarea", true, None),
-        field("descripcionLarga", "Descripción larga", "richtext", false, None),
+        field(
+            "descripcionLarga",
+            "Descripción larga",
+            "richtext",
+            false,
+            None,
+        ),
         array_field("equipo", "Equipo", "Persona", equipo_fields, None),
-        array_field("stack", "Stack tecnológico", "Tecnología", vec![
-            field("value", "Tecnología", "text", true, None),
-        ], Some("Una tecnología por item. Ej: Python, React, PostgreSQL.")),
-        array_field("problemas", "Problemas", "Problema", vec![
-            field("value", "Problema", "textarea", true, None),
-        ], None),
-        array_field("queHicimos", "Qué hicimos", "Actividad", vec![
-            field("value", "Actividad", "textarea", true, None),
-        ], None),
-        array_field("resultados", "Resultados", "Resultado", vec![
-            field("value", "Resultado", "textarea", true, None),
-        ], None),
-        array_field("highlights", "Highlights / Cifras clave", "Highlight", highlight_fields, None),
+        array_field(
+            "stack",
+            "Stack tecnológico",
+            "Tecnología",
+            vec![field("value", "Tecnología", "text", true, None)],
+            Some("Una tecnología por item. Ej: Python, React, PostgreSQL."),
+        ),
+        array_field(
+            "problemas",
+            "Problemas",
+            "Problema",
+            vec![field("value", "Problema", "textarea", true, None)],
+            None,
+        ),
+        array_field(
+            "queHicimos",
+            "Qué hicimos",
+            "Actividad",
+            vec![field("value", "Actividad", "textarea", true, None)],
+            None,
+        ),
+        array_field(
+            "resultados",
+            "Resultados",
+            "Resultado",
+            vec![field("value", "Resultado", "textarea", true, None)],
+            None,
+        ),
+        array_field(
+            "highlights",
+            "Highlights / Cifras clave",
+            "Highlight",
+            highlight_fields,
+            None,
+        ),
         object_field(
             "videoPromocional",
             "Video promocional",
@@ -285,15 +322,39 @@ fn proyectos_schema() -> Vec<FieldDef> {
             None,
         ),
         object_field("videoTecnico", "Video técnico", video_fields, None),
-        field("documentoDrive", "Documento Google Drive (URL)", "url", false, Some("Enlace de visualización de Google Docs o Drive")),
+        field(
+            "documentoDrive",
+            "Documento Google Drive (URL)",
+            "url",
+            false,
+            Some("Enlace de visualización de Google Docs o Drive"),
+        ),
         field("documentacion", "Documentación (URL)", "url", false, None),
         field("urlProyecto", "URL del proyecto", "url", false, None),
-        field("videoPlaceholder", "Mostrar placeholder de video", "boolean", false, Some("Si está activo, se muestra un placeholder en lugar del reproductor de video")),
-        field("reservado", "Reservado (oculto en público)", "boolean", false, Some("Si está activo, el item no se muestra en la lista pública")),
-        array_field("galeria", "Galería", "Imagen", vec![
-            field("url", "URL imagen", "media", true, None),
-            field("alt", "Texto alternativo", "text", false, None),
-        ], None),
+        field(
+            "videoPlaceholder",
+            "Mostrar placeholder de video",
+            "boolean",
+            false,
+            Some("Si está activo, se muestra un placeholder en lugar del reproductor de video"),
+        ),
+        field(
+            "reservado",
+            "Reservado (oculto en público)",
+            "boolean",
+            false,
+            Some("Si está activo, el item no se muestra en la lista pública"),
+        ),
+        array_field(
+            "galeria",
+            "Galería",
+            "Imagen",
+            vec![
+                field("url", "URL imagen", "media", true, None),
+                field("alt", "Texto alternativo", "text", false, None),
+            ],
+            None,
+        ),
         mediciones_array(),
     ]
 }
@@ -305,15 +366,27 @@ fn casos_exito_schema() -> Vec<FieldDef> {
     let industria_opts = vec![
         opt("Minería", "Minería"),
         opt("Salud y Seguros", "Salud y Seguros"),
-        opt("Transporte e Infraestructura Aeroportuaria", "Transporte e Infraestructura Aeroportuaria"),
-        opt("Deporte y Tecnología (SportsTech)", "Deporte y Tecnología (SportsTech)"),
-        opt("Tecnología y Construcción (ConTech)", "Tecnología y Construcción (ConTech)"),
+        opt(
+            "Transporte e Infraestructura Aeroportuaria",
+            "Transporte e Infraestructura Aeroportuaria",
+        ),
+        opt(
+            "Deporte y Tecnología (SportsTech)",
+            "Deporte y Tecnología (SportsTech)",
+        ),
+        opt(
+            "Tecnología y Construcción (ConTech)",
+            "Tecnología y Construcción (ConTech)",
+        ),
         opt("Sector Público y Transporte", "Sector Público y Transporte"),
     ];
 
     let estado_opts = vec![
         opt("Implementado en Producción", "Implementado en Producción"),
-        opt("Implementado en Pre-Producción", "Implementado en Pre-Producción"),
+        opt(
+            "Implementado en Pre-Producción",
+            "Implementado en Pre-Producción",
+        ),
         opt("En desarrollo", "En desarrollo"),
         opt("Pausado", "Pausado"),
     ];
@@ -355,27 +428,38 @@ fn casos_exito_schema() -> Vec<FieldDef> {
         field("pais", "País", "text", false, None),
         select_field("estado", "Estado", estado_opts, true, None),
         field("plazo", "Plazo", "text", false, None),
-        field("precioValor", "Precio (valor numérico)", "number", false, None),
+        field(
+            "precioValor",
+            "Precio (valor numérico)",
+            "number",
+            false,
+            None,
+        ),
         select_field("precioMoneda", "Moneda", moneda_opts, false, None),
         field("cliente", "Cliente", "text", false, None),
         field("descripcion", "Descripción", "textarea", true, None),
         field("perfil", "Perfil del cliente", "richtext", false, None),
         field("alcance", "Alcance", "richtext", false, None),
         field("detalleTecnico", "Detalle técnico", "richtext", false, None),
-        array_field("stack", "Stack", "Tecnología", vec![
-            field("value", "Tecnología", "text", true, None),
-        ], None),
-        array_field("equipo", "Equipo", "Persona", equipo_fields, None),
-        array_field("galeria", "Galería", "Imagen", vec![
-            field("url", "URL imagen", "media", true, None),
-            field("alt", "Texto alternativo", "text", false, None),
-        ], None),
-        object_field(
-            "videoPromocional",
-            "Video promocional",
-            video_fields,
+        array_field(
+            "stack",
+            "Stack",
+            "Tecnología",
+            vec![field("value", "Tecnología", "text", true, None)],
             None,
         ),
+        array_field("equipo", "Equipo", "Persona", equipo_fields, None),
+        array_field(
+            "galeria",
+            "Galería",
+            "Imagen",
+            vec![
+                field("url", "URL imagen", "media", true, None),
+                field("alt", "Texto alternativo", "text", false, None),
+            ],
+            None,
+        ),
+        object_field("videoPromocional", "Video promocional", video_fields, None),
         field("urlProyecto", "URL del proyecto", "url", false, None),
         mediciones_array(),
     ]
@@ -422,49 +506,108 @@ fn laboratorio_schema() -> Vec<FieldDef> {
         field("tipoSolucion", "Tipo de solución", "text", false, None),
         field("cliente", "Cliente", "text", false, None),
         field("descripcion", "Descripción corta", "textarea", true, None),
-        field("descripcionLarga", "Descripción larga", "richtext", false, None),
-        field("documentoDrive", "Documento Google Drive / Docs (URL)", "url", false, Some("Embebe un visor de documento en la ficha")),
-        array_field("autores", "Autores (Investigación)", "Autor", autores_fields, None),
-        array_field("equipo", "Equipo desarrollador", "Persona", equipo_fields, None),
-        array_field("stack", "Stack", "Tecnología", vec![
-            field("value", "Tecnología", "text", true, None),
-        ], None),
-        array_field("puntosClave", "Puntos clave", "Punto", vec![
-            field("stat", "Valor", "text", true, None),
-            field("etiqueta", "Etiqueta", "text", true, None),
-            field("detalle", "Detalle", "text", false, None),
-        ], None),
-        array_field("ventajas", "Ventajas", "Ventaja", vec![
-            field("titulo", "Título", "text", true, None),
-            field("descripcion", "Descripción", "textarea", true, None),
-            field("icono", "Ícono Lucide", "icon", false, None),
-        ], None),
-        array_field("cicloVida", "Ciclo de vida / Pipeline", "Fase", ciclo_fields, None),
-        array_field("problemas", "Problemas a enfrentar", "Problema", vec![
-            field("value", "Problema", "textarea", true, None),
-        ], None),
-        array_field("queHicimos", "Qué hicimos", "Actividad", vec![
-            field("value", "Actividad", "textarea", true, None),
-        ], None),
-        array_field("resultados", "Resultados", "Resultado", vec![
-            field("value", "Resultado", "textarea", true, None),
-        ], None),
+        field(
+            "descripcionLarga",
+            "Descripción larga",
+            "richtext",
+            false,
+            None,
+        ),
+        field(
+            "documentoDrive",
+            "Documento Google Drive / Docs (URL)",
+            "url",
+            false,
+            Some("Embebe un visor de documento en la ficha"),
+        ),
+        array_field(
+            "autores",
+            "Autores (Investigación)",
+            "Autor",
+            autores_fields,
+            None,
+        ),
+        array_field(
+            "equipo",
+            "Equipo desarrollador",
+            "Persona",
+            equipo_fields,
+            None,
+        ),
+        array_field(
+            "stack",
+            "Stack",
+            "Tecnología",
+            vec![field("value", "Tecnología", "text", true, None)],
+            None,
+        ),
+        array_field(
+            "puntosClave",
+            "Puntos clave",
+            "Punto",
+            vec![
+                field("stat", "Valor", "text", true, None),
+                field("etiqueta", "Etiqueta", "text", true, None),
+                field("detalle", "Detalle", "text", false, None),
+            ],
+            None,
+        ),
+        array_field(
+            "ventajas",
+            "Ventajas",
+            "Ventaja",
+            vec![
+                field("titulo", "Título", "text", true, None),
+                field("descripcion", "Descripción", "textarea", true, None),
+                field("icono", "Ícono Lucide", "icon", false, None),
+            ],
+            None,
+        ),
+        array_field(
+            "cicloVida",
+            "Ciclo de vida / Pipeline",
+            "Fase",
+            ciclo_fields,
+            None,
+        ),
+        array_field(
+            "problemas",
+            "Problemas a enfrentar",
+            "Problema",
+            vec![field("value", "Problema", "textarea", true, None)],
+            None,
+        ),
+        array_field(
+            "queHicimos",
+            "Qué hicimos",
+            "Actividad",
+            vec![field("value", "Actividad", "textarea", true, None)],
+            None,
+        ),
+        array_field(
+            "resultados",
+            "Resultados",
+            "Resultado",
+            vec![field("value", "Resultado", "textarea", true, None)],
+            None,
+        ),
         object_field(
             "videoPromocional",
             "Video promocional",
             video_ref_fields(),
             None,
         ),
-        object_field(
-            "videoTecnico",
-            "Video técnico",
-            video_ref_fields(),
+        object_field("videoTecnico", "Video técnico", video_ref_fields(), None),
+        array_field(
+            "galeria",
+            "Galería",
+            "Imagen",
+            vec![
+                field("url", "URL imagen", "media", true, None),
+                field("alt", "Texto alternativo", "text", false, None),
+            ],
             None,
         ),
-        array_field("galeria", "Galería", "Imagen", vec![
-            field("url", "URL imagen", "media", true, None),
-            field("alt", "Texto alternativo", "text", false, None),
-        ], None),
         field("documentacion", "Documentación (URL)", "url", false, None),
         field("urlProyecto", "URL del proyecto", "url", false, None),
     ]
@@ -482,9 +625,15 @@ fn poc_schema() -> Vec<FieldDef> {
         opt("En evaluación", "En evaluación"),
         opt("Operativo", "Operativo"),
         opt("Operativo / En evolución", "Operativo / En evolución"),
-        opt("Operativo / Demostración funcional", "Operativo / Demostración funcional"),
+        opt(
+            "Operativo / Demostración funcional",
+            "Operativo / Demostración funcional",
+        ),
         opt("Implementado en Producción", "Implementado en Producción"),
-        opt("Implementado en Pre-Producción", "Implementado en Pre-Producción"),
+        opt(
+            "Implementado en Pre-Producción",
+            "Implementado en Pre-Producción",
+        ),
         opt("Video Demo", "Video Demo"),
         opt("En Producción", "En Producción"),
         opt("Pausado", "Pausado"),
@@ -509,43 +658,96 @@ fn poc_schema() -> Vec<FieldDef> {
         field("tipoSolucion", "Tipo de solución", "text", false, None),
         field("cliente", "Cliente", "text", false, None),
         field("descripcion", "Descripción", "textarea", true, None),
-        field("descripcionLarga", "Descripción larga", "richtext", false, None),
-        array_field("equipo", "Equipo", "Persona", vec![
-            field("nombre", "Nombre", "text", true, None),
-            field("rol", "Rol", "text", true, None),
-        ], None),
-        array_field("stack", "Stack", "Tecnología", vec![
-            field("value", "Tecnología", "text", true, None),
-        ], None),
-        array_field("highlights", "Highlights / Cifras clave", "Highlight", highlight_fields, None),
-        array_field("problemas", "Problemas", "Problema", vec![
-            field("value", "Problema", "textarea", true, None),
-        ], None),
-        array_field("queHicimos", "Qué hicimos", "Actividad", vec![
-            field("value", "Actividad", "textarea", true, None),
-        ], None),
-        array_field("resultados", "Resultados", "Resultado", vec![
-            field("value", "Resultado", "textarea", true, None),
-        ], None),
+        field(
+            "descripcionLarga",
+            "Descripción larga",
+            "richtext",
+            false,
+            None,
+        ),
+        array_field(
+            "equipo",
+            "Equipo",
+            "Persona",
+            vec![
+                field("nombre", "Nombre", "text", true, None),
+                field("rol", "Rol", "text", true, None),
+            ],
+            None,
+        ),
+        array_field(
+            "stack",
+            "Stack",
+            "Tecnología",
+            vec![field("value", "Tecnología", "text", true, None)],
+            None,
+        ),
+        array_field(
+            "highlights",
+            "Highlights / Cifras clave",
+            "Highlight",
+            highlight_fields,
+            None,
+        ),
+        array_field(
+            "problemas",
+            "Problemas",
+            "Problema",
+            vec![field("value", "Problema", "textarea", true, None)],
+            None,
+        ),
+        array_field(
+            "queHicimos",
+            "Qué hicimos",
+            "Actividad",
+            vec![field("value", "Actividad", "textarea", true, None)],
+            None,
+        ),
+        array_field(
+            "resultados",
+            "Resultados",
+            "Resultado",
+            vec![field("value", "Resultado", "textarea", true, None)],
+            None,
+        ),
         object_field(
             "videoPromocional",
             "Video promocional",
             video_ref_fields(),
             None,
         ),
-        object_field(
-            "videoTecnico",
-            "Video técnico",
-            video_ref_fields(),
+        object_field("videoTecnico", "Video técnico", video_ref_fields(), None),
+        field(
+            "documentoDrive",
+            "Documento Google Drive (URL)",
+            "url",
+            false,
             None,
         ),
-        field("documentoDrive", "Documento Google Drive (URL)", "url", false, None),
-        field("videoPlaceholder", "Mostrar placeholder de video", "boolean", false, Some("Si está activo, se muestra un placeholder en lugar del reproductor de video")),
-        field("reservado", "Reservado (oculto en público)", "boolean", false, Some("Si está activo, el item no se muestra en la lista pública")),
-        array_field("galeria", "Galería", "Imagen", vec![
-            field("url", "URL imagen", "media", true, None),
-            field("alt", "Texto alternativo", "text", false, None),
-        ], None),
+        field(
+            "videoPlaceholder",
+            "Mostrar placeholder de video",
+            "boolean",
+            false,
+            Some("Si está activo, se muestra un placeholder en lugar del reproductor de video"),
+        ),
+        field(
+            "reservado",
+            "Reservado (oculto en público)",
+            "boolean",
+            false,
+            Some("Si está activo, el item no se muestra en la lista pública"),
+        ),
+        array_field(
+            "galeria",
+            "Galería",
+            "Imagen",
+            vec![
+                field("url", "URL imagen", "media", true, None),
+                field("alt", "Texto alternativo", "text", false, None),
+            ],
+            None,
+        ),
         field("documentacion", "Documentación (URL)", "url", false, None),
         field("urlProyecto", "URL del proyecto", "url", false, None),
         mediciones_array(),
@@ -597,10 +799,19 @@ fn almaviva_schema() -> Vec<FieldDef> {
     let categoria_opts = vec![
         opt("Documental y Conocimiento", "Documental y Conocimiento"),
         opt("Salud y Clínica", "Salud y Clínica"),
-        opt("Conversacional y Atención al Cliente", "Conversacional y Atención al Cliente"),
+        opt(
+            "Conversacional y Atención al Cliente",
+            "Conversacional y Atención al Cliente",
+        ),
         opt("Voz y Multimodal", "Voz y Multimodal"),
-        opt("Analítica, Predicción y Riesgo", "Analítica, Predicción y Riesgo"),
-        opt("Asistencia en Campo y Mantenimiento", "Asistencia en Campo y Mantenimiento"),
+        opt(
+            "Analítica, Predicción y Riesgo",
+            "Analítica, Predicción y Riesgo",
+        ),
+        opt(
+            "Asistencia en Campo y Mantenimiento",
+            "Asistencia en Campo y Mantenimiento",
+        ),
     ];
 
     vec![
@@ -611,23 +822,49 @@ fn almaviva_schema() -> Vec<FieldDef> {
         field("tipo", "Tipo", "text", false, None),
         field("estado", "Estado", "text", false, None),
         field("descripcion", "Descripción", "textarea", true, None),
-        field("descripcionLarga", "Descripción larga", "richtext", false, None),
-        field("clientesReferencia", "Clientes de referencia", "textarea", false, None),
+        field(
+            "descripcionLarga",
+            "Descripción larga",
+            "richtext",
+            false,
+            None,
+        ),
+        field(
+            "clientesReferencia",
+            "Clientes de referencia",
+            "textarea",
+            false,
+            None,
+        ),
         field("gtm", "Go-to-market", "richtext", false, None),
         field("prerrequisitos", "Prerrequisitos", "richtext", false, None),
-        array_field("procesos", "Procesos", "Proceso", vec![
-            field("value", "Proceso", "textarea", true, None),
-        ], None),
-        array_field("resultados", "Resultados", "Resultado", vec![
-            field("value", "Resultado", "textarea", true, None),
-        ], None),
+        array_field(
+            "procesos",
+            "Procesos",
+            "Proceso",
+            vec![field("value", "Proceso", "textarea", true, None)],
+            None,
+        ),
+        array_field(
+            "resultados",
+            "Resultados",
+            "Resultado",
+            vec![field("value", "Resultado", "textarea", true, None)],
+            None,
+        ),
         field("flexibilidadIA", "Flexibilidad IA", "richtext", false, None),
         field("soberania", "Soberanía", "richtext", false, None),
         field("herramientas", "Herramientas", "richtext", false, None),
         field("insumos", "Insumos", "richtext", false, None),
         field("alcance", "Alcance", "richtext", false, None),
         field("framework", "Framework", "richtext", false, None),
-        field("cronogramaRiesgos", "Cronograma y riesgos", "richtext", false, None),
+        field(
+            "cronogramaRiesgos",
+            "Cronograma y riesgos",
+            "richtext",
+            false,
+            None,
+        ),
         field("servicios", "Servicios", "richtext", false, None),
         field("licenciamiento", "Licenciamiento", "richtext", false, None),
         field("contenidoExtra", "Contenido extra", "richtext", false, None),
@@ -637,16 +874,30 @@ fn almaviva_schema() -> Vec<FieldDef> {
             video_ref_fields(),
             None,
         ),
-        array_field("industrias", "Industrias", "Industria", vec![
-            field("value", "Industria", "text", true, None),
-        ], None),
-        array_field("autores", "Autores", "Autor", vec![
-            field("nombre", "Nombre", "text", true, None),
-            field("rol", "Rol", "text", false, None),
-        ], None),
-        array_field("clientes", "Clientes", "Cliente", vec![
-            field("value", "Cliente", "text", true, None),
-        ], None),
+        array_field(
+            "industrias",
+            "Industrias",
+            "Industria",
+            vec![field("value", "Industria", "text", true, None)],
+            None,
+        ),
+        array_field(
+            "autores",
+            "Autores",
+            "Autor",
+            vec![
+                field("nombre", "Nombre", "text", true, None),
+                field("rol", "Rol", "text", false, None),
+            ],
+            None,
+        ),
+        array_field(
+            "clientes",
+            "Clientes",
+            "Cliente",
+            vec![field("value", "Cliente", "text", true, None)],
+            None,
+        ),
         mediciones_array(),
     ]
 }
@@ -655,10 +906,7 @@ fn almaviva_schema() -> Vec<FieldDef> {
 // XMS
 // ============================================================================
 fn xms_schema() -> Vec<FieldDef> {
-    let tipo_agente_opts = vec![
-        opt("especifico", "Específico"),
-        opt("general", "General"),
-    ];
+    let tipo_agente_opts = vec![opt("especifico", "Específico"), opt("general", "General")];
 
     vec![
         field("slug", "Slug (URL)", "slug", true, None),
@@ -672,19 +920,35 @@ fn xms_schema() -> Vec<FieldDef> {
         field("tiempo", "Tiempo", "text", false, None),
         field("objetivo", "Objetivo", "textarea", false, None),
         field("descripcion", "Descripción", "textarea", true, None),
-        array_field("funcionalidades", "Funcionalidades", "Funcionalidad", vec![
-            field("value", "Funcionalidad", "text", true, None),
-        ], None),
+        array_field(
+            "funcionalidades",
+            "Funcionalidades",
+            "Funcionalidad",
+            vec![field("value", "Funcionalidad", "text", true, None)],
+            None,
+        ),
         field("flujo", "Flujo", "text", false, None),
-        array_field("beneficios", "Beneficios", "Beneficio", vec![
-            field("value", "Beneficio", "text", true, None),
-        ], None),
-        array_field("stack", "Stack", "Tecnología", vec![
-            field("value", "Tecnología", "text", true, None),
-        ], None),
-        array_field("integraciones", "Integraciones", "Integración", vec![
-            field("value", "Integración", "text", true, None),
-        ], None),
+        array_field(
+            "beneficios",
+            "Beneficios",
+            "Beneficio",
+            vec![field("value", "Beneficio", "text", true, None)],
+            None,
+        ),
+        array_field(
+            "stack",
+            "Stack",
+            "Tecnología",
+            vec![field("value", "Tecnología", "text", true, None)],
+            None,
+        ),
+        array_field(
+            "integraciones",
+            "Integraciones",
+            "Integración",
+            vec![field("value", "Integración", "text", true, None)],
+            None,
+        ),
         mediciones_array(),
     ]
 }

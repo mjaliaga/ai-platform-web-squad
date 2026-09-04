@@ -60,7 +60,7 @@ pub async fn list_versions(
 ) -> Result<Json<Vec<VersionWithStats>>, Response> {
     let mut sql = String::from(
         "SELECT id, name, project_id, description, release_date, status, created_at \
-         FROM versions WHERE deleted_at IS NULL"
+         FROM versions WHERE deleted_at IS NULL",
     );
     let mut binds: Vec<String> = Vec::new();
 
@@ -74,7 +74,10 @@ pub async fn list_versions(
     for b in &binds {
         q = q.bind(b);
     }
-    let versions = q.fetch_all(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let versions = q
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let mut result = Vec::with_capacity(versions.len());
     for version in versions {
@@ -82,7 +85,7 @@ pub async fn list_versions(
             "SELECT \
              COALESCE(SUM(CASE WHEN relationship = 'fix' THEN 1 ELSE 0 END), 0), \
              COALESCE(SUM(CASE WHEN relationship = 'affects' THEN 1 ELSE 0 END), 0) \
-             FROM task_versions WHERE version_id = ?"
+             FROM task_versions WHERE version_id = ?",
         )
         .bind(&version.id)
         .fetch_one(&state.db)
@@ -109,7 +112,7 @@ pub async fn create_version(
     let id = Uuid::new_v4().to_string();
     sqlx::query(
         "INSERT INTO versions (id, name, project_id, description, release_date) \
-         VALUES (?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&payload.name)
@@ -122,7 +125,7 @@ pub async fn create_version(
 
     let version = sqlx::query_as::<_, Version>(
         "SELECT id, name, project_id, description, release_date, status, created_at \
-         FROM versions WHERE id = ?"
+         FROM versions WHERE id = ?",
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -139,7 +142,7 @@ pub async fn get_version(
 ) -> Result<Json<VersionWithStats>, Response> {
     let version = sqlx::query_as::<_, Version>(
         "SELECT id, name, project_id, description, release_date, status, created_at \
-         FROM versions WHERE id = ? AND deleted_at IS NULL"
+         FROM versions WHERE id = ? AND deleted_at IS NULL",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -148,14 +151,19 @@ pub async fn get_version(
 
     let version = match version {
         Some(v) => v,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Versión no encontrada".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Versión no encontrada".to_string(),
+            ))
+        }
     };
 
     let stats: (i64, i64) = sqlx::query_as(
         "SELECT \
          COALESCE(SUM(CASE WHEN relationship = 'fix' THEN 1 ELSE 0 END), 0), \
          COALESCE(SUM(CASE WHEN relationship = 'affects' THEN 1 ELSE 0 END), 0) \
-         FROM task_versions WHERE version_id = ?"
+         FROM task_versions WHERE version_id = ?",
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -193,28 +201,48 @@ pub async fn update_version(
     if let Some(status) = &payload.status {
         const STATUSES: &[&str] = &["unreleased", "released", "archived"];
         if !STATUSES.contains(&status.as_str()) {
-            return Err(error_response(StatusCode::BAD_REQUEST, format!("Status inválido '{}'. Debe ser: {}", status, STATUSES.join(", "))));
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "Status inválido '{}'. Debe ser: {}",
+                    status,
+                    STATUSES.join(", ")
+                ),
+            ));
         }
         sets.push("status = ?");
         bindings.push(serde_json::json!(status));
     }
 
     if sets.is_empty() {
-        return Err(error_response(StatusCode::BAD_REQUEST, "Sin cambios".to_string()));
+        return Err(error_response(
+            StatusCode::BAD_REQUEST,
+            "Sin cambios".to_string(),
+        ));
     }
 
     let sql = format!("UPDATE versions SET {} WHERE id = ?", sets.join(", "));
     let mut q = sqlx::query(&sql);
-    if let Some(name) = &payload.name { q = q.bind(name); }
-    if let Some(desc) = &payload.description { q = q.bind(desc); }
-    if let Some(release) = &payload.release_date { q = q.bind(release); }
-    if let Some(status) = &payload.status { q = q.bind(status); }
+    if let Some(name) = &payload.name {
+        q = q.bind(name);
+    }
+    if let Some(desc) = &payload.description {
+        q = q.bind(desc);
+    }
+    if let Some(release) = &payload.release_date {
+        q = q.bind(release);
+    }
+    if let Some(status) = &payload.status {
+        q = q.bind(status);
+    }
     q = q.bind(&id);
-    q.execute(&state.db).await.map_err(|e| internal_error(&format!("db error: {e}")))?;
+    q.execute(&state.db)
+        .await
+        .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let version = sqlx::query_as::<_, Version>(
         "SELECT id, name, project_id, description, release_date, status, created_at \
-         FROM versions WHERE id = ?"
+         FROM versions WHERE id = ?",
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -252,11 +280,14 @@ pub async fn assign_version(
 ) -> Result<StatusCode, Response> {
     let relationship = payload.relationship.unwrap_or_else(|| "fix".to_string());
     if relationship != "fix" && relationship != "affects" {
-        return Err(error_response(StatusCode::BAD_REQUEST, "relationship debe ser 'fix' o 'affects'".to_string()));
+        return Err(error_response(
+            StatusCode::BAD_REQUEST,
+            "relationship debe ser 'fix' o 'affects'".to_string(),
+        ));
     }
 
     sqlx::query(
-        "INSERT OR IGNORE INTO task_versions (task_id, version_id, relationship) VALUES (?, ?, ?)"
+        "INSERT OR IGNORE INTO task_versions (task_id, version_id, relationship) VALUES (?, ?, ?)",
     )
     .bind(&payload.task_id)
     .bind(&id)
@@ -284,11 +315,19 @@ pub async fn unassign_version(
 }
 
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{delete, get, patch, post}};
+    use axum::{
+        middleware,
+        routing::{delete, get, post},
+    };
 
     axum::Router::new()
         .route("/api/versions", get(list_versions).post(create_version))
-        .route("/api/versions/:id", get(get_version).patch(update_version).delete(delete_version))
+        .route(
+            "/api/versions/:id",
+            get(get_version)
+                .patch(update_version)
+                .delete(delete_version),
+        )
         .route("/api/versions/:id/assign", post(assign_version))
         .route("/api/versions/:id/tasks/:task_id", delete(unassign_version))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth))

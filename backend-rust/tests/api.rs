@@ -15,7 +15,8 @@ static ENV_SET: std::sync::Once = std::sync::Once::new();
 
 async fn setup() -> (axum::Router, String) {
     let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-    let upload_dir = std::env::temp_dir().join(format!("tivit_test_uploads_{}", std::process::id()));
+    let upload_dir =
+        std::env::temp_dir().join(format!("tivit_test_uploads_{}", std::process::id()));
     std::fs::create_dir_all(&upload_dir).ok();
 
     ENV_SET.call_once(|| {
@@ -26,11 +27,7 @@ async fn setup() -> (axum::Router, String) {
         tivit_portal_backend::middleware::csrf::disable_csrf_for_testing();
     });
 
-    let db_path = std::env::temp_dir().join(format!(
-        "tivit_test_{}_{}.db",
-        std::process::id(),
-        n
-    ));
+    let db_path = std::env::temp_dir().join(format!("tivit_test_{}_{}.db", std::process::id(), n));
     let _ = std::fs::remove_file(&db_path);
     let _ = std::fs::remove_file(format!("{}-wal", db_path.display()));
     let _ = std::fs::remove_file(format!("{}-shm", db_path.display()));
@@ -106,10 +103,7 @@ async fn login(router: &axum::Router, email: &str, password: &str) -> String {
         .unwrap()
         .to_string();
 
-    format!(
-        "{}; csrf_token={}",
-        auth_cookie, TEST_CSRF_TOKEN
-    )
+    format!("{}; csrf_token={}", auth_cookie, TEST_CSRF_TOKEN)
 }
 
 fn authed_get(uri: &str, token: &str) -> Request<Body> {
@@ -121,7 +115,11 @@ fn authed_get(uri: &str, token: &str) -> Request<Body> {
         .unwrap()
 }
 
-async fn get_json(router: &axum::Router, uri: &str, token: &str) -> (StatusCode, serde_json::Value) {
+async fn get_json(
+    router: &axum::Router,
+    uri: &str,
+    token: &str,
+) -> (StatusCode, serde_json::Value) {
     let (status, bytes) = send(router, authed_get(uri, token)).await;
     (status, json_bytes(&bytes))
 }
@@ -222,7 +220,7 @@ async fn comentarios_y_subtareas() {
         &router,
         Request::builder()
             .method("POST")
-            .uri(&format!("/api/tasks/{id}/comments"))
+            .uri(format!("/api/tasks/{id}/comments"))
             .header("cookie", &token)
             .header("content-type", "application/json")
             .body(Body::from(r#"{"body":"Primer comentario"}"#))
@@ -239,14 +237,18 @@ async fn comentarios_y_subtareas() {
         &router,
         Request::builder()
             .method("POST")
-            .uri(&format!("/api/tasks/{id}/comments"))
+            .uri(format!("/api/tasks/{id}/comments"))
             .header("cookie", &token)
             .header("content-type", "application/json")
             .body(Body::from(r#"{"body":""}"#))
             .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "comentario vacío debe fallar");
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "comentario vacío debe fallar"
+    );
 
     // comentar en tarea inexistente → 404
     let (status, _) = send(
@@ -269,7 +271,7 @@ async fn comentarios_y_subtareas() {
         &router,
         Request::builder()
             .method("PATCH")
-            .uri(&format!("/api/subtasks/{sub_id}/toggle"))
+            .uri(format!("/api/subtasks/{sub_id}/toggle"))
             .header("cookie", &token)
             .header("content-type", "application/json")
             .body(Body::from(r#"{"completed":true}"#))
@@ -317,13 +319,17 @@ async fn sprints() {
             .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "fin anterior a inicio debe fallar");
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "fin anterior a inicio debe fallar"
+    );
 
     let (status, _) = send(
         &router,
         Request::builder()
             .method("POST")
-            .uri(&format!("/api/sprints/{sprint_id}/activate"))
+            .uri(format!("/api/sprints/{sprint_id}/activate"))
             .header("cookie", &token)
             .body(Body::empty())
             .unwrap(),
@@ -331,7 +337,8 @@ async fn sprints() {
     .await;
     assert_eq!(status, StatusCode::OK);
 
-    let (status, json) = get_json(&router, &format!("/api/sprints/{sprint_id}/board"), &token).await;
+    let (status, json) =
+        get_json(&router, &format!("/api/sprints/{sprint_id}/board"), &token).await;
     assert_eq!(status, StatusCode::OK);
     assert!(json["columns"].as_array().unwrap().len() >= 4);
 
@@ -354,9 +361,12 @@ async fn adjuntos_upload_y_download() {
         &router,
         Request::builder()
             .method("POST")
-            .uri(&format!("/api/tasks/{task_id}/attachments"))
+            .uri(format!("/api/tasks/{task_id}/attachments"))
             .header("cookie", &token)
-            .header("content-type", format!("multipart/form-data; boundary={boundary}"))
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
             .body(Body::from(body.clone()))
             .unwrap(),
     )
@@ -372,14 +382,21 @@ async fn adjuntos_upload_y_download() {
             .method("POST")
             .uri("/api/tasks/inexistente/attachments")
             .header("cookie", &token)
-            .header("content-type", format!("multipart/form-data; boundary={boundary}"))
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
             .body(Body::from(body.clone()))
             .unwrap(),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
-    let (status, bytes) = send(&router, authed_get(&format!("/api/attachments/{att_id}"), &token)).await;
+    let (status, bytes) = send(
+        &router,
+        authed_get(&format!("/api/attachments/{att_id}"), &token),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK, "descarga debería funcionar");
     assert_eq!(bytes.as_ref(), b"Hola mundo");
 
@@ -405,7 +422,11 @@ async fn validacion_y_errores() {
             .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "estado inválido debe fallar");
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "estado inválido debe fallar"
+    );
 
     // assignee inexistente
     let (status, _) = send(
@@ -415,34 +436,40 @@ async fn validacion_y_errores() {
             .uri("/api/tasks")
             .header("cookie", &token)
             .header("content-type", "application/json")
-            .body(Body::from(
-                r#"{"title":"Y","assignee_id":"no-existe"}"#,
-            ))
+            .body(Body::from(r#"{"title":"Y","assignee_id":"no-existe"}"#))
             .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "assignee inexistente debe fallar");
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "assignee inexistente debe fallar"
+    );
 
     // horas negativas
     let (status, _) = send(
         &router,
         Request::builder()
             .method("POST")
-            .uri(&format!("/api/tasks/{task_id}/time"))
+            .uri(format!("/api/tasks/{task_id}/time"))
             .header("cookie", &token)
             .header("content-type", "application/json")
             .body(Body::from(r#"{"hours":-5}"#))
             .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "horas negativas deben fallar");
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "horas negativas deben fallar"
+    );
 
     // horas válidas
     let (status, _) = send(
         &router,
         Request::builder()
             .method("POST")
-            .uri(&format!("/api/tasks/{task_id}/time"))
+            .uri(format!("/api/tasks/{task_id}/time"))
             .header("cookie", &token)
             .header("content-type", "application/json")
             .body(Body::from(r#"{"hours":2.5}"#))
@@ -456,7 +483,7 @@ async fn validacion_y_errores() {
         &router,
         Request::builder()
             .method("POST")
-            .uri(&format!("/api/tasks/{task_id}/dependencies"))
+            .uri(format!("/api/tasks/{task_id}/dependencies"))
             .header("cookie", &token)
             .header("content-type", "application/json")
             .body(Body::from(r#"{"depends_on_id":"no-existe"}"#))
@@ -469,9 +496,7 @@ async fn validacion_y_errores() {
 }
 
 async fn create_member(router: &axum::Router, admin_token: &str, email: &str) {
-    let body = format!(
-        r#"{{"name":"Miembro","email":"{email}","password":"member123"}}"#
-    );
+    let body = format!(r#"{{"name":"Miembro","email":"{email}","password":"member123"}}"#);
     let (status, _) = send(
         router,
         Request::builder()
@@ -534,7 +559,12 @@ async fn anuncios_y_wiki() {
     // anuncio vacío falla
     let (status, _) = send(
         &router,
-        json_req("POST", "/api/announcements", &token, r#"{"title":"","body":"x"}"#),
+        json_req(
+            "POST",
+            "/api/announcements",
+            &token,
+            r#"{"title":"","body":"x"}"#,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -542,7 +572,12 @@ async fn anuncios_y_wiki() {
     // wiki
     let (status, bytes) = send(
         &router,
-        json_req("POST", "/api/wiki", &token, r#"{"title":"Guía de inicio","body":"Contenido"}"#),
+        json_req(
+            "POST",
+            "/api/wiki",
+            &token,
+            r#"{"title":"Guía de inicio","body":"Contenido"}"#,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
@@ -557,7 +592,12 @@ async fn anuncios_y_wiki() {
     // slug duplicado → auto-único
     let (status, bytes) = send(
         &router,
-        json_req("POST", "/api/wiki", &token, r#"{"title":"Guía de inicio","body":"Otra"}"#),
+        json_req(
+            "POST",
+            "/api/wiki",
+            &token,
+            r#"{"title":"Guía de inicio","body":"Otra"}"#,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
@@ -569,14 +609,24 @@ async fn anuncios_y_wiki() {
 
     let (status, _) = send(
         &router,
-        json_req("PATCH", &format!("/api/announcements/{ann_id}"), &member_token, r#"{"title":"Hack"}"#),
+        json_req(
+            "PATCH",
+            &format!("/api/announcements/{ann_id}"),
+            &member_token,
+            r#"{"title":"Hack"}"#,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 
     let (status, _) = send(
         &router,
-        json_req("PATCH", &format!("/api/wiki/{slug}"), &member_token, r#"{"body":"hack"}"#),
+        json_req(
+            "PATCH",
+            &format!("/api/wiki/{slug}"),
+            &member_token,
+            r#"{"body":"hack"}"#,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
@@ -585,7 +635,7 @@ async fn anuncios_y_wiki() {
         &router,
         Request::builder()
             .method("DELETE")
-            .uri(&format!("/api/wiki/{slug}"))
+            .uri(format!("/api/wiki/{slug}"))
             .header("cookie", &member_token)
             .body(Body::empty())
             .unwrap(),
@@ -596,7 +646,12 @@ async fn anuncios_y_wiki() {
     // admin edita y borra
     let (status, json) = send(
         &router,
-        json_req("PATCH", &format!("/api/wiki/{slug}"), &token, r#"{"title":"Guía actualizada"}"#),
+        json_req(
+            "PATCH",
+            &format!("/api/wiki/{slug}"),
+            &token,
+            r#"{"title":"Guía actualizada"}"#,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -606,7 +661,7 @@ async fn anuncios_y_wiki() {
         &router,
         Request::builder()
             .method("DELETE")
-            .uri(&format!("/api/wiki/{slug}"))
+            .uri(format!("/api/wiki/{slug}"))
             .header("cookie", &token)
             .body(Body::empty())
             .unwrap(),
@@ -624,7 +679,12 @@ async fn perfil_y_password() {
 
     let (status, json) = send(
         &router,
-        json_req("PATCH", "/api/auth/profile", &token, r#"{"name":"Nuevo Nombre"}"#),
+        json_req(
+            "PATCH",
+            "/api/auth/profile",
+            &token,
+            r#"{"name":"Nuevo Nombre"}"#,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -681,7 +741,11 @@ async fn perfil_y_password() {
             .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::UNAUTHORIZED, "login con password viejo debe fallar");
+    assert_eq!(
+        status,
+        StatusCode::UNAUTHORIZED,
+        "login con password viejo debe fallar"
+    );
 
     let (status, _) = send(
         &router,
@@ -695,7 +759,11 @@ async fn perfil_y_password() {
             .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "login con password nuevo debe funcionar");
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "login con password nuevo debe funcionar"
+    );
 
     let _ = std::fs::remove_file(&db_path);
 }
@@ -724,7 +792,12 @@ async fn usuarios_admin() {
     let member_token = login(&router, "gest@tivit.com", "member123").await;
     let (status, _) = send(
         &router,
-        json_req("PATCH", &format!("/api/users/{member_id}"), &member_token, r#"{"role":"admin"}"#),
+        json_req(
+            "PATCH",
+            &format!("/api/users/{member_id}"),
+            &member_token,
+            r#"{"role":"admin"}"#,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
@@ -732,7 +805,12 @@ async fn usuarios_admin() {
     // admin desactiva al member
     let (status, json) = send(
         &router,
-        json_req("PATCH", &format!("/api/users/{member_id}"), &token, r#"{"active":0}"#),
+        json_req(
+            "PATCH",
+            &format!("/api/users/{member_id}"),
+            &token,
+            r#"{"active":0}"#,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -751,12 +829,21 @@ async fn usuarios_admin() {
             .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "usuario desactivado no puede loguearse");
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "usuario desactivado no puede loguearse"
+    );
 
     // admin cambia rol a admin
     let (status, json) = send(
         &router,
-        json_req("PATCH", &format!("/api/users/{member_id}"), &token, r#"{"role":"admin","active":1}"#),
+        json_req(
+            "PATCH",
+            &format!("/api/users/{member_id}"),
+            &token,
+            r#"{"role":"admin","active":1}"#,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -770,7 +857,7 @@ async fn usuarios_admin() {
         &router,
         Request::builder()
             .method("DELETE")
-            .uri(&format!("/api/tasks/{task_id}"))
+            .uri(format!("/api/tasks/{task_id}"))
             .header("cookie", &member_token)
             .body(Body::empty())
             .unwrap(),
@@ -836,27 +923,35 @@ async fn rbac_usuarios() {
             .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "member no puede crear usuarios");
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "member no puede crear usuarios"
+    );
 
     // member no puede borrar tareas
     let (status, _) = send(
         &router,
         Request::builder()
             .method("DELETE")
-            .uri(&format!("/api/tasks/{task_id}"))
+            .uri(format!("/api/tasks/{task_id}"))
             .header("cookie", &member_token)
             .body(Body::empty())
             .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "member no puede borrar tareas");
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "member no puede borrar tareas"
+    );
 
     // admin sí puede borrar tareas
     let (status, _) = send(
         &router,
         Request::builder()
             .method("DELETE")
-            .uri(&format!("/api/tasks/{task_id}"))
+            .uri(format!("/api/tasks/{task_id}"))
             .header("cookie", &token)
             .body(Body::empty())
             .unwrap(),

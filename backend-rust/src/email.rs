@@ -16,8 +16,10 @@ pub async fn send_brevo_email(to_email: &str, to_name: &str, subject: &str, html
         }
     };
 
-    let sender_email = std::env::var("BREVO_SENDER_EMAIL").unwrap_or_else(|_| "noreply@tivit.com".to_string());
-    let sender_name = std::env::var("BREVO_SENDER_NAME").unwrap_or_else(|_| "TIVIT Portal".to_string());
+    let sender_email =
+        std::env::var("BREVO_SENDER_EMAIL").unwrap_or_else(|_| "noreply@tivit.com".to_string());
+    let sender_name =
+        std::env::var("BREVO_SENDER_NAME").unwrap_or_else(|_| "TIVIT Portal".to_string());
 
     let payload = json!({
         "sender": { "name": sender_name, "email": sender_email },
@@ -27,7 +29,10 @@ pub async fn send_brevo_email(to_email: &str, to_name: &str, subject: &str, html
     });
 
     // Cliente reqwest con timeout corto para no bloquear request principal
-    let client = match reqwest::Client::builder().timeout(std::time::Duration::from_secs(10)).build() {
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+    {
         Ok(c) => c,
         Err(e) => {
             tracing::warn!(target: "email", error = %e, "No se pudo crear cliente reqwest");
@@ -60,6 +65,9 @@ pub async fn send_brevo_email(to_email: &str, to_name: &str, subject: &str, html
 }
 
 /// Helper para notificar ticket (in-app + email)
+// CI: los 9 parámetros son campos del dominio del ticket; agruparlos en struct
+// sería más invasivo que el beneficio. Se permite el lint aquí.
+#[allow(clippy::too_many_arguments)]
 pub async fn notify_ticket(
     db: &sqlx::SqlitePool,
     assignee_id: &str,
@@ -73,8 +81,14 @@ pub async fn notify_ticket(
 ) {
     // In-app notification (reusa tabla notifications)
     let message = match action {
-        "created" => format!("Nuevo ticket {} (Nivel {}) para proyecto {}: {}", ticket_code, level, project_name, ticket_title),
-        "escalated" => format!("Ticket {} escalado a Nivel {}: {}", ticket_code, level, ticket_title),
+        "created" => format!(
+            "Nuevo ticket {} (Nivel {}) para proyecto {}: {}",
+            ticket_code, level, project_name, ticket_title
+        ),
+        "escalated" => format!(
+            "Ticket {} escalado a Nivel {}: {}",
+            ticket_code, level, ticket_title
+        ),
         "status_changed" => format!("Ticket {} cambió de estado: {}", ticket_code, ticket_title),
         _ => format!("Ticket {}: {}", ticket_code, ticket_title),
     };
@@ -92,7 +106,7 @@ pub async fn notify_ticket(
     // Email via Brevo al assignee
     // Buscar datos del assignee
     let assignee = sqlx::query_as::<_, (String, String, String)>(
-        "SELECT id, name, email FROM users WHERE id = ? AND deleted_at IS NULL"
+        "SELECT id, name, email FROM users WHERE id = ? AND deleted_at IS NULL",
     )
     .bind(assignee_id)
     .fetch_optional(db)
@@ -102,8 +116,14 @@ pub async fn notify_ticket(
 
     if let Some((_, name, email)) = assignee {
         let subject = match action {
-            "created" => format!("[Ticket {}] Nuevo ticket Nivel {} - {}", ticket_code, level, project_name),
-            "escalated" => format!("[Ticket {}] Escalado a Nivel {} - {}", ticket_code, level, project_name),
+            "created" => format!(
+                "[Ticket {}] Nuevo ticket Nivel {} - {}",
+                ticket_code, level, project_name
+            ),
+            "escalated" => format!(
+                "[Ticket {}] Escalado a Nivel {} - {}",
+                ticket_code, level, project_name
+            ),
             _ => format!("[Ticket {}] {}", ticket_code, ticket_title),
         };
         let html = format!(
@@ -116,7 +136,12 @@ pub async fn notify_ticket(
             <p><strong>Acción:</strong> {}</p>
             <p><a href="{}/portal/tickets/{}">Ver ticket en el portal</a></p>
             </body></html>"#,
-            subject, project_name, ticket_title, ticket_code, level, action,
+            subject,
+            project_name,
+            ticket_title,
+            ticket_code,
+            level,
+            action,
             std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:8080".to_string()),
             ticket_id
         );

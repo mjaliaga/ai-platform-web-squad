@@ -1,8 +1,13 @@
-use std::sync::Arc;
+// CI (clippy -D warnings): `axum::http::Response<Body>` pesa >128 bytes y todas las
+// funciones `validate_*` lo devuelven como variante `Err`. Boxearlo implicaría
+// refactorizar decenas de handlers; se permite el lint a nivel crate hasta ese refactor.
+#![allow(clippy::result_large_err)]
+
 use axum::extract::DefaultBodyLimit;
 use axum::http::{header::HeaderValue, Method};
 use axum::Router;
 use sqlx::SqlitePool;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
 pub mod audit;
@@ -54,7 +59,10 @@ pub async fn build_router(state: Arc<AppState>) -> Router {
         .merge(routes::tickets::router(state.clone()))
         .merge(content::routes::router(state.clone()))
         .merge(content::media::router(state.clone()))
-        .layer(axum::middleware::from_fn_with_state(state.clone(), csrf_protect));
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            csrf_protect,
+        ));
 
     let cors_origins: Vec<String> = std::env::var("CORS_ORIGIN")
         .unwrap_or_else(|_| "http://localhost:8080".to_string())
@@ -70,10 +78,8 @@ pub async fn build_router(state: Arc<AppState>) -> Router {
         // No wildcard — se deniega por defecto. Usar capa vacía que rechaza orígenes no whitelisteados.
         CorsLayer::new()
     } else {
-        let origins: Vec<HeaderValue> = cors_origins
-            .iter()
-            .filter_map(|o| o.parse().ok())
-            .collect();
+        let origins: Vec<HeaderValue> =
+            cors_origins.iter().filter_map(|o| o.parse().ok()).collect();
         if origins.is_empty() {
             tracing::warn!("CORS_ORIGIN no contiene orígenes válidos — denegando cross-origin");
             CorsLayer::new()

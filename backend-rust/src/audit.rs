@@ -137,11 +137,7 @@ pub async fn log_login_failure(
 }
 
 pub async fn log_logout(pool: &SqlitePool, user_id: &str) {
-    log_audit_event(
-        pool,
-        AuditEvent::new("logout").with_user(user_id),
-    )
-    .await;
+    log_audit_event(pool, AuditEvent::new("logout").with_user(user_id)).await;
 }
 
 pub async fn log_role_change(
@@ -160,11 +156,7 @@ pub async fn log_role_change(
     .await;
 }
 
-pub async fn log_user_deactivated(
-    pool: &SqlitePool,
-    actor: &Claims,
-    target_user_id: &str,
-) {
+pub async fn log_user_deactivated(pool: &SqlitePool, actor: &Claims, target_user_id: &str) {
     log_audit_event(
         pool,
         AuditEvent::new("user_deactivated")
@@ -175,11 +167,7 @@ pub async fn log_user_deactivated(
 }
 
 pub async fn log_password_change(pool: &SqlitePool, user_id: &str) {
-    log_audit_event(
-        pool,
-        AuditEvent::new("password_change").with_user(user_id),
-    )
-    .await;
+    log_audit_event(pool, AuditEvent::new("password_change").with_user(user_id)).await;
 }
 
 pub use crate::utils::{extract_ip, extract_user_agent};

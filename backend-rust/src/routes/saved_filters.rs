@@ -66,7 +66,7 @@ pub async fn list_saved_filters(
 ) -> Result<Json<Vec<SavedFilter>>, Response> {
     let filters = sqlx::query_as::<_, SavedFilter>(
         "SELECT id, user_id, name, query, is_shared, project_id, created_at, updated_at \
-         FROM saved_filters WHERE user_id = ? OR is_shared = 1 ORDER BY updated_at DESC"
+         FROM saved_filters WHERE user_id = ? OR is_shared = 1 ORDER BY updated_at DESC",
     )
     .bind(&claims.sub)
     .fetch_all(&state.db)
@@ -85,17 +85,19 @@ pub async fn create_saved_filter(
     validate_required("query", &payload.query, 1000)?;
 
     // Validate the JQL query
-    jql::parse_jql(&payload.query).map_err(|e| error_response(
-        StatusCode::BAD_REQUEST,
-        format!("Query inválida: {}", e.message),
-    ))?;
+    jql::parse_jql(&payload.query).map_err(|e| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            format!("Query inválida: {}", e.message),
+        )
+    })?;
 
     let id = Uuid::new_v4().to_string();
     let is_shared = payload.is_shared.unwrap_or(false) as i32;
 
     sqlx::query(
         "INSERT INTO saved_filters (id, user_id, name, query, is_shared, project_id) \
-         VALUES (?, ?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&claims.sub)
@@ -109,7 +111,7 @@ pub async fn create_saved_filter(
 
     let filter = sqlx::query_as::<_, SavedFilter>(
         "SELECT id, user_id, name, query, is_shared, project_id, created_at, updated_at \
-         FROM saved_filters WHERE id = ?"
+         FROM saved_filters WHERE id = ?",
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -126,29 +128,41 @@ pub async fn update_saved_filter(
     Json(payload): Json<UpdateSavedFilterRequest>,
 ) -> Result<Json<SavedFilter>, Response> {
     // Verify ownership
-    let existing: Option<(String,)> = sqlx::query_as(
-        "SELECT user_id FROM saved_filters WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let existing: Option<(String,)> =
+        sqlx::query_as("SELECT user_id FROM saved_filters WHERE id = ?")
+            .bind(&id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     match existing {
         Some((owner,)) if owner == claims.sub => {}
-        Some(_) => return Err(error_response(StatusCode::FORBIDDEN, "No autorizado".to_string())),
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Filtro no encontrado".to_string())),
+        Some(_) => {
+            return Err(error_response(
+                StatusCode::FORBIDDEN,
+                "No autorizado".to_string(),
+            ))
+        }
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Filtro no encontrado".to_string(),
+            ))
+        }
     }
 
     // Validate new query if provided
     if let Some(q) = &payload.query {
-        jql::parse_jql(q).map_err(|e| error_response(
-            StatusCode::BAD_REQUEST,
-            format!("Query inválida: {}", e.message),
-        ))?;
+        jql::parse_jql(q).map_err(|e| {
+            error_response(
+                StatusCode::BAD_REQUEST,
+                format!("Query inválida: {}", e.message),
+            )
+        })?;
     }
 
-    let mut q_builder = sqlx::QueryBuilder::new("UPDATE saved_filters SET updated_at = datetime('now')");
+    let mut q_builder =
+        sqlx::QueryBuilder::new("UPDATE saved_filters SET updated_at = datetime('now')");
     if let Some(name) = &payload.name {
         q_builder.push(", name = ").push_bind(name);
     }
@@ -159,12 +173,15 @@ pub async fn update_saved_filter(
         q_builder.push(", is_shared = ").push_bind(shared as i32);
     }
     q_builder.push(" WHERE id = ").push_bind(&id);
-    q_builder.build().execute(&state.db).await
+    q_builder
+        .build()
+        .execute(&state.db)
+        .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let filter = sqlx::query_as::<_, SavedFilter>(
         "SELECT id, user_id, name, query, is_shared, project_id, created_at, updated_at \
-         FROM saved_filters WHERE id = ?"
+         FROM saved_filters WHERE id = ?",
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -180,18 +197,27 @@ pub async fn delete_saved_filter(
     Path(id): Path<String>,
 ) -> Result<StatusCode, Response> {
     // Verify ownership
-    let existing: Option<(String,)> = sqlx::query_as(
-        "SELECT user_id FROM saved_filters WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let existing: Option<(String,)> =
+        sqlx::query_as("SELECT user_id FROM saved_filters WHERE id = ?")
+            .bind(&id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     match existing {
         Some((owner,)) if owner == claims.sub => {}
-        Some(_) => return Err(error_response(StatusCode::FORBIDDEN, "No autorizado".to_string())),
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Filtro no encontrado".to_string())),
+        Some(_) => {
+            return Err(error_response(
+                StatusCode::FORBIDDEN,
+                "No autorizado".to_string(),
+            ))
+        }
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Filtro no encontrado".to_string(),
+            ))
+        }
     }
 
     sqlx::query("DELETE FROM saved_filters WHERE id = ?")
@@ -219,7 +245,12 @@ pub async fn execute_saved_filter(
 
     let (query, _) = match filter {
         Some(f) => f,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Filtro no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Filtro no encontrado".to_string(),
+            ))
+        }
     };
 
     execute_jql_query(&state, &claims, &query, 100, 0).await
@@ -269,10 +300,12 @@ async fn execute_jql_query(
     limit: i64,
     offset: i64,
 ) -> Result<Json<Vec<TaskSearchResult>>, Response> {
-    let parsed = jql::parse_jql(query).map_err(|e| error_response(
-        StatusCode::BAD_REQUEST,
-        format!("Query inválida: {}", e.message),
-    ))?;
+    let parsed = jql::parse_jql(query).map_err(|e| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            format!("Query inválida: {}", e.message),
+        )
+    })?;
 
     // Clamp limit/offset to safe bounds.
     let limit = limit.clamp(1, 500);
@@ -371,7 +404,8 @@ async fn execute_jql_query(
     }
 
     // ORDER BY: must use a whitelist of orderable columns.
-    let order_col = parsed.order_by
+    let order_col = parsed
+        .order_by
         .as_deref()
         .filter(|c| is_orderable_column(c))
         .unwrap_or("created_at");
@@ -379,15 +413,22 @@ async fn execute_jql_query(
         Some("DESC") => "DESC",
         _ => "ASC",
     };
-    qb.push(format!(" ORDER BY {} {} LIMIT ? OFFSET ?", order_col, dir));
+    // FIX CI E2E (execute devolvía 500): `QueryBuilder::push_bind` ya genera el
+    // placeholder; escribir `?` literales duplicaba parámetros (`LIMIT ? OFFSET ? ? ?`).
+    qb.push(format!(" ORDER BY {order_col} {dir} LIMIT "));
     qb.push_bind(limit);
+    qb.push(" OFFSET ");
     qb.push_bind(offset);
 
-    let rows = qb.build().fetch_all(&state.db).await
+    let rows = qb
+        .build()
+        .fetch_all(&state.db)
+        .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let results: Vec<TaskSearchResult> = rows.iter().map(|row| {
-        TaskSearchResult {
+    let results: Vec<TaskSearchResult> = rows
+        .iter()
+        .map(|row| TaskSearchResult {
             id: row.get("id"),
             code: row.get("code"),
             title: row.get("title"),
@@ -395,18 +436,27 @@ async fn execute_jql_query(
             priority: row.get("priority"),
             assignee_id: row.try_get("assignee_id").ok().flatten(),
             project_id: row.try_get("project_id").ok().flatten(),
-        }
-    }).collect();
+        })
+        .collect();
 
     Ok(Json(results))
 }
 
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{delete, get, patch, post}};
+    use axum::{
+        middleware,
+        routing::{get, patch, post},
+    };
 
     axum::Router::new()
-        .route("/api/saved-filters", get(list_saved_filters).post(create_saved_filter))
-        .route("/api/saved-filters/:id", patch(update_saved_filter).delete(delete_saved_filter))
+        .route(
+            "/api/saved-filters",
+            get(list_saved_filters).post(create_saved_filter),
+        )
+        .route(
+            "/api/saved-filters/:id",
+            patch(update_saved_filter).delete(delete_saved_filter),
+        )
         .route("/api/saved-filters/:id/execute", get(execute_saved_filter))
         .route("/api/tasks/search", post(search_tasks))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth))

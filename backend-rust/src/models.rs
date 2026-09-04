@@ -494,8 +494,8 @@ pub struct ContentItemOut {
 
 impl From<ContentItem> for ContentItemOut {
     fn from(item: ContentItem) -> Self {
-        let data: serde_json::Value = serde_json::from_str(&item.data)
-            .unwrap_or_else(|_| serde_json::json!({}));
+        let data: serde_json::Value =
+            serde_json::from_str(&item.data).unwrap_or_else(|_| serde_json::json!({}));
         Self {
             id: item.id,
             collection: item.collection,

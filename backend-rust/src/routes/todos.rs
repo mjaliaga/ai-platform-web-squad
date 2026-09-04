@@ -101,9 +101,17 @@ pub async fn get_todo_stats(
     let total = todos.len() as i32;
     let completed = todos.iter().filter(|t| t.completed).count() as i32;
     let active = total - completed;
-    let overdue = todos.iter().filter(|t| !t.completed && is_overdue(&t.due_date)).count() as i32;
+    let overdue = todos
+        .iter()
+        .filter(|t| !t.completed && is_overdue(&t.due_date))
+        .count() as i32;
 
-    Ok(Json(TodoStats { total, completed, active, overdue }))
+    Ok(Json(TodoStats {
+        total,
+        completed,
+        active,
+        overdue,
+    }))
 }
 
 pub async fn create_todo(
@@ -116,13 +124,12 @@ pub async fn create_todo(
     let priority = payload.priority.unwrap_or_else(|| "medium".to_string());
     let category = payload.category.unwrap_or_else(|| "general".to_string());
 
-    let max_position: Option<(i32,)> = sqlx::query_as(
-        "SELECT COALESCE(MAX(position), 0) FROM todos WHERE user_id = ?"
-    )
-    .bind(&claims.sub)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let max_position: Option<(i32,)> =
+        sqlx::query_as("SELECT COALESCE(MAX(position), 0) FROM todos WHERE user_id = ?")
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let position = max_position.map(|(p,)| p + 1).unwrap_or(0);
 
@@ -182,7 +189,12 @@ pub async fn update_todo(
 
     let existing = match existing {
         Some(t) => t,
-        None => return Err(error_response(StatusCode::NOT_FOUND, "Todo no encontrado".to_string())),
+        None => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Todo no encontrado".to_string(),
+            ))
+        }
     };
 
     let title = payload.title.unwrap_or(existing.title);
@@ -236,14 +248,17 @@ pub async fn delete_todo(
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     if result.rows_affected() == 0 {
-        return Err(error_response(StatusCode::NOT_FOUND, "Todo no encontrado".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Todo no encontrado".to_string(),
+        ));
     }
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Serialize)]
-struct ClearCompletedResponse {
+pub struct ClearCompletedResponse {
     deleted: i32,
 }
 
@@ -257,7 +272,9 @@ pub async fn clear_completed_todos(
         .await
         .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    Ok(Json(ClearCompletedResponse { deleted: result.rows_affected() as i32 }))
+    Ok(Json(ClearCompletedResponse {
+        deleted: result.rows_affected() as i32,
+    }))
 }
 
 pub async fn reorder_todos(

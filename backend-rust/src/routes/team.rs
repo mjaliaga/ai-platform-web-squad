@@ -10,9 +10,7 @@ use uuid::Uuid;
 
 use crate::middleware::auth::require_auth;
 use crate::models::{Claims, PublicUser};
-use crate::validation::{
-    error_response, internal_error, require_admin, validate_required,
-};
+use crate::validation::{error_response, internal_error, require_admin, validate_required};
 use crate::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -57,11 +55,13 @@ pub async fn list_announcements(
     Extension(claims): Extension<Claims>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<Vec<AnnouncementWithAuthor>>, Response> {
-    let limit: u32 = params.get("limit")
+    let limit: u32 = params
+        .get("limit")
         .and_then(|v| v.parse().ok())
         .unwrap_or(50)
         .min(200);
-    let offset: u32 = params.get("offset")
+    let offset: u32 = params
+        .get("offset")
         .and_then(|v| v.parse().ok())
         .unwrap_or(0);
 
@@ -69,7 +69,7 @@ pub async fn list_announcements(
         // Verify membership (admin bypasses)
         if claims.role != "admin" {
             let member: Option<(String,)> = sqlx::query_as(
-                "SELECT user_id FROM project_members WHERE project_id = ? AND user_id = ?"
+                "SELECT user_id FROM project_members WHERE project_id = ? AND user_id = ?",
             )
             .bind(pid)
             .bind(&claims.sub)
@@ -116,18 +116,21 @@ pub async fn list_announcements(
 
     let mut result = Vec::with_capacity(rows.len());
     for a in rows {
-        let author = authors.get(&a.author_id).cloned().unwrap_or_else(|| PublicUser {
-            id: a.author_id.clone(),
-            name: "Desconocido".to_string(),
-            email: String::new(),
-            role: "member".to_string(),
-            avatar_color: None,
-            active: 1,
-            created_at: None,
-            phone: None,
-            linkedin: None,
-            github: None,
-        });
+        let author = authors
+            .get(&a.author_id)
+            .cloned()
+            .unwrap_or_else(|| PublicUser {
+                id: a.author_id.clone(),
+                name: "Desconocido".to_string(),
+                email: String::new(),
+                role: "member".to_string(),
+                avatar_color: None,
+                active: 1,
+                created_at: None,
+                phone: None,
+                linkedin: None,
+                github: None,
+            });
         result.push(AnnouncementWithAuthor {
             announcement: a,
             author,
@@ -156,7 +159,11 @@ pub async fn create_announcement(
     validate_required("body", &payload.body, 10000)?;
 
     let id = Uuid::new_v4().to_string();
-    let pinned = if payload.pinned.unwrap_or(0) == 1 { 1 } else { 0 };
+    let pinned = if payload.pinned.unwrap_or(0) == 1 {
+        1
+    } else {
+        0
+    };
 
     sqlx::query(
         "INSERT INTO announcements (id, author_id, title, body, pinned, project_id) VALUES (?, ?, ?, ?, ?, ?)"
@@ -330,18 +337,21 @@ pub async fn list_wiki(
 
     let mut result = Vec::with_capacity(rows.len());
     for p in rows {
-        let author = authors.get(&p.author_id).cloned().unwrap_or_else(|| PublicUser {
-            id: p.author_id.clone(),
-            name: "Desconocido".to_string(),
-            email: String::new(),
-            role: "member".to_string(),
-            avatar_color: None,
-            active: 1,
-            created_at: None,
-            phone: None,
-            linkedin: None,
-            github: None,
-        });
+        let author = authors
+            .get(&p.author_id)
+            .cloned()
+            .unwrap_or_else(|| PublicUser {
+                id: p.author_id.clone(),
+                name: "Desconocido".to_string(),
+                email: String::new(),
+                role: "member".to_string(),
+                avatar_color: None,
+                active: 1,
+                created_at: None,
+                phone: None,
+                linkedin: None,
+                github: None,
+            });
         result.push(WikiPageWithAuthor { page: p, author });
     }
 
@@ -427,7 +437,11 @@ fn slugify(input: &str) -> String {
     }
 }
 
-async fn unique_slug(db: &sqlx::SqlitePool, base: &str, exclude_id: Option<&str>) -> Result<String, Response> {
+async fn unique_slug(
+    db: &sqlx::SqlitePool,
+    base: &str,
+    exclude_id: Option<&str>,
+) -> Result<String, Response> {
     let mut candidate = base.to_string();
     let mut n = 1;
     loop {
@@ -569,7 +583,9 @@ pub async fn update_wiki(
         bindings.push(serde_json::json!(body));
     }
     let new_slug = match &payload.slug {
-        Some(s) if !s.trim().is_empty() => Some(unique_slug(&state.db, &slugify(s), Some(&page.id)).await?),
+        Some(s) if !s.trim().is_empty() => {
+            Some(unique_slug(&state.db, &slugify(s), Some(&page.id)).await?)
+        }
         _ => None,
     };
     if let Some(s) = &new_slug {
@@ -640,7 +656,10 @@ pub fn router(state: Arc<AppState>) -> axum::Router {
     };
 
     axum::Router::new()
-        .route("/api/announcements", get(list_announcements).post(create_announcement))
+        .route(
+            "/api/announcements",
+            get(list_announcements).post(create_announcement),
+        )
         .route(
             "/api/announcements/:id",
             patch(update_announcement).delete(delete_announcement),

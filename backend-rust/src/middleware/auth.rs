@@ -44,14 +44,13 @@ pub async fn require_auth(
     .map_err(|_| StatusCode::UNAUTHORIZED)?
     .claims;
 
-    let active: Option<(i32, Option<String>)> = sqlx::query_as(
-        "SELECT active, deleted_at FROM users WHERE id = ?"
-    )
-        .bind(&claims.sub)
-        .fetch_optional(&state.db)
-        .await
-        .ok()
-        .flatten();
+    let active: Option<(i32, Option<String>)> =
+        sqlx::query_as("SELECT active, deleted_at FROM users WHERE id = ?")
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten();
 
     match active {
         Some((1, None)) => {}

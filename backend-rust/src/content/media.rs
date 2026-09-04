@@ -1,7 +1,7 @@
 use axum::{
     extract::{Extension, Multipart, Path, State},
     http::StatusCode,
-    response::{Response, Json},
+    response::{Json, Response},
 };
 use chrono::Utc;
 use std::sync::Arc;
@@ -50,13 +50,28 @@ fn sniff_mime(bytes: &[u8]) -> Option<&'static str> {
     if bytes.len() >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF {
         return Some("image/jpeg");
     }
-    if bytes.len() >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 {
+    if bytes.len() >= 4
+        && bytes[0] == 0x89
+        && bytes[1] == 0x50
+        && bytes[2] == 0x4E
+        && bytes[3] == 0x47
+    {
         return Some("image/png");
     }
-    if bytes.len() >= 4 && bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x38 {
+    if bytes.len() >= 4
+        && bytes[0] == 0x47
+        && bytes[1] == 0x49
+        && bytes[2] == 0x46
+        && bytes[3] == 0x38
+    {
         return Some("image/gif");
     }
-    if bytes.len() >= 4 && bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46 {
+    if bytes.len() >= 4
+        && bytes[0] == 0x25
+        && bytes[1] == 0x50
+        && bytes[2] == 0x44
+        && bytes[3] == 0x46
+    {
         return Some("application/pdf");
     }
     // WebP: RIFF....WEBP — no exigido por spec estricta pero evita falsos warn/no-match en webp reales
@@ -73,8 +88,7 @@ pub async fn upload_media(
 ) -> Result<(StatusCode, Json<ContentMediaOut>), Response> {
     require_admin_or_editor(&claims)?;
 
-    let upload_dir = std::env::var("MEDIA_DIR")
-        .unwrap_or_else(|_| "data/media".to_string());
+    let upload_dir = std::env::var("MEDIA_DIR").unwrap_or_else(|_| "data/media".to_string());
     std::fs::create_dir_all(&upload_dir).ok();
 
     let mut filename = String::new();
@@ -92,17 +106,15 @@ pub async fn upload_media(
             "file" => {
                 filename = field.file_name().unwrap_or("upload").to_string();
                 mime_type = field.content_type().map(|m| m.to_string());
-                let data = field
-                    .bytes()
-                    .await
-                    .map_err(|e| error_response(StatusCode::BAD_REQUEST, format!("read error: {e}")))?;
+                let data = field.bytes().await.map_err(|e| {
+                    error_response(StatusCode::BAD_REQUEST, format!("read error: {e}"))
+                })?;
                 bytes = Some(data.to_vec());
             }
             "alt" => {
-                let v = field
-                    .text()
-                    .await
-                    .map_err(|e| error_response(StatusCode::BAD_REQUEST, format!("read error: {e}")))?;
+                let v = field.text().await.map_err(|e| {
+                    error_response(StatusCode::BAD_REQUEST, format!("read error: {e}"))
+                })?;
                 alt_text = Some(v);
             }
             _ => {
@@ -111,8 +123,10 @@ pub async fn upload_media(
         }
     }
 
-    let bytes = bytes.ok_or_else(|| error_response(StatusCode::BAD_REQUEST, "Falta el archivo".to_string()))?;
-    let mime = mime_type.ok_or_else(|| error_response(StatusCode::BAD_REQUEST, "Falta mime type".to_string()))?;
+    let bytes = bytes
+        .ok_or_else(|| error_response(StatusCode::BAD_REQUEST, "Falta el archivo".to_string()))?;
+    let mime = mime_type
+        .ok_or_else(|| error_response(StatusCode::BAD_REQUEST, "Falta mime type".to_string()))?;
 
     // P1-2: Bloqueo SVG XSS — 415 Unsupported Media Type. Ni siquiera llega a classify.
     // Comparación case-insensitive + bloqueo por extensión como defensa en profundidad.
@@ -138,7 +152,9 @@ pub async fn upload_media(
     // Si el contenido empieza con `<svg` o `<?xml` y no es un binario reconocido, bloquear.
     if bytes.len() >= 4 {
         let head = &bytes[..bytes.len().min(512)];
-        let head_str = String::from_utf8_lossy(head).trim_start().to_ascii_lowercase();
+        let head_str = String::from_utf8_lossy(head)
+            .trim_start()
+            .to_ascii_lowercase();
         if head_str.starts_with("<svg") || head_str.starts_with("<?xml") {
             // Si el sniff no lo identificó como imagen válida binaria, es SVG textual
             if sniff_mime(&bytes).is_none() {
@@ -151,7 +167,10 @@ pub async fn upload_media(
     }
 
     if bytes.is_empty() {
-        return Err(error_response(StatusCode::BAD_REQUEST, "Archivo vacío".to_string()));
+        return Err(error_response(
+            StatusCode::BAD_REQUEST,
+            "Archivo vacío".to_string(),
+        ));
     }
     if bytes.len() > MAX_BYTES {
         return Err(error_response(
@@ -169,7 +188,10 @@ pub async fn upload_media(
                 // Mensaje debe contener exactamente "MIME no coincide" para validación automática
                 return Err(error_response(
                     StatusCode::BAD_REQUEST,
-                    format!("MIME no coincide: declarado {} pero contenido es {}", mime, detected),
+                    format!(
+                        "MIME no coincide: declarado {} pero contenido es {}",
+                        mime, detected
+                    ),
                 ));
             } else {
                 // Declarado no es imagen pero detectado difiere: log warn pero permite (ej. pdf declarado como pdf ok, mismatch ya cubierto)
@@ -203,7 +225,11 @@ pub async fn upload_media(
     let stored_name = if extension.is_empty() {
         format!("{id}_{}", sanitize_filename(&filename))
     } else {
-        format!("{id}_{}.{}", sanitize_filename(filename.trim_end_matches(&format!(".{extension}"))), extension)
+        format!(
+            "{id}_{}.{}",
+            sanitize_filename(filename.trim_end_matches(&format!(".{extension}"))),
+            extension
+        )
     };
     let stored_path = format!("{}/{}", upload_dir, stored_name);
 
@@ -285,12 +311,11 @@ pub async fn list_media(
     .await
     .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
-    let total: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM content_media WHERE deleted_at IS NULL",
-    )
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let total: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM content_media WHERE deleted_at IS NULL")
+            .fetch_one(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     let filtered: Vec<ContentMedia> = if let Some(k) = kind_filter {
         rows.into_iter()
@@ -308,7 +333,10 @@ pub async fn list_media(
         rows
     };
 
-    let user_ids: Vec<&str> = filtered.iter().filter_map(|m| m.uploaded_by.as_deref()).collect();
+    let user_ids: Vec<&str> = filtered
+        .iter()
+        .filter_map(|m| m.uploaded_by.as_deref())
+        .collect();
     let users = crate::routes::tasks::batch_users(&state.db, &user_ids).await;
 
     let items: Vec<ContentMediaOut> = filtered
@@ -335,17 +363,19 @@ pub async fn delete_media(
     require_admin_or_editor(&claims)?;
 
     let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    let result = sqlx::query(
-        "UPDATE content_media SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
-    )
-    .bind(&now)
-    .bind(&id)
-    .execute(&state.db)
-    .await
-    .map_err(|e| internal_error(&format!("db error: {e}")))?;
+    let result =
+        sqlx::query("UPDATE content_media SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL")
+            .bind(&now)
+            .bind(&id)
+            .execute(&state.db)
+            .await
+            .map_err(|e| internal_error(&format!("db error: {e}")))?;
 
     if result.rows_affected() == 0 {
-        return Err(error_response(StatusCode::NOT_FOUND, "Archivo no encontrado".to_string()));
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Archivo no encontrado".to_string(),
+        ));
     }
 
     tracing::info!(target: "media_audit", actor_id = %claims.sub, media_id = %id, "media deleted");
@@ -382,7 +412,10 @@ pub async fn update_media(
 
     let user_ids: Vec<&str> = media.uploaded_by.as_deref().into_iter().collect();
     let users = crate::routes::tasks::batch_users(&state.db, &user_ids).await;
-    let uploader = media.uploaded_by.as_ref().and_then(|id| users.get(id).cloned());
+    let uploader = media
+        .uploaded_by
+        .as_ref()
+        .and_then(|id| users.get(id).cloned());
     Ok(Json(media.to_out(uploader)))
 }
 
@@ -432,7 +465,7 @@ fn image_dimensions(bytes: &[u8]) -> Result<(Option<i32>, Option<i32>), ()> {
             let b2 = bytes[23] as i32;
             let b3 = bytes[24] as i32;
             let w = (b0 | ((b1 & 0x3f) << 8)) + 1;
-            let h = (((b1 >> 6) | (b2 << 2) | ((b3 & 0x0f) << 10))) + 1;
+            let h = ((b1 >> 6) | (b2 << 2) | ((b3 & 0x0f) << 10)) + 1;
             return Ok((Some(w), Some(h)));
         }
     }
@@ -441,7 +474,10 @@ fn image_dimensions(bytes: &[u8]) -> Result<(Option<i32>, Option<i32>), ()> {
 
 #[allow(dead_code)]
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{delete, get, patch}};
+    use axum::{
+        middleware,
+        routing::{get, patch},
+    };
 
     axum::Router::new()
         .route("/api/media", get(list_media).post(upload_media))

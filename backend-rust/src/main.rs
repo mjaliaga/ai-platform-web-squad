@@ -8,12 +8,15 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info,sqlx=warn,tower_http=info")))
+        .with(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,sqlx=warn,tower_http=info")),
+        )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite://data/portal.db".to_string());
+    let database_url =
+        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://data/portal.db".to_string());
 
     let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
         tracing::error!("JWT_SECRET no está configurado. Generá uno con: openssl rand -hex 64");
@@ -43,7 +46,8 @@ async fn main() -> anyhow::Result<()> {
         redis_url.as_deref(),
         Duration::from_secs(15 * 60),
         10,
-    ).await;
+    )
+    .await;
 
     let state = Arc::new(AppState {
         db: pool,

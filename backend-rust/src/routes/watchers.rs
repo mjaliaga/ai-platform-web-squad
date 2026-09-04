@@ -68,7 +68,10 @@ pub async fn unwatch_task(
 
 #[allow(dead_code)]
 pub fn router(state: Arc<AppState>) -> axum::Router {
-    use axum::{middleware, routing::{delete, get, post}};
+    use axum::{
+        middleware,
+        routing::{delete, get, post},
+    };
 
     axum::Router::new()
         .route("/api/tasks/:id/watchers", get(list_watchers))
