@@ -11,11 +11,13 @@ const links = [
   { to: "/portal/tickets", label: "Tickets", icon: Ticket },
 ];
 
-const adminLinks = [
-  { to: "/portal/certifications", label: "Certificaciones", icon: Award },
-  { to: "/portal/cms", label: "Contenido", icon: FileClock },
-  { to: "/portal/admin/audit", label: "Auditoría", icon: Shield },
-];
+// Gating por rol — corrige "no todas las secciones salen" para member/editor
+// Certificaciones: cualquier autenticado (backend permite list a todos) — se muestra si hay user
+// Contenido: member/editor/admin (canEdit en CMS/ContentManager.jsx:27)
+// Auditoría: solo admin
+const cmsLink = { to: "/portal/cms", label: "Contenido", icon: FileClock };
+const certLink = { to: "/portal/certifications", label: "Certificaciones", icon: Award };
+const auditLink = { to: "/portal/admin/audit", label: "Auditoría", icon: Shield };
 
 export function PortalLayout() {
   const { user, logout } = useAuth();
@@ -93,7 +95,11 @@ export function PortalLayout() {
           scrolled ? "shadow-sm" : ""
         }`}
       >
-        <div className="mx-auto grid h-16 w-full max-w-7xl 2xl:max-w-[1536px] min-[1920px]:max-w-[1600px] grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
+        {/* FIX: grid-cols con minmax(0,1fr) permite que el nav central haga shrink correctamente.
+            Antes auto 1fr auto impedía shrink y causaba overflow/wrap vertical en 768-1024px con 8 items.
+            breakpoint lg (1024) en lugar de md (768) evita overflow: a 768-1023 el nav no cabe (668px) → mejor hamburguesa.
+            1280 (xl) ya cabe holgado. */}
+        <div className="mx-auto grid h-16 w-full max-w-7xl 2xl:max-w-[1536px] min-[1920px]:max-w-[1600px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
           <div className="flex shrink-0 items-center gap-3">
             <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="TIVIT">
               <img src="/media/logos/logo-tivit-tile.png" alt="TIVIT" className="h-8 w-auto" />
@@ -108,25 +114,43 @@ export function PortalLayout() {
             </Link>
           </div>
 
-          <nav className="hidden min-w-0 items-center justify-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex xl:gap-1.5" aria-label="Principal">
-            {links.map((l) => (
-              <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
-                <l.icon className="h-4 w-4" aria-hidden="true" />
-                {l.label}
-              </NavLink>
-            ))}
-            {user?.role === "admin" &&
-              adminLinks.map((l) => (
+          {/* FIX: breakpoint lg (1024) para evitar overflow de 8 items en 768-1023. Añadido wrapper relative + gradiente para indicar scroll cuando hay overflow en lg-xl. */}
+          <div className="relative hidden min-w-0 lg:flex lg:items-center lg:justify-center">
+            <nav className="flex min-w-0 items-center justify-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:gap-1.5" aria-label="Principal">
+              {links.map((l) => (
                 <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
                   <l.icon className="h-4 w-4" aria-hidden="true" />
                   {l.label}
                 </NavLink>
               ))}
-            <NavLink to="/portal/members" className={navLinkClass}>
-              <Users className="h-4 w-4" aria-hidden="true" />
-              Miembros
-            </NavLink>
-          </nav>
+              {/* Certificaciones visible a cualquier autenticado */}
+              {!!user && (
+                <NavLink to={certLink.to} className={navLinkClass}>
+                  <certLink.icon className="h-4 w-4" aria-hidden="true" />
+                  {certLink.label}
+                </NavLink>
+              )}
+              {/* Contenido visible a member/editor/admin */}
+              {!!user && ["member", "editor", "admin"].includes(user.role) && (
+                <NavLink to={cmsLink.to} className={navLinkClass}>
+                  <cmsLink.icon className="h-4 w-4" aria-hidden="true" />
+                  {cmsLink.label}
+                </NavLink>
+              )}
+              {/* Auditoría solo admin */}
+              {user?.role === "admin" && (
+                <NavLink to={auditLink.to} className={navLinkClass}>
+                  <auditLink.icon className="h-4 w-4" aria-hidden="true" />
+                  {auditLink.label}
+                </NavLink>
+              )}
+              <NavLink to="/portal/members" className={navLinkClass}>
+                <Users className="h-4 w-4" aria-hidden="true" />
+                Miembros
+              </NavLink>
+            </nav>
+            <div aria-hidden="true" className="pointer-events-none absolute right-0 top-0 hidden h-full w-6 bg-gradient-to-l from-white to-transparent lg:block" />
+          </div>
 
           <div className="flex shrink-0 items-center gap-2">
             <NotificationBell />
@@ -192,7 +216,7 @@ export function PortalLayout() {
 
             <button
               onClick={() => setMobileOpen((o) => !o)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/5 text-tivit-ink/70 transition hover:bg-tivit-red-light/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2 md:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/5 text-tivit-ink/70 transition hover:bg-tivit-red-light/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tivit-red focus-visible:ring-offset-2 lg:hidden"
               aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
               aria-expanded={mobileOpen}
               aria-controls="portal-mobile-nav"
@@ -205,7 +229,7 @@ export function PortalLayout() {
         {mobileOpen && (
           <nav
             id="portal-mobile-nav"
-            className="border-t border-black/5 bg-white/95 px-4 py-3 backdrop-blur-md md:hidden"
+            className="border-t border-black/5 bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden"
             aria-label="Principal"
           >
             <div className="flex flex-col gap-1">
@@ -215,13 +239,24 @@ export function PortalLayout() {
                   {l.label}
                 </NavLink>
               ))}
-              {user?.role === "admin" &&
-                adminLinks.map((l) => (
-                  <NavLink key={l.to} to={l.to} end={l.end} className={navLinkClass}>
-                    <l.icon className="h-4 w-4" aria-hidden="true" />
-                    {l.label}
-                  </NavLink>
-                ))}
+              {!!user && (
+                <NavLink to={certLink.to} className={navLinkClass}>
+                  <certLink.icon className="h-4 w-4" aria-hidden="true" />
+                  {certLink.label}
+                </NavLink>
+              )}
+              {!!user && ["member", "editor", "admin"].includes(user.role) && (
+                <NavLink to={cmsLink.to} className={navLinkClass}>
+                  <cmsLink.icon className="h-4 w-4" aria-hidden="true" />
+                  {cmsLink.label}
+                </NavLink>
+              )}
+              {user?.role === "admin" && (
+                <NavLink to={auditLink.to} className={navLinkClass}>
+                  <auditLink.icon className="h-4 w-4" aria-hidden="true" />
+                  {auditLink.label}
+                </NavLink>
+              )}
               <NavLink to="/portal/members" className={navLinkClass}>
                 <Users className="h-4 w-4" aria-hidden="true" />
                 Miembros
